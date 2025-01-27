@@ -1,0 +1,7 @@
+.idea
+.tmp
+*.log
+/cmd/build
+.DS_Store
+
+.env
