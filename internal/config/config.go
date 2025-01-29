@@ -7,17 +7,26 @@ import (
 	"time"
 )
 
+const (
+	EnvDev  = "dev"
+	EnvTest = "test"
+	EnvProd = "prod"
+)
+
 type Config struct {
 	Env  string `env:"ENV" env-required:"true"`
 	HTTP HTTPServer
 	DB   Database
+	Cors Cors
 }
 
 type HTTPServer struct {
-	Host        string        `env:"HTTP_HOST" env-default:"localhost"`
-	Port        string        `env:"HTTP_PORT" env-default:"8082"`
-	Timeout     time.Duration `env:"HTTP_TIMEOUT" env-default:"4s"`
-	IdleTimeout time.Duration `env:"HTTP_IDLE_TIMEOUT" env-default:"60s"`
+	Host         string        `env:"HTTP_HOST" env-default:"localhost"`
+	Port         uint16        `env:"HTTP_PORT" env-default:"8082"`
+	Timeout      time.Duration `env:"HTTP_TIMEOUT" env-default:"4s"`
+	IdleTimeout  time.Duration `env:"HTTP_IDLE_TIMEOUT" env-default:"60s"`
+	ReadTimeout  time.Duration `env:"HTTP_READ_TIMEOUT" env-default:"15s"`
+	WriteTimeout time.Duration `env:"HTTP_WRITE_TIMEOUT" env-default:"15s"`
 }
 
 type Database struct {
@@ -27,6 +36,16 @@ type Database struct {
 	Username string `env:"DB_USERNAME" env-required:"true"`
 	Password string `env:"DB_PASSWORD" env-required:"true"`
 	Database string `env:"DB_DATABASE" env-required:"true"`
+}
+
+type Cors struct {
+	AllowedMethods     []string `env:"CORS_ALLOWED_METHODS" env-required:"true"`
+	AllowedOrigins     []string `env:"CORS_ALLOWED_ORIGINS" env-required:"true"`
+	AllowedHeaders     []string `env:"CORS_ALLOWED_HEADERS" env-required:"true"`
+	AllowCredentials   bool     `env:"CORS_ALLOW_CREDENTIALS" env-required:"true"`
+	OptionsPassthrough bool     `env:"CORS_OPTIONS_PASSTHROUGH" env-required:"true"`
+	ExposedHeaders     []string `env:"CORS_EXPOSED_HEADERS" env-required:"true"`
+	Debug              bool     `env:"CORS_DEBUG" env-default:"false"`
 }
 
 const configFilePath = ".env"
@@ -51,6 +70,6 @@ func MustLoad() *Config {
 	if err != nil {
 		log.Fatalf("error reading .env file: %s", err)
 	}
-
+	log.Println("config .env file loaded")
 	return &cfg
 }

@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "ASSISTANT-GO",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}
