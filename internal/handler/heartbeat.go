@@ -1,19 +1,14 @@
 package handler
 
 import (
-	"github.com/julienschmidt/httprouter"
 	"net/http"
-)
-
-const (
-	URL = "/api/heartbeat"
 )
 
 type HeartbeatHandler struct {
 }
 
-func (h *HeartbeatHandler) Register(router *httprouter.Router) {
-	router.HandlerFunc(http.MethodGet, URL, h.Heartbeat)
+func NewHeartbeatHandler() *HeartbeatHandler {
+	return &HeartbeatHandler{}
 }
 
 // Heartbeat
