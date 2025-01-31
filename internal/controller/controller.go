@@ -42,7 +42,7 @@ func (controller *Init) SetRoutes(ctx context.Context) error {
 
 func (controller *Init) setUserRoutes(ctx context.Context) {
 	userRepository := repository.NewUserRepository(ctx, controller.db)
-	userUseCase := useCase.NewUserUseCase(userRepository)
+	userUseCase := useCase.NewUserUseCase(ctx, userRepository)
 	userHandler := handler.NewUserHandler(userUseCase)
 
 	controller.router.HandlerFunc(http.MethodPost, "/api/user/register", userHandler.Create)
