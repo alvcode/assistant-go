@@ -45,5 +45,9 @@ func (controller *Init) setUserRoutes(ctx context.Context) {
 	userUseCase := useCase.NewUserUseCase(ctx, userRepository)
 	userHandler := handler.NewUserHandler(userUseCase)
 
-	controller.router.HandlerFunc(http.MethodPost, "/api/user/register", userHandler.Create)
+	controller.router.Handler(
+		http.MethodPost,
+		"/api/user/register",
+		handler.LocaleMiddleware(userHandler.Create),
+	)
 }

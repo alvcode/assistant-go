@@ -1,11 +1,11 @@
 package locale
 
 import (
+	"assistant-go/internal/logging"
 	"context"
 	"encoding/json"
 	"log"
 	"net/http"
-	"strings"
 	"sync"
 
 	"github.com/nicksnyder/go-i18n/v2/i18n"
@@ -18,7 +18,7 @@ var (
 	once           sync.Once
 )
 
-func InitLocales() {
+func InitLocales(ctx context.Context) {
 	once.Do(func() {
 		bundleInstance = i18n.NewBundle(language.English)
 		bundleInstance.RegisterUnmarshalFunc("json", json.Unmarshal)
@@ -29,7 +29,7 @@ func InitLocales() {
 		localizers["en"] = i18n.NewLocalizer(bundleInstance, "en")
 		localizers["ru"] = i18n.NewLocalizer(bundleInstance, "ru")
 
-		log.Println("Localization initialized")
+		logging.GetLogger(ctx).Infoln("Localization initialized")
 	})
 }
 
@@ -46,7 +46,7 @@ func loadTranslations() {
 
 	for _, f := range files {
 		if _, err := bundleInstance.LoadMessageFile(f.file); err != nil {
-			log.Printf("Failed to load translation file %s: %v", f.file, err)
+			log.Fatalf("Failed to load translation file %s: %v", f.file, err)
 		}
 	}
 }
@@ -69,40 +69,22 @@ func T(lang string, messageID string, args ...interface{}) string {
 	return result
 }
 
-// Key для хранения локализатора в контексте запроса
-type contextKey string
+const localeContextKey = "locale"
 
-const localeContextKey contextKey = "locale"
-
-func LocaleMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Извлекаем заголовок "locale" (например, "en" или "ru")
-		localeHeader := r.Header.Get("locale")
-		if localeHeader == "" {
-			localeHeader = "en" // Если заголовок не задан — по умолчанию английский
+func Middleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		locale := r.Header.Get(localeContextKey)
+		if locale == "" {
+			locale = "en"
 		}
-
-		// Преобразуем в нижний регистр для стабильности
-		localeHeader = strings.ToLower(localeHeader)
-
-		// Проверяем, поддерживаем ли данный язык
-		if _, exists := localizers[localeHeader]; !exists {
-			// Если язык не поддерживается — fallback на английский
-			localeHeader = "en"
-		}
-
-		// Устанавливаем локализацию в контекст запроса
-		ctx := context.WithValue(r.Context(), localeContextKey, localeHeader)
-
-		// Применяем контекст с локализацией к следующему обработчику
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
+		ctx := context.WithValue(r.Context(), localeContextKey, locale)
+		next(w, r.WithContext(ctx))
+	}
 }
 
 func GetLocaleFromContext(ctx context.Context) string {
 	locale, ok := ctx.Value(localeContextKey).(string)
 	if !ok {
-		// Если локализация не установлена, возвращаем английский как fallback
 		return "en"
 	}
 	return locale

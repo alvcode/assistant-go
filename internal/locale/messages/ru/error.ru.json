@@ -1,3 +1,5 @@
 {
-  
+  "error_reading_request_body": "Ошибка чтения тела запроса",
+  "user_already_exists": "Пользователь уже существует",
+  "unexpected_database_error": "Непредвиденная ошибка базы данных"
 }

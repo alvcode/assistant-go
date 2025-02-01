@@ -4,6 +4,7 @@ import (
 	dtoUser "assistant-go/internal/layer/dto/user"
 	"assistant-go/internal/layer/useCase"
 	"assistant-go/internal/layer/viewModel/user"
+	"assistant-go/internal/locale"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -22,20 +23,22 @@ func NewUserHandler(useCase useCase.UserUseCase) *UserHandler {
 func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var createUserDto dtoUser.CreateDto
 
+	localeFromContext := locale.GetLocaleFromContext(r.Context())
+
 	err := json.NewDecoder(r.Body).Decode(&createUserDto)
 	if err != nil {
-		SendErrorResponse(w, "Error reading request body", http.StatusBadRequest, 0)
+		SendErrorResponse(w, locale.T(localeFromContext, "error_reading_request_body"), http.StatusBadRequest, 0)
 		return
 	}
 
-	if err := createUserDto.Validate(); err != nil {
-		SendErrorResponse(w, fmt.Sprintf("Validation error: %v", err), http.StatusUnprocessableEntity, 0)
+	if err := createUserDto.Validate(localeFromContext); err != nil {
+		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
 		return
 	}
 
-	entity, err := h.useCase.Create(createUserDto)
+	entity, err := h.useCase.Create(createUserDto, localeFromContext)
 	if err != nil {
-		SendErrorResponse(w, fmt.Sprintf("Create user error: %v", err), http.StatusUnprocessableEntity, 0)
+		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
 		return
 	}
 

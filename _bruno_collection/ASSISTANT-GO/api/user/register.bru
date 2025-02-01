@@ -10,10 +10,13 @@ post {
   auth: none
 }
 
+headers {
+  locale: ru
+}
+
 body:json {
   {
     "login": "{{login}}",
     "password": "{{password}}"
-    //"password": ""
   }
 }

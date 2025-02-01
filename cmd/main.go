@@ -5,8 +5,8 @@ import (
 	"assistant-go/internal/config"
 	"assistant-go/internal/locale"
 	"assistant-go/internal/logging"
+	"assistant-go/pkg/vld"
 	"context"
-	"fmt"
 )
 
 func main() {
@@ -20,11 +20,8 @@ func main() {
 
 	logging.GetLogger(ctx).Infoln("Starting application")
 
-	locale.InitLocales()
-	fmt.Println(locale.T("ru", "hello")) // Привет, мир!
-	fmt.Println(locale.T("en", "hello")) // Привет, мир!
-
-	logging.GetLogger(ctx).Fatalln("stop")
+	locale.InitLocales(ctx)
+	vld.InitValidator(ctx)
 
 	a, err := app.NewApp(ctx, cfg)
 	if err != nil {
