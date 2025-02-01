@@ -1,4 +1,4 @@
-package viewModel
+package vmUser
 
 import (
 	"assistant-go/internal/layer/entity"
@@ -12,7 +12,7 @@ type User struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-func (user *User) FromEntity(entity *entity.User) *User {
+func UserVMFromEnity(entity *entity.User) *User {
 	return &User{
 		ID:        entity.ID,
 		Login:     entity.Login,

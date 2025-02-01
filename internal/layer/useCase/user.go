@@ -5,6 +5,9 @@ import (
 	"assistant-go/internal/layer/entity"
 	"assistant-go/internal/layer/repository"
 	"context"
+	"errors"
+	"golang.org/x/crypto/bcrypt"
+	"time"
 )
 
 type UserUseCase interface {
@@ -24,10 +27,24 @@ func NewUserUseCase(ctx context.Context, userRepository repository.UserRepositor
 }
 
 func (uc *userUseCase) Create(in dtoUser.CreateDto) (*entity.User, error) {
-	userEntity := entity.User{
-		Login:    in.Login,
-		Password: in.Password,
+	//err := bcrypt.CompareHashAndPassword([]byte(storedHashedPassword), []byte(inputPassword))
+	existingUser, _ := uc.userRepository.Find(in.Login)
+	if existingUser != nil {
+		return nil, errors.New("user already exists")
 	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(in.Password), 11)
+	if err != nil {
+		return nil, err
+	}
+
+	userEntity := entity.User{
+		Login:     in.Login,
+		Password:  string(hashedPassword),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
 	data, err := uc.userRepository.Create(userEntity)
 	if err != nil {
 		return nil, err

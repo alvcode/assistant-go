@@ -3,7 +3,7 @@ package handler
 import (
 	dtoUser "assistant-go/internal/layer/dto/user"
 	"assistant-go/internal/layer/useCase"
-	"assistant-go/internal/layer/viewModel"
+	"assistant-go/internal/layer/viewModel/user"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -19,12 +19,6 @@ func NewUserHandler(useCase useCase.UserUseCase) *UserHandler {
 	}
 }
 
-// Create
-// @Summary Heartbeat metric
-// @Tags Metrics
-// @Success 204
-// @Failure 400
-// @Router /api/user/register [post]
 func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var createUserDto dtoUser.CreateDto
 
@@ -41,11 +35,11 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	entity, err := h.useCase.Create(createUserDto)
 	if err != nil {
+		SendErrorResponse(w, fmt.Sprintf("Create user error: %v", err), http.StatusUnprocessableEntity, 0)
 		return
 	}
 
-	user := viewModel.User{}
-	userVM := user.FromEntity(entity)
+	userVM := vmUser.UserVMFromEnity(entity)
 
 	SendResponse(w, http.StatusCreated, userVM)
 }

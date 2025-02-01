@@ -3,8 +3,10 @@ package main
 import (
 	"assistant-go/internal/app"
 	"assistant-go/internal/config"
+	"assistant-go/internal/locale"
 	"assistant-go/internal/logging"
 	"context"
+	"fmt"
 )
 
 func main() {
@@ -17,6 +19,12 @@ func main() {
 	ctx = logging.ContextWithLogger(ctx, logger)
 
 	logging.GetLogger(ctx).Infoln("Starting application")
+
+	locale.InitLocales()
+	fmt.Println(locale.T("ru", "hello")) // Привет, мир!
+	fmt.Println(locale.T("en", "hello")) // Привет, мир!
+
+	logging.GetLogger(ctx).Fatalln("stop")
 
 	a, err := app.NewApp(ctx, cfg)
 	if err != nil {
