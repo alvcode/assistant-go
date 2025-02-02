@@ -71,10 +71,15 @@ func T(lang string, messageID string, args ...interface{}) string {
 
 const localeContextKey = "locale"
 
+var allowedLocales = map[string]bool{
+	"ru": true,
+	"en": true,
+}
+
 func Middleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		locale := r.Header.Get(localeContextKey)
-		if locale == "" {
+		if !allowedLocales[locale] {
 			locale = "en"
 		}
 		ctx := context.WithValue(r.Context(), localeContextKey, locale)
@@ -82,7 +87,7 @@ func Middleware(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func GetLocaleFromContext(ctx context.Context) string {
+func GetLangFromContext(ctx context.Context) string {
 	locale, ok := ctx.Value(localeContextKey).(string)
 	if !ok {
 		return "en"

@@ -1,0 +1,22 @@
+meta {
+  name: login
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{domain}}/api/user/login
+  body: json
+  auth: none
+}
+
+headers {
+  locale: ru
+}
+
+body:json {
+  {
+    "login": "{{login}}",
+    "password": "{{password}}"
+  }
+}

@@ -1,5 +1,6 @@
 {
   "error_reading_request_body": "Error reading request body",
   "user_already_exists": "User already exists",
-  "unexpected_database_error": "Unexpected database error"
+  "unexpected_database_error": "Unexpected database error",
+  "incorrect_username_or_password": "Incorrect username or password entered"
 }

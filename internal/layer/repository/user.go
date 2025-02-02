@@ -10,6 +10,8 @@ import (
 type UserRepository interface {
 	Create(in entity.User) (*entity.User, error)
 	Find(login string) (*entity.User, error)
+	FindUserToken(token string) (*entity.UserToken, error)
+	SetUserToken(in entity.UserToken) (*entity.UserToken, error)
 }
 
 type userRepository struct {
@@ -47,4 +49,23 @@ func (ur *userRepository) Find(login string) (*entity.User, error) {
 	}
 
 	return &user, nil
+}
+
+func (ur *userRepository) FindUserToken(token string) (*entity.UserToken, error) {
+	query := `SELECT user_id, token, refresh_token, expired_to FROM user_tokens WHERE token = $1`
+
+	row := ur.db.QueryRow(ur.ctx, query, token)
+
+	var userToken entity.UserToken
+	if err := row.Scan(&userToken.UserId, &userToken.Token, &userToken.RefreshToken, &userToken.ExpiredTo); err != nil {
+		return nil, errors.New("user token not found")
+	}
+	return &userToken, nil
+}
+
+func (ur *userRepository) SetUserToken(in entity.UserToken) (*entity.UserToken, error) {
+	query := `INSERT INTO user_tokens (user_id, token, refresh_token, expired_to) VALUES ($1, $2, $3, $4)`
+
+	_, err := ur.db.Exec(ur.ctx, query, in.UserId, in.Token, in.RefreshToken, in.ExpiredTo)
+	return &in, err
 }

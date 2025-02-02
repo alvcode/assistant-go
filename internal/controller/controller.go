@@ -50,4 +50,9 @@ func (controller *Init) setUserRoutes(ctx context.Context) {
 		"/api/user/register",
 		handler.LocaleMiddleware(userHandler.Create),
 	)
+	controller.router.Handler(
+		http.MethodPost,
+		"/api/user/login",
+		handler.LocaleMiddleware(userHandler.Login),
+	)
 }

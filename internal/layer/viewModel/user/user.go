@@ -20,3 +20,19 @@ func UserVMFromEnity(entity *entity.User) *User {
 		UpdatedAt: entity.UpdatedAt,
 	}
 }
+
+type UserToken struct {
+	UserId       uint32 `json:"user_id"`
+	Token        string `json:"token"`
+	RefreshToken string `json:"refresh_token"`
+	ExpiredTo    uint32 `json:"expired_to"`
+}
+
+func UserTokenVMFromEnity(entity *entity.UserToken) *UserToken {
+	return &UserToken{
+		UserId:       entity.UserId,
+		Token:        entity.Token,
+		RefreshToken: entity.RefreshToken,
+		ExpiredTo:    entity.ExpiredTo,
+	}
+}
