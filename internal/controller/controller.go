@@ -47,12 +47,17 @@ func (controller *Init) setUserRoutes(ctx context.Context) {
 
 	controller.router.Handler(
 		http.MethodPost,
-		"/api/user/register",
+		"/api/auth/register",
 		handler.LocaleMiddleware(userHandler.Create),
 	)
 	controller.router.Handler(
 		http.MethodPost,
-		"/api/user/login",
+		"/api/auth/login",
 		handler.LocaleMiddleware(userHandler.Login),
+	)
+	controller.router.Handler(
+		http.MethodPost,
+		"/api/auth/refresh-token",
+		handler.LocaleMiddleware(userHandler.RefreshToken),
 	)
 }

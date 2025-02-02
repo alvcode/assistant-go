@@ -3,7 +3,6 @@ package repository
 import (
 	"assistant-go/internal/layer/entity"
 	"context"
-	"errors"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -32,7 +31,7 @@ func (ur *userRepository) Create(in entity.User) (*entity.User, error) {
 	row := ur.db.QueryRow(ur.ctx, query, in.Login, in.Password, in.CreatedAt, in.UpdatedAt)
 
 	if err := row.Scan(&in.ID); err != nil {
-		return nil, errors.New("failed to insert user: " + err.Error())
+		return nil, err
 	}
 
 	return &in, nil
@@ -45,9 +44,8 @@ func (ur *userRepository) Find(login string) (*entity.User, error) {
 
 	var user entity.User
 	if err := row.Scan(&user.ID, &user.Login, &user.Password, &user.CreatedAt, &user.UpdatedAt); err != nil {
-		return nil, errors.New("user not found")
+		return nil, err
 	}
-
 	return &user, nil
 }
 
@@ -58,7 +56,7 @@ func (ur *userRepository) FindUserToken(token string) (*entity.UserToken, error)
 
 	var userToken entity.UserToken
 	if err := row.Scan(&userToken.UserId, &userToken.Token, &userToken.RefreshToken, &userToken.ExpiredTo); err != nil {
-		return nil, errors.New("user token not found")
+		return nil, err
 	}
 	return &userToken, nil
 }

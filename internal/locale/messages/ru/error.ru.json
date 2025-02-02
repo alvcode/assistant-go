@@ -2,5 +2,6 @@
   "error_reading_request_body": "Ошибка чтения тела запроса",
   "user_already_exists": "Пользователь уже существует",
   "unexpected_database_error": "Непредвиденная ошибка базы данных",
-  "incorrect_username_or_password": "Неверно введен логин пользователя или пароль"
+  "incorrect_username_or_password": "Неверно введен логин пользователя или пароль",
+  "refresh_token_not_found": "Refresh token не найден"
 }

@@ -10,6 +10,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
+	"github.com/jackc/pgx/v5"
 	"golang.org/x/crypto/bcrypt"
 	"time"
 )
@@ -17,6 +18,7 @@ import (
 type UserUseCase interface {
 	Create(in dtoUser.LoginAndPassword, lang string) (*entity.User, error)
 	Login(in dtoUser.LoginAndPassword, lang string) (*entity.UserToken, error)
+	RefreshToken(in dtoUser.RefreshToken, lang string) (*entity.UserToken, error)
 }
 
 type userUseCase struct {
@@ -32,8 +34,8 @@ func NewUserUseCase(ctx context.Context, userRepository repository.UserRepositor
 }
 
 func (uc *userUseCase) Create(in dtoUser.LoginAndPassword, lang string) (*entity.User, error) {
-	existingUser, _ := uc.userRepository.Find(in.Login)
-	if existingUser != nil {
+	existingUser, err := uc.userRepository.Find(in.Login)
+	if err == nil && existingUser != nil {
 		return nil, errors.New(locale.T(lang, "user_already_exists"))
 	}
 
@@ -58,32 +60,22 @@ func (uc *userUseCase) Create(in dtoUser.LoginAndPassword, lang string) (*entity
 }
 
 func (uc *userUseCase) Login(in dtoUser.LoginAndPassword, lang string) (*entity.UserToken, error) {
-	existingUser, _ := uc.userRepository.Find(in.Login)
-	if existingUser == nil {
-		return nil, errors.New(locale.T(lang, "incorrect_username_or_password"))
+	existingUser, err := uc.userRepository.Find(in.Login)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, errors.New(locale.T(lang, "incorrect_username_or_password"))
+		}
+		logging.GetLogger(uc.ctx).Error(err)
+		return nil, errors.New(locale.T(lang, "unexpected_database_error"))
 	}
 
-	err := bcrypt.CompareHashAndPassword([]byte(existingUser.Password), []byte(in.Password))
+	err = bcrypt.CompareHashAndPassword([]byte(existingUser.Password), []byte(in.Password))
 	if err != nil {
 		return nil, errors.New(locale.T(lang, "incorrect_username_or_password"))
 	}
 
-	var userTokenEntity entity.UserToken
-	for {
-		token := GenerateAPIToken()
-		refreshToken := GenerateAPIToken()
+	userTokenEntity := uc.generateTokenPair(int(existingUser.ID))
 
-		existingToken, _ := uc.userRepository.FindUserToken(token)
-		if existingToken == nil {
-			userTokenEntity = entity.UserToken{
-				UserId:       existingUser.ID,
-				Token:        token,
-				RefreshToken: refreshToken,
-				ExpiredTo:    uint32(time.Now().Add(4 * time.Hour).Unix()),
-			}
-			break
-		}
-	}
 	data, err := uc.userRepository.SetUserToken(userTokenEntity)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
@@ -92,7 +84,50 @@ func (uc *userUseCase) Login(in dtoUser.LoginAndPassword, lang string) (*entity.
 	return data, nil
 }
 
-func GenerateAPIToken() string {
+func (uc *userUseCase) RefreshToken(in dtoUser.RefreshToken, lang string) (*entity.UserToken, error) {
+	existingToken, err := uc.userRepository.FindUserToken(in.Token)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, errors.New(locale.T(lang, "refresh_token_not_found"))
+		}
+		return nil, errors.New(locale.T(lang, "unexpected_database_error"))
+	}
+	if existingToken.RefreshToken != in.RefreshToken {
+		return nil, errors.New(locale.T(lang, "refresh_token_not_found"))
+	}
+
+	userTokenEntity := uc.generateTokenPair(int(existingToken.UserId))
+	data, err := uc.userRepository.SetUserToken(userTokenEntity)
+	if err != nil {
+		logging.GetLogger(uc.ctx).Error(err)
+		return nil, errors.New(locale.T(lang, "unexpected_database_error"))
+	}
+	return data, nil
+}
+
+func (uc *userUseCase) generateTokenPair(userId int) entity.UserToken {
+	var userTokenEntity entity.UserToken
+	for {
+		token := generateAPIToken()
+		refreshToken := generateAPIToken()
+
+		_, err := uc.userRepository.FindUserToken(token)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				userTokenEntity = entity.UserToken{
+					UserId:       uint32(userId),
+					Token:        token,
+					RefreshToken: refreshToken,
+					ExpiredTo:    uint32(time.Now().Add(4 * time.Hour).Unix()),
+				}
+				break
+			}
+		}
+	}
+	return userTokenEntity
+}
+
+func generateAPIToken() string {
 	bytes := make([]byte, 48)
 	_, err := rand.Read(bytes)
 	if err != nil {

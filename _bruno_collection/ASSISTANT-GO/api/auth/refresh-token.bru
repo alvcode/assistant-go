@@ -1,0 +1,22 @@
+meta {
+  name: refresh-token
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{domain}}/api/auth/refresh-token
+  body: json
+  auth: none
+}
+
+headers {
+  locale: ru
+}
+
+body:json {
+  {
+    "token": "2LZTXky0OCCvCwDK7QvHAx3bGJvNBWK2BZn5hyvw82_9aj-p2OJY3AcvoIL3uAdU",
+    "refresh_token": "jAr3ZnSJjtOTeiys3PthaGd8WBADbcHjdrXGnh88yiwPES1grcLriwScoq58ArYQ"
+  }
+}

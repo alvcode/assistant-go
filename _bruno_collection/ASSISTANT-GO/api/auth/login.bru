@@ -1,11 +1,11 @@
 meta {
-  name: register
+  name: login
   type: http
-  seq: 1
+  seq: 2
 }
 
 post {
-  url: {{domain}}/api/user/register
+  url: {{domain}}/api/auth/login
   body: json
   auth: none
 }

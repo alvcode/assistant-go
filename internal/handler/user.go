@@ -65,3 +65,26 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	userTokenVM := vmUser.UserTokenVMFromEnity(entity)
 	SendResponse(w, http.StatusOK, userTokenVM)
 }
+
+func (h *UserHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
+	var refreshTokenDto dtoUser.RefreshToken
+	langRequest := locale.GetLangFromContext(r.Context())
+
+	err := json.NewDecoder(r.Body).Decode(&refreshTokenDto)
+	if err != nil {
+		SendErrorResponse(w, locale.T(langRequest, "error_reading_request_body"), http.StatusBadRequest, 0)
+		return
+	}
+	if err := refreshTokenDto.Validate(langRequest); err != nil {
+		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
+		return
+	}
+
+	entity, err := h.useCase.RefreshToken(refreshTokenDto, langRequest)
+	if err != nil {
+		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
+		return
+	}
+	userTokenVM := vmUser.UserTokenVMFromEnity(entity)
+	SendResponse(w, http.StatusOK, userTokenVM)
+}
