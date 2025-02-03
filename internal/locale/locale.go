@@ -52,6 +52,10 @@ func loadTranslations() {
 }
 
 func T(lang string, messageID string, args ...interface{}) string {
+	if localizers == nil {
+		log.Printf("Localizers not initialized, returning messageID: %s", messageID)
+		return messageID
+	}
 	localizer, exists := localizers[lang]
 	if !exists {
 		localizer = localizers["en"]
