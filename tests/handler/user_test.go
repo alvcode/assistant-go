@@ -99,4 +99,53 @@ func TestRegisterUserEndpointErrorExists(t *testing.T) {
 	userHandler.Create(rr, req)
 
 	assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
+
+	expectedResponse := `{"message":"user_already_exists","status":422,"code":0}`
+	assert.JSONEq(t, expectedResponse, rr.Body.String())
+}
+
+func TestRegisterUserEndpointErrorMissLogin(t *testing.T) {
+	mockRepo := new(MockUserRepository)
+	ctx := context.Background()
+	vld.InitValidator(ctx)
+
+	userUseCase := useCase.NewUserUseCase(ctx, mockRepo)
+
+	userHandler := handler.NewUserHandler(userUseCase)
+
+	dtoForRequest := dtoUser.LoginAndPassword{Login: "", Password: "test_pwd"}
+	requestBody, _ := json.Marshal(dtoForRequest)
+	req := httptest.NewRequest("POST", "/api/auth/register", bytes.NewReader(requestBody))
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+	userHandler.Create(rr, req)
+
+	assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
+
+	expectedResponse := `{"message":"Login is a required field","status":422,"code":0}`
+	assert.JSONEq(t, expectedResponse, rr.Body.String())
+}
+
+func TestRegisterUserEndpointErrorMissPassword(t *testing.T) {
+	mockRepo := new(MockUserRepository)
+	ctx := context.Background()
+	vld.InitValidator(ctx)
+
+	userUseCase := useCase.NewUserUseCase(ctx, mockRepo)
+
+	userHandler := handler.NewUserHandler(userUseCase)
+
+	dtoForRequest := dtoUser.LoginAndPassword{Login: "test_user", Password: ""}
+	requestBody, _ := json.Marshal(dtoForRequest)
+	req := httptest.NewRequest("POST", "/api/auth/register", bytes.NewReader(requestBody))
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+	userHandler.Create(rr, req)
+
+	assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
+
+	expectedResponse := `{"message":"Password is a required field","status":422,"code":0}`
+	assert.JSONEq(t, expectedResponse, rr.Body.String())
 }
