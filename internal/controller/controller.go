@@ -36,6 +36,7 @@ func (controller *Init) SetRoutes(ctx context.Context) error {
 	controller.router.HandlerFunc(http.MethodGet, "/api/heartbeat", heartbeatHandler.Heartbeat)
 
 	controller.setUserRoutes(ctx)
+	controller.setNotesCategories(ctx)
 
 	return nil
 }
@@ -48,16 +49,28 @@ func (controller *Init) setUserRoutes(ctx context.Context) {
 	controller.router.Handler(
 		http.MethodPost,
 		"/api/auth/register",
-		handler.LocaleMiddleware(userHandler.Create),
+		handler.BuildHandler(userHandler.Create, handler.LocaleMW),
 	)
 	controller.router.Handler(
 		http.MethodPost,
 		"/api/auth/login",
-		handler.LocaleMiddleware(userHandler.Login),
+		handler.BuildHandler(userHandler.Login, handler.LocaleMW),
 	)
 	controller.router.Handler(
 		http.MethodPost,
 		"/api/auth/refresh-token",
-		handler.LocaleMiddleware(userHandler.RefreshToken),
+		handler.BuildHandler(userHandler.RefreshToken, handler.LocaleMW),
+	)
+}
+
+func (controller *Init) setNotesCategories(ctx context.Context) {
+	noteCategoryRepository := repository.NewNoteCategoryRepository(ctx, controller.db)
+	noteCategoryUseCase := useCase.NewNoteCategoryUseCase(ctx, noteCategoryRepository)
+	noteCategoryHandler := handler.NewNoteCategoryHandler(noteCategoryUseCase)
+
+	controller.router.Handler(
+		http.MethodPost,
+		"/api/notes/categories",
+		handler.BuildHandler(noteCategoryHandler.Create, handler.LocaleMW, handler.AuthMW),
 	)
 }
