@@ -11,8 +11,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"golang.org/x/crypto/bcrypt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -43,109 +45,268 @@ func (m *MockUserRepository) SetUserToken(in entity.UserToken) (*entity.UserToke
 	return args.Get(0).(*entity.UserToken), args.Error(1)
 }
 
-func TestRegisterUserEndpointSuccess(t *testing.T) {
-	// Создаем мок-репозиторий
+func setupTest() (*MockUserRepository, *handler.UserHandler, context.Context) {
 	mockRepo := new(MockUserRepository)
 	ctx := context.Background()
 	vld.InitValidator(ctx)
 
 	userUseCase := useCase.NewUserUseCase(ctx, mockRepo)
-
 	userHandler := handler.NewUserHandler(userUseCase)
 
-	userEntity := entity.User{ID: 1, Login: "test_user", Password: "test_pwd", CreatedAt: time.Now(), UpdatedAt: time.Now()}
-	mockRepo.On("Create", mock.AnythingOfType("entity.User")).Return(&userEntity, nil)
-	mockRepo.On("Find", userEntity.Login).Return((*entity.User)(nil), errors.New("user not found"))
-
-	dtoForRequest := dtoUser.LoginAndPassword{Login: "test_user", Password: "test_pwd"}
-	// Создаем тестовый HTTP-запрос
-	requestBody, _ := json.Marshal(dtoForRequest)
-	req := httptest.NewRequest("POST", "/api/auth/register", bytes.NewReader(requestBody))
-	req.Header.Set("Content-Type", "application/json")
-
-	// Эмулируем HTTP-сервер
-	rr := httptest.NewRecorder()
-	userHandler.Create(rr, req)
-
-	assert.Equal(t, http.StatusCreated, rr.Code)
-
-	// Проверяем, что в ответе пришел тот же пользователь
-	var responseUser vmUser.User
-	err := json.Unmarshal(rr.Body.Bytes(), &responseUser)
-	assert.NoError(t, err)
-
-	assert.Equal(t, userEntity.Login, responseUser.Login)
+	return mockRepo, userHandler, ctx
 }
 
-func TestRegisterUserEndpointErrorExists(t *testing.T) {
-	mockRepo := new(MockUserRepository)
-	ctx := context.Background()
-	vld.InitValidator(ctx)
+func TestRegisterUserEndpoint(t *testing.T) {
+	mockRepo, userHandler, _ := setupTest()
 
-	userUseCase := useCase.NewUserUseCase(ctx, mockRepo)
+	nowDatetime := time.Now()
+	userEntity := entity.User{ID: 1, Login: "test_user", Password: "test_pwd", CreatedAt: nowDatetime, UpdatedAt: nowDatetime}
+	userVM := vmUser.UserVMFromEnity(&userEntity)
+	userVMBytes, _ := json.Marshal(userVM)
 
-	userHandler := handler.NewUserHandler(userUseCase)
+	tests := []struct {
+		name               string
+		requestData        dtoUser.LoginAndPassword
+		mockSetup          func()
+		expectedStatusCode int
+		expectedResponse   string
+	}{
+		{
+			name: "Success",
+			requestData: dtoUser.LoginAndPassword{
+				Login: "test_user", Password: "test_pwd",
+			},
+			mockSetup: func() {
+				mockRepo.On("Find", "test_user").Return((*entity.User)(nil), errors.New("user not found"))
+				mockRepo.On("Create", mock.AnythingOfType("entity.User")).Return(&userEntity, nil)
+			},
+			expectedStatusCode: http.StatusCreated,
+			expectedResponse:   string(userVMBytes),
+		},
+		{
+			name: "User already exists",
+			requestData: dtoUser.LoginAndPassword{
+				Login: "test_user", Password: "test_pwd",
+			},
+			mockSetup: func() {
+				mockRepo.On("Find", "test_user").Return(&userEntity, nil)
+			},
+			expectedStatusCode: http.StatusUnprocessableEntity,
+			expectedResponse:   `{"message":"user_already_exists","status":422,"code":0}`,
+		},
+		{
+			name: "Missing login",
+			requestData: dtoUser.LoginAndPassword{
+				Login: "", Password: "test_pwd",
+			},
+			mockSetup:          func() {},
+			expectedStatusCode: http.StatusUnprocessableEntity,
+			expectedResponse:   `{"message":"Login is a required field","status":422,"code":0}`,
+		},
+		{
+			name: "Missing Password",
+			requestData: dtoUser.LoginAndPassword{
+				Login: "test_user", Password: "",
+			},
+			mockSetup:          func() {},
+			expectedStatusCode: http.StatusUnprocessableEntity,
+			expectedResponse:   `{"message":"Password is a required field","status":422,"code":0}`,
+		},
+	}
 
-	userEntity := entity.User{ID: 1, Login: "test_user", Password: "test_pwd", CreatedAt: time.Now(), UpdatedAt: time.Now()}
-	mockRepo.On("Create", mock.AnythingOfType("entity.User")).Return(&userEntity, nil)
-	mockRepo.On("Find", userEntity.Login).Return(&userEntity, nil)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockRepo.ExpectedCalls = nil // Очищаем вызовы перед тестом
+			tt.mockSetup()
 
-	dtoForRequest := dtoUser.LoginAndPassword{Login: "test_user", Password: "test_pwd"}
-	requestBody, _ := json.Marshal(dtoForRequest)
-	req := httptest.NewRequest("POST", "/api/auth/register", bytes.NewReader(requestBody))
-	req.Header.Set("Content-Type", "application/json")
+			requestBody, _ := json.Marshal(tt.requestData)
+			req := httptest.NewRequest("POST", "/api/auth/register", bytes.NewReader(requestBody))
+			req.Header.Set("Content-Type", "application/json")
 
-	rr := httptest.NewRecorder()
-	userHandler.Create(rr, req)
+			rr := httptest.NewRecorder()
+			userHandler.Create(rr, req)
 
-	assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
-
-	expectedResponse := `{"message":"user_already_exists","status":422,"code":0}`
-	assert.JSONEq(t, expectedResponse, rr.Body.String())
+			assert.Equal(t, tt.expectedStatusCode, rr.Code)
+			assert.JSONEq(t, tt.expectedResponse, rr.Body.String())
+		})
+	}
 }
 
-func TestRegisterUserEndpointErrorMissLogin(t *testing.T) {
-	mockRepo := new(MockUserRepository)
-	ctx := context.Background()
-	vld.InitValidator(ctx)
+func TestLoginEndpoint(t *testing.T) {
+	mockRepo, userHandler, _ := setupTest()
 
-	userUseCase := useCase.NewUserUseCase(ctx, mockRepo)
+	expiredToken := uint32(time.Now().Add(4 * time.Hour).Unix())
+	userTokenEntity := entity.UserToken{
+		UserId:       1,
+		Token:        "token_string_sdjhfgasdjfgasjdgfasjasdgvhajkadhsdnjhsdnjhsfnjsdfg",
+		RefreshToken: "refresh_token_ksdjgjasdbghjasgjasghdsfhasdhadhsdfnjhsnjh",
+		ExpiredTo:    expiredToken,
+	}
+	userTokenVM := vmUser.UserTokenVMFromEnity(&userTokenEntity)
+	userTokenVMBytes, _ := json.Marshal(userTokenVM)
 
-	userHandler := handler.NewUserHandler(userUseCase)
+	testPasswordHash, _ := bcrypt.GenerateFromPassword([]byte("test_pwd"), 11)
 
-	dtoForRequest := dtoUser.LoginAndPassword{Login: "", Password: "test_pwd"}
-	requestBody, _ := json.Marshal(dtoForRequest)
-	req := httptest.NewRequest("POST", "/api/auth/register", bytes.NewReader(requestBody))
-	req.Header.Set("Content-Type", "application/json")
+	nowDatetime := time.Now()
+	userEntity := entity.User{
+		ID:        1,
+		Login:     "test_user",
+		Password:  string(testPasswordHash),
+		CreatedAt: nowDatetime,
+		UpdatedAt: nowDatetime,
+	}
 
-	rr := httptest.NewRecorder()
-	userHandler.Create(rr, req)
+	tests := []struct {
+		name               string
+		requestData        dtoUser.LoginAndPassword
+		mockSetup          func()
+		expectedStatusCode int
+		expectedResponse   string
+	}{
+		{
+			name: "Success",
+			requestData: dtoUser.LoginAndPassword{
+				Login: "test_user", Password: "test_pwd",
+			},
+			mockSetup: func() {
+				mockRepo.On("Find", "test_user").Return(&userEntity, nil)
+				mockRepo.On("FindUserToken", mock.Anything).Return((*entity.UserToken)(nil), pgx.ErrNoRows)
+				mockRepo.On("SetUserToken", mock.AnythingOfType("entity.UserToken")).Return(&userTokenEntity, nil)
+			},
+			expectedStatusCode: http.StatusOK,
+			expectedResponse:   string(userTokenVMBytes),
+		},
+		{
+			name: "Wrong Password",
+			requestData: dtoUser.LoginAndPassword{
+				Login: "test_user", Password: "test_pwdd",
+			},
+			mockSetup: func() {
+				mockRepo.On("Find", "test_user").Return(&userEntity, nil)
+				mockRepo.On("FindUserToken", mock.Anything).Return((*entity.UserToken)(nil), pgx.ErrNoRows)
+			},
+			expectedStatusCode: http.StatusUnprocessableEntity,
+			expectedResponse:   `{"message":"incorrect_username_or_password","status":422,"code":0}`,
+		},
+		{
+			name: "Empty Password",
+			requestData: dtoUser.LoginAndPassword{
+				Login: "test_user", Password: "",
+			},
+			mockSetup: func() {
+				mockRepo.On("Find", "test_user").Return(&userEntity, nil)
+				mockRepo.On("FindUserToken", mock.Anything).Return((*entity.UserToken)(nil), pgx.ErrNoRows)
+			},
+			expectedStatusCode: http.StatusUnprocessableEntity,
+			expectedResponse:   `{"message":"Password is a required field","status":422,"code":0}`,
+		},
+		{
+			name: "Empty Login",
+			requestData: dtoUser.LoginAndPassword{
+				Login: "", Password: "test_pwd",
+			},
+			mockSetup: func() {
+				mockRepo.On("Find", "test_user").Return(&userEntity, nil)
+				mockRepo.On("FindUserToken", mock.Anything).Return((*entity.UserToken)(nil), pgx.ErrNoRows)
+			},
+			expectedStatusCode: http.StatusUnprocessableEntity,
+			expectedResponse:   `{"message":"Login is a required field","status":422,"code":0}`,
+		},
+	}
 
-	assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockRepo.ExpectedCalls = nil
+			tt.mockSetup()
 
-	expectedResponse := `{"message":"Login is a required field","status":422,"code":0}`
-	assert.JSONEq(t, expectedResponse, rr.Body.String())
+			requestBody, _ := json.Marshal(tt.requestData)
+			req := httptest.NewRequest("POST", "/api/auth/login", bytes.NewReader(requestBody))
+			req.Header.Set("Content-Type", "application/json")
+
+			rr := httptest.NewRecorder()
+			userHandler.Login(rr, req)
+
+			assert.Equal(t, tt.expectedStatusCode, rr.Code)
+			assert.JSONEq(t, tt.expectedResponse, rr.Body.String())
+		})
+	}
 }
 
-func TestRegisterUserEndpointErrorMissPassword(t *testing.T) {
-	mockRepo := new(MockUserRepository)
-	ctx := context.Background()
-	vld.InitValidator(ctx)
+func TestRefreshTokenEndpoint(t *testing.T) {
+	mockRepo, userHandler, _ := setupTest()
 
-	userUseCase := useCase.NewUserUseCase(ctx, mockRepo)
+	expiredToken := uint32(time.Now().Add(4 * time.Hour).Unix())
+	userTokenEntity := entity.UserToken{
+		UserId:       1,
+		Token:        "token_string_sdjhfgasdjfgasjdgfasjasdgvhajkadhsdnjhsdnjhsfnjsdfg",
+		RefreshToken: "refresh_token_ksdjgjasdbghjasgjasghdsfhasdhadhsdfnjhsnjh",
+		ExpiredTo:    expiredToken,
+	}
+	userTokenVM := vmUser.UserTokenVMFromEnity(&userTokenEntity)
+	userTokenVMBytes, _ := json.Marshal(userTokenVM)
 
-	userHandler := handler.NewUserHandler(userUseCase)
+	tests := []struct {
+		name               string
+		requestData        dtoUser.RefreshToken
+		mockSetup          func()
+		expectedStatusCode int
+		expectedResponse   string
+	}{
+		{
+			name: "Success",
+			requestData: dtoUser.RefreshToken{
+				Token:        "token_string_sdjhfgasdjfgasjdgfasjasdgvhajkadhsdnjhsdnjhsfnjsdfg",
+				RefreshToken: "refresh_token_ksdjgjasdbghjasgjasghdsfhasdhadhsdfnjhsnjh",
+			},
+			mockSetup: func() {
+				mockRepo.On("FindUserToken", mock.Anything).Return(&userTokenEntity, nil).Once()
+				mockRepo.On("FindUserToken", mock.Anything).Return((*entity.UserToken)(nil), pgx.ErrNoRows).Once()
+				mockRepo.On("SetUserToken", mock.AnythingOfType("entity.UserToken")).Return(&userTokenEntity, nil)
+			},
+			expectedStatusCode: http.StatusOK,
+			expectedResponse:   string(userTokenVMBytes),
+		},
+		{
+			name: "Not Found Token",
+			requestData: dtoUser.RefreshToken{
+				Token:        "token_string_sdjhfgasdjfgasjdgfasjasdgvhajkadhsdnjhsdnjhsfnjsdfg",
+				RefreshToken: "refresh_token_ksdjgjasdbghjasgjasghdsfhasdhadhsdfnjhsnjh",
+			},
+			mockSetup: func() {
+				mockRepo.On("FindUserToken", mock.Anything).Return((*entity.UserToken)(nil), pgx.ErrNoRows).Once()
+				mockRepo.On("SetUserToken", mock.AnythingOfType("entity.UserToken")).Return(&userTokenEntity, nil)
+			},
+			expectedStatusCode: http.StatusUnprocessableEntity,
+			expectedResponse:   `{"message":"refresh_token_not_found","status":422,"code":0}`,
+		},
+		{
+			name: "Wrong Refresh Token",
+			requestData: dtoUser.RefreshToken{
+				Token:        "token_string_sdjhfgasdjfgasjdgfasjasdgvhajkadhsdnjhsdnjhsfnjsdfg",
+				RefreshToken: "refresh_token_ksdjgjasdbghjasgjasghdsfhasdhadhsdfnjhsnjhh",
+			},
+			mockSetup: func() {
+				mockRepo.On("FindUserToken", mock.Anything).Return(&userTokenEntity, nil).Once()
+			},
+			expectedStatusCode: http.StatusUnprocessableEntity,
+			expectedResponse:   `{"message":"refresh_token_not_found","status":422,"code":0}`,
+		},
+	}
 
-	dtoForRequest := dtoUser.LoginAndPassword{Login: "test_user", Password: ""}
-	requestBody, _ := json.Marshal(dtoForRequest)
-	req := httptest.NewRequest("POST", "/api/auth/register", bytes.NewReader(requestBody))
-	req.Header.Set("Content-Type", "application/json")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockRepo.ExpectedCalls = nil
+			tt.mockSetup()
 
-	rr := httptest.NewRecorder()
-	userHandler.Create(rr, req)
+			requestBody, _ := json.Marshal(tt.requestData)
+			req := httptest.NewRequest("POST", "/api/auth/refresh-token", bytes.NewReader(requestBody))
+			req.Header.Set("Content-Type", "application/json")
 
-	assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
+			rr := httptest.NewRecorder()
+			userHandler.RefreshToken(rr, req)
 
-	expectedResponse := `{"message":"Password is a required field","status":422,"code":0}`
-	assert.JSONEq(t, expectedResponse, rr.Body.String())
+			assert.Equal(t, tt.expectedStatusCode, rr.Code)
+			assert.JSONEq(t, tt.expectedResponse, rr.Body.String())
+		})
+	}
 }
