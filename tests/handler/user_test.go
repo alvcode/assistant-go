@@ -35,6 +35,11 @@ func (m *MockUserRepository) Find(login string) (*entity.User, error) {
 	return args.Get(0).(*entity.User), args.Error(1)
 }
 
+func (m *MockUserRepository) FindById(id int) (*entity.User, error) {
+	args := m.Called(id)
+	return args.Get(0).(*entity.User), args.Error(1)
+}
+
 func (m *MockUserRepository) FindUserToken(token string) (*entity.UserToken, error) {
 	args := m.Called(token)
 	return args.Get(0).(*entity.UserToken), args.Error(1)
