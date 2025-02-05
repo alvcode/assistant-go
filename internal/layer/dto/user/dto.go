@@ -29,3 +29,15 @@ func (dto *RefreshToken) Validate(lang string) error {
 	}
 	return nil
 }
+
+type Token struct {
+	Token string `json:"token" validate:"required,min=50,max=100"`
+}
+
+func (dto *Token) Validate(lang string) error {
+	err := vld.Validate.Struct(dto)
+	if err != nil {
+		return vld.TextFromFirstError(err, lang)
+	}
+	return nil
+}

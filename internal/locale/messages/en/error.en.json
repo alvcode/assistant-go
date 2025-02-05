@@ -3,5 +3,6 @@
   "user_already_exists": "User already exists",
   "unexpected_database_error": "Unexpected database error",
   "incorrect_username_or_password": "Incorrect username or password entered",
-  "refresh_token_not_found": "Refresh token not found"
+  "refresh_token_not_found": "Refresh token not found",
+  "unauthorized": "You are unauthorized"
 }

@@ -29,6 +29,9 @@ func New(cfg *config.Config, db *pgxpool.Pool, router *httprouter.Router) *Init 
 
 func (controller *Init) SetRoutes(ctx context.Context) error {
 	logging.GetLogger(ctx).Println("swagger init")
+
+	handler.InitMiddleware(ctx, controller.db)
+
 	controller.router.Handler(http.MethodGet, "/swagger", http.RedirectHandler("/swagger/index.html", http.StatusMovedPermanently))
 	controller.router.Handler(http.MethodGet, "/swagger/*any", httpSwagger.WrapHandler)
 

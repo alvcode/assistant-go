@@ -9,6 +9,7 @@ import (
 type UserRepository interface {
 	Create(in entity.User) (*entity.User, error)
 	Find(login string) (*entity.User, error)
+	FindById(id int) (*entity.User, error)
 	FindUserToken(token string) (*entity.UserToken, error)
 	SetUserToken(in entity.UserToken) (*entity.UserToken, error)
 }
@@ -41,6 +42,18 @@ func (ur *userRepository) Find(login string) (*entity.User, error) {
 	query := `SELECT id, login, password, created_at, updated_at FROM users WHERE login = $1`
 
 	row := ur.db.QueryRow(ur.ctx, query, login)
+
+	var user entity.User
+	if err := row.Scan(&user.ID, &user.Login, &user.Password, &user.CreatedAt, &user.UpdatedAt); err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (ur *userRepository) FindById(id int) (*entity.User, error) {
+	query := `SELECT id, login, password, created_at, updated_at FROM users WHERE id = $1`
+
+	row := ur.db.QueryRow(ur.ctx, query, id)
 
 	var user entity.User
 	if err := row.Scan(&user.ID, &user.Login, &user.Password, &user.CreatedAt, &user.UpdatedAt); err != nil {

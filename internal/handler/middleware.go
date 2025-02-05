@@ -1,12 +1,26 @@
 package handler
 
 import (
+	dtoUser "assistant-go/internal/layer/dto/user"
+	"assistant-go/internal/layer/repository"
 	"assistant-go/internal/locale"
 	"context"
+	"errors"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"net/http"
+	"strings"
+	"time"
 )
 
-// Middleware константы
+var userRepository repository.UserRepository
+
+const UserContextKey = "user"
+
+func InitMiddleware(ctx context.Context, db *pgxpool.Pool) {
+	userRepository = repository.NewUserRepository(ctx, db)
+}
+
 const (
 	LocaleMW = "LocaleMW"
 	AuthMW   = "AuthMW"
@@ -42,23 +56,53 @@ func LocaleMiddleware(next http.HandlerFunc) http.HandlerFunc {
 
 func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		token := r.Header.Get("Authorization")
-		if token == "" {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		langRequest := locale.GetLangFromContext(r.Context())
+
+		header := r.Header.Get("Authorization")
+		if header == "" {
+			SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
 			return
 		}
-		r = r.WithContext(context.WithValue(r.Context(), "user", 1))
-		next.ServeHTTP(w, r)
+		const prefix = "Bearer "
+		if !strings.HasPrefix(header, prefix) {
+			SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
+			return
+		}
+
+		token := strings.TrimPrefix(header, prefix)
+		dtoUserToken := dtoUser.Token{Token: token}
+
+		if err := dtoUserToken.Validate(langRequest); err != nil {
+			SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
+			return
+		}
+
+		userTokenEntity, err := userRepository.FindUserToken(dtoUserToken.Token)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
+				return
+			}
+			SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
+			return
+		}
+
+		if userTokenEntity.ExpiredTo < uint32(time.Now().Unix()) {
+			SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
+			return
+		}
+
+		userEntity, err := userRepository.FindById(int(userTokenEntity.UserId))
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
+				return
+			}
+			SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), UserContextKey, userEntity)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	}
-	//return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	//	token := r.Header.Get("Authorization")
-	//	if token == "" {
-	//		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-	//		return
-	//	}
-	//	// Здесь логика проверки токена и извлечения пользователя
-	//	// user := parseToken(token)
-	//	// r = r.WithContext(context.WithValue(r.Context(), "user", user))
-	//	next.ServeHTTP(w, r)
-	//})
 }
