@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"assistant-go/internal/layer/entity"
 	"encoding/json"
+	"errors"
 	"net/http"
 )
 
@@ -33,4 +35,12 @@ func SendResponse(w http.ResponseWriter, status int, response interface{}) {
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		SendErrorResponse(w, "Failed to encode response", http.StatusInternalServerError, 0)
 	}
+}
+
+func GetAuthUser(r *http.Request) (*entity.User, error) {
+	userEntity, ok := r.Context().Value(UserContextKey).(*entity.User)
+	if !ok {
+		return nil, errors.New("auth user not found")
+	}
+	return userEntity, nil
 }

@@ -4,11 +4,14 @@ import (
 	dtoNoteCategory "assistant-go/internal/layer/dto/noteCategory"
 	"assistant-go/internal/layer/entity"
 	"assistant-go/internal/layer/repository"
+	"assistant-go/internal/locale"
+	"assistant-go/internal/logging"
 	"context"
+	"errors"
 )
 
 type NoteCategoryUseCase interface {
-	Create(in dtoNoteCategory.Create, lang string) (*entity.NoteCategory, error)
+	Create(in dtoNoteCategory.Create, userEntity *entity.User, lang string) (*entity.NoteCategory, error)
 }
 
 type noteCategoryUseCase struct {
@@ -23,6 +26,21 @@ func NewNoteCategoryUseCase(ctx context.Context, noteCategoryRepository reposito
 	}
 }
 
-func (uc *noteCategoryUseCase) Create(in dtoNoteCategory.Create, lang string) (*entity.NoteCategory, error) {
-	return nil, nil
+func (uc *noteCategoryUseCase) Create(
+	in dtoNoteCategory.Create,
+	userEntity *entity.User,
+	lang string,
+) (*entity.NoteCategory, error) {
+	noteCategoryEntity := entity.NoteCategory{
+		UserId:   userEntity.ID,
+		Name:     in.Name,
+		ParentId: in.ParentId,
+	}
+
+	data, err := uc.noteCategoryRepository.Create(noteCategoryEntity)
+	if err != nil {
+		logging.GetLogger(uc.ctx).Error(err)
+		return nil, errors.New(locale.T(lang, "unexpected_database_error"))
+	}
+	return data, nil
 }

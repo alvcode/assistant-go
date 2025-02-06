@@ -34,7 +34,7 @@ var MapMiddleware = map[string]Middleware{
 type Middleware func(http.HandlerFunc) http.HandlerFunc
 
 func ApplyMiddleware(h http.HandlerFunc, middlewares ...Middleware) http.HandlerFunc {
-	for i := 0; i < len(middlewares); i++ {
+	for i := len(middlewares) - 1; i >= 0; i-- {
 		h = middlewares[i](h)
 	}
 	return h
@@ -103,6 +103,6 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		}
 
 		ctx := context.WithValue(r.Context(), UserContextKey, userEntity)
-		next.ServeHTTP(w, r.WithContext(ctx))
+		next(w, r.WithContext(ctx))
 	}
 }

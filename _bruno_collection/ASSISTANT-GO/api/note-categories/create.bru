@@ -6,10 +6,13 @@ meta {
 
 post {
   url: {{domain}}/api/notes/categories
-  body: none
-  auth: bearer
+  body: json
+  auth: inherit
 }
 
-auth:bearer {
-  token: xXf781B5PdfN6ub-5CGk1c7KzRX7V8wWJ6Vfv6414W7yA8WCotNrx2CdGNyZn43F
+body:json {
+  {
+    "name": "Личные",
+    "parent_id": 2
+  }
 }

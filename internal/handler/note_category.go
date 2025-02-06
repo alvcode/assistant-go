@@ -1,11 +1,11 @@
 package handler
 
 import (
-	dtoNoteCategory "assistant-go/internal/layer/dto/noteCategory"
-	"assistant-go/internal/layer/entity"
+	"assistant-go/internal/layer/dto/noteCategory"
 	"assistant-go/internal/layer/useCase"
 	"assistant-go/internal/locale"
 	"encoding/json"
+	"fmt"
 	"net/http"
 )
 
@@ -23,19 +23,27 @@ func (h *NoteCategoryHandler) Create(w http.ResponseWriter, r *http.Request) {
 	langRequest := locale.GetLangFromContext(r.Context())
 	var createNoteCategoryDto dtoNoteCategory.Create
 
-	userEntity, ok := r.Context().Value(UserContextKey).(*entity.User)
-	if !ok {
+	authUser, err := GetAuthUser(r)
+	if err != nil {
 		SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
 		return
 	}
 
-	SendErrorResponse(w, "im from handler. user login: "+userEntity.Login, http.StatusBadRequest, 0)
-	return
-
-	err := json.NewDecoder(r.Body).Decode(&createNoteCategoryDto)
+	err = json.NewDecoder(r.Body).Decode(&createNoteCategoryDto)
 	if err != nil {
 		SendErrorResponse(w, locale.T(langRequest, "error_reading_request_body"), http.StatusBadRequest, 0)
 		return
 	}
-	// TODO: продолжить...
+
+	if err := createNoteCategoryDto.Validate(langRequest); err != nil {
+		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
+		return
+	}
+
+	entity, err := h.useCase.Create(createNoteCategoryDto, authUser, langRequest)
+	if err != nil {
+		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
+		return
+	}
+	SendResponse(w, http.StatusCreated, entity)
 }

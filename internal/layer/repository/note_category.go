@@ -30,6 +30,5 @@ func (ur *noteCategoryRepository) Create(in entity.NoteCategory) (*entity.NoteCa
 	if err := row.Scan(&in.ID); err != nil {
 		return nil, err
 	}
-
 	return &in, nil
 }
