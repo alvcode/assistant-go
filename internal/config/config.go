@@ -39,13 +39,13 @@ type Database struct {
 }
 
 type Cors struct {
-	AllowedMethods     []string `env:"CORS_ALLOWED_METHODS" env-required:"true"`
-	AllowedOrigins     []string `env:"CORS_ALLOWED_ORIGINS" env-required:"true"`
-	AllowedHeaders     []string `env:"CORS_ALLOWED_HEADERS" env-required:"true"`
-	AllowCredentials   bool     `env:"CORS_ALLOW_CREDENTIALS" env-required:"true"`
-	OptionsPassthrough bool     `env:"CORS_OPTIONS_PASSTHROUGH" env-required:"true"`
-	ExposedHeaders     []string `env:"CORS_EXPOSED_HEADERS" env-required:"true"`
-	Debug              bool     `env:"CORS_DEBUG" env-default:"false"`
+	AllowedMethods     string `env:"CORS_ALLOWED_METHODS" env-required:"true"`
+	AllowedOrigins     string `env:"CORS_ALLOWED_ORIGINS" env-required:"true"`
+	AllowedHeaders     string `env:"CORS_ALLOWED_HEADERS" env-required:"true"`
+	AllowCredentials   bool   `env:"CORS_ALLOW_CREDENTIALS" env-required:"true"`
+	OptionsPassthrough bool   `env:"CORS_OPTIONS_PASSTHROUGH" env-required:"true"`
+	ExposedHeaders     string `env:"CORS_EXPOSED_HEADERS" env-required:"true"`
+	Debug              bool   `env:"CORS_DEBUG" env-default:"false"`
 }
 
 const configFilePath = ".env"

@@ -14,6 +14,7 @@ import (
 	"golang.org/x/sync/errgroup"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	_ "assistant-go/swagger"
@@ -70,12 +71,12 @@ func (a *App) startHTTP(ctx context.Context) error {
 	logging.GetLogger(ctx).Printf("CORS: %+v", a.cfg.Cors)
 
 	c := cors.New(cors.Options{
-		AllowedMethods:     a.cfg.Cors.AllowedMethods,
-		AllowedOrigins:     a.cfg.Cors.AllowedOrigins,
-		AllowedHeaders:     a.cfg.Cors.AllowedHeaders,
+		AllowedMethods:     strings.Split(a.cfg.Cors.AllowedMethods, ","),
+		AllowedOrigins:     strings.Split(a.cfg.Cors.AllowedOrigins, ","),
+		AllowedHeaders:     strings.Split(a.cfg.Cors.AllowedHeaders, ","),
 		AllowCredentials:   a.cfg.Cors.AllowCredentials,
 		OptionsPassthrough: a.cfg.Cors.OptionsPassthrough,
-		ExposedHeaders:     a.cfg.Cors.ExposedHeaders,
+		ExposedHeaders:     strings.Split(a.cfg.Cors.ExposedHeaders, ","),
 		Debug:              a.cfg.Cors.Debug,
 	})
 

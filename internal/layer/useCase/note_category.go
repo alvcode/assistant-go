@@ -12,6 +12,7 @@ import (
 
 type NoteCategoryUseCase interface {
 	Create(in dtoNoteCategory.Create, userEntity *entity.User, lang string) (*entity.NoteCategory, error)
+	FindAll(userId uint32, lang string) ([]*entity.NoteCategory, error)
 }
 
 type noteCategoryUseCase struct {
@@ -38,6 +39,15 @@ func (uc *noteCategoryUseCase) Create(
 	}
 
 	data, err := uc.noteCategoryRepository.Create(noteCategoryEntity)
+	if err != nil {
+		logging.GetLogger(uc.ctx).Error(err)
+		return nil, errors.New(locale.T(lang, "unexpected_database_error"))
+	}
+	return data, nil
+}
+
+func (uc *noteCategoryUseCase) FindAll(userId uint32, lang string) ([]*entity.NoteCategory, error) {
+	data, err := uc.noteCategoryRepository.FindAll(userId)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
 		return nil, errors.New(locale.T(lang, "unexpected_database_error"))

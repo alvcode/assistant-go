@@ -76,4 +76,9 @@ func (controller *Init) setNotesCategories(ctx context.Context) {
 		"/api/notes/categories",
 		handler.BuildHandler(noteCategoryHandler.Create, handler.LocaleMW, handler.AuthMW),
 	)
+	controller.router.Handler(
+		http.MethodGet,
+		"/api/notes/categories",
+		handler.BuildHandler(noteCategoryHandler.GetAll, handler.LocaleMW, handler.AuthMW),
+	)
 }
