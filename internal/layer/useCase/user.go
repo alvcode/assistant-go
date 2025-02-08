@@ -74,9 +74,13 @@ func (uc *userUseCase) Login(in dtoUser.LoginAndPassword, lang string) (*entity.
 		return nil, errors.New(locale.T(lang, "incorrect_username_or_password"))
 	}
 
-	userTokenEntity := uc.generateTokenPair(int(existingUser.ID))
+	userTokenEntity, err := uc.generateTokenPair(int(existingUser.ID))
+	if err != nil {
+		logging.GetLogger(uc.ctx).Error(err)
+		return nil, errors.New(locale.T(lang, "unexpected_error"))
+	}
 
-	data, err := uc.userRepository.SetUserToken(userTokenEntity)
+	data, err := uc.userRepository.SetUserToken(*userTokenEntity)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
 		return nil, errors.New(locale.T(lang, "unexpected_database_error"))
@@ -96,8 +100,12 @@ func (uc *userUseCase) RefreshToken(in dtoUser.RefreshToken, lang string) (*enti
 		return nil, errors.New(locale.T(lang, "refresh_token_not_found"))
 	}
 
-	userTokenEntity := uc.generateTokenPair(int(existingToken.UserId))
-	data, err := uc.userRepository.SetUserToken(userTokenEntity)
+	userTokenEntity, err := uc.generateTokenPair(int(existingToken.UserId))
+	if err != nil {
+		logging.GetLogger(uc.ctx).Error(err)
+		return nil, errors.New(locale.T(lang, "unexpected_error"))
+	}
+	data, err := uc.userRepository.SetUserToken(*userTokenEntity)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
 		return nil, errors.New(locale.T(lang, "unexpected_database_error"))
@@ -105,16 +113,22 @@ func (uc *userUseCase) RefreshToken(in dtoUser.RefreshToken, lang string) (*enti
 	return data, nil
 }
 
-func (uc *userUseCase) generateTokenPair(userId int) entity.UserToken {
-	var userTokenEntity entity.UserToken
+func (uc *userUseCase) generateTokenPair(userId int) (*entity.UserToken, error) {
+	var userTokenEntity *entity.UserToken
 	for {
-		token := generateAPIToken()
-		refreshToken := generateAPIToken()
+		token, err := generateAPIToken()
+		if err != nil {
+			return nil, err
+		}
+		refreshToken, err := generateAPIToken()
+		if err != nil {
+			return nil, err
+		}
 
-		_, err := uc.userRepository.FindUserToken(token)
+		_, err = uc.userRepository.FindUserToken(token)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				userTokenEntity = entity.UserToken{
+				userTokenEntity = &entity.UserToken{
 					UserId:       uint32(userId),
 					Token:        token,
 					RefreshToken: refreshToken,
@@ -124,14 +138,14 @@ func (uc *userUseCase) generateTokenPair(userId int) entity.UserToken {
 			}
 		}
 	}
-	return userTokenEntity
+	return userTokenEntity, nil
 }
 
-func generateAPIToken() string {
+func generateAPIToken() (string, error) {
 	bytes := make([]byte, 48)
 	_, err := rand.Read(bytes)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
-	return base64.URLEncoding.EncodeToString(bytes)
+	return base64.URLEncoding.EncodeToString(bytes), nil
 }
