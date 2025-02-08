@@ -188,7 +188,6 @@ func TestLoginEndpoint(t *testing.T) {
 			},
 			mockSetup: func() {
 				mockRepo.On("Find", "test_user").Return(&userEntity, nil)
-				mockRepo.On("FindUserToken", mock.Anything).Return((*entity.UserToken)(nil), pgx.ErrNoRows)
 			},
 			expectedStatusCode: http.StatusUnprocessableEntity,
 			expectedResponse:   `{"message":"incorrect_username_or_password","status":422,"code":0}`,
