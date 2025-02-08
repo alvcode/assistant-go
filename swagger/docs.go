@@ -30,6 +30,22 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/api/user/register": {
+            "post": {
+                "tags": [
+                    "Metrics"
+                ],
+                "summary": "Heartbeat metric",
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    }
+                }
+            }
         }
     }
 }`

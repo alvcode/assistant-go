@@ -2,7 +2,7 @@ package app
 
 import (
 	"assistant-go/internal/config"
-	"assistant-go/internal/handler"
+	"assistant-go/internal/controller"
 	"assistant-go/internal/logging"
 	"assistant-go/internal/storage/postgres"
 	"context"
@@ -11,10 +11,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/julienschmidt/httprouter"
 	"github.com/rs/cors"
-	httpSwagger "github.com/swaggo/http-swagger"
 	"golang.org/x/sync/errgroup"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	_ "assistant-go/swagger"
@@ -30,13 +30,6 @@ type App struct {
 func NewApp(ctx context.Context, cfg *config.Config) (App, error) {
 	logging.GetLogger(ctx).Println("router init")
 	router := httprouter.New()
-
-	logging.GetLogger(ctx).Println("swagger init")
-	router.Handler(http.MethodGet, "/swagger", http.RedirectHandler("/swagger/index.html", http.StatusMovedPermanently))
-	router.Handler(http.MethodGet, "/swagger/*any", httpSwagger.WrapHandler)
-
-	heartbeatHandler := handler.HeartbeatHandler{}
-	heartbeatHandler.Register(router)
 
 	pgConfig := postgres.NewPgConfig(cfg.DB.Host, cfg.DB.Port, cfg.DB.Username, cfg.DB.Password, cfg.DB.Database)
 	pgClient, err := postgres.NewClient(ctx, 5, time.Second*5, pgConfig)
@@ -62,6 +55,12 @@ func (a *App) Run(ctx context.Context) error {
 }
 
 func (a *App) startHTTP(ctx context.Context) error {
+	controllerInit := controller.New(a.cfg, a.pgxPool, a.router)
+	errRoute := controllerInit.SetRoutes(ctx)
+	if errRoute != nil {
+		logging.GetLogger(ctx).WithError(errRoute).Fatal("failed to init routes")
+	}
+
 	logging.GetLogger(ctx).Printf("IP: %s, Port: %d", a.cfg.HTTP.Host, a.cfg.HTTP.Port)
 
 	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", a.cfg.HTTP.Host, a.cfg.HTTP.Port))
@@ -72,12 +71,12 @@ func (a *App) startHTTP(ctx context.Context) error {
 	logging.GetLogger(ctx).Printf("CORS: %+v", a.cfg.Cors)
 
 	c := cors.New(cors.Options{
-		AllowedMethods:     a.cfg.Cors.AllowedMethods,
-		AllowedOrigins:     a.cfg.Cors.AllowedOrigins,
-		AllowedHeaders:     a.cfg.Cors.AllowedHeaders,
+		AllowedMethods:     strings.Split(a.cfg.Cors.AllowedMethods, ","),
+		AllowedOrigins:     strings.Split(a.cfg.Cors.AllowedOrigins, ","),
+		AllowedHeaders:     strings.Split(a.cfg.Cors.AllowedHeaders, ","),
 		AllowCredentials:   a.cfg.Cors.AllowCredentials,
 		OptionsPassthrough: a.cfg.Cors.OptionsPassthrough,
-		ExposedHeaders:     a.cfg.Cors.ExposedHeaders,
+		ExposedHeaders:     strings.Split(a.cfg.Cors.ExposedHeaders, ","),
 		Debug:              a.cfg.Cors.Debug,
 	})
 

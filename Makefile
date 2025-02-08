@@ -18,3 +18,9 @@ md-to: # $(timestamp) - откат конкретной миграции. при
 # =======================================================
 swag:
 	swag init -g ./cmd/main.go -o ./swagger
+
+test:
+	go test ./tests/...
+
+test-v:
+	go test ./tests/... -v
