@@ -22,7 +22,7 @@ type Config struct {
 
 type HTTPServer struct {
 	Host         string        `env:"HTTP_HOST" env-default:"localhost"`
-	Port         uint16        `env:"HTTP_PORT" env-default:"8085"`
+	Port         uint16        `env:"HTTP_PORT" env-default:"8083"`
 	Timeout      time.Duration `env:"HTTP_TIMEOUT" env-default:"4s"`
 	IdleTimeout  time.Duration `env:"HTTP_IDLE_TIMEOUT" env-default:"60s"`
 	ReadTimeout  time.Duration `env:"HTTP_READ_TIMEOUT" env-default:"15s"`
