@@ -5,5 +5,6 @@
   "unexpected_error": "Unexpected error",
   "incorrect_username_or_password": "Incorrect username or password entered",
   "refresh_token_not_found": "Refresh token not found",
-  "unauthorized": "You are unauthorized"
+  "unauthorized": "You are unauthorized",
+  "parent_id_of_the_category_not_found": "Parent category not found"
 }

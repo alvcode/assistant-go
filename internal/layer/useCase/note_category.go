@@ -8,6 +8,7 @@ import (
 	"assistant-go/internal/logging"
 	"context"
 	"errors"
+	"github.com/jackc/pgx/v5"
 )
 
 type NoteCategoryUseCase interface {
@@ -36,6 +37,17 @@ func (uc *noteCategoryUseCase) Create(
 		UserId:   userEntity.ID,
 		Name:     in.Name,
 		ParentId: in.ParentId,
+	}
+
+	if in.ParentId != nil {
+		_, err := uc.noteCategoryRepository.FindByIDAndUser(userEntity.ID, *in.ParentId)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return nil, errors.New(locale.T(lang, "parent_id_of_the_category_not_found"))
+			}
+			logging.GetLogger(uc.ctx).Error(err)
+			return nil, errors.New(locale.T(lang, "unexpected_database_error"))
+		}
 	}
 
 	data, err := uc.noteCategoryRepository.Create(noteCategoryEntity)
