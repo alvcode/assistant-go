@@ -9,6 +9,7 @@ import (
 type NoteCategoryRepository interface {
 	Create(in entity.NoteCategory) (*entity.NoteCategory, error)
 	FindAll(userId uint32) ([]*entity.NoteCategory, error)
+	FindByIDAndUser(userId uint32, id uint32) (*entity.NoteCategory, error)
 }
 
 type noteCategoryRepository struct {
@@ -56,4 +57,15 @@ func (ur *noteCategoryRepository) FindAll(userId uint32) ([]*entity.NoteCategory
 	}
 
 	return categories, nil
+}
+
+func (ur *noteCategoryRepository) FindByIDAndUser(userId uint32, id uint32) (*entity.NoteCategory, error) {
+	query := `SELECT * FROM note_categories WHERE user_id = $1 and id = $2`
+	row := ur.db.QueryRow(ur.ctx, query, userId, id)
+
+	var noteCategory entity.NoteCategory
+	if err := row.Scan(&noteCategory.ID, &noteCategory.UserId, &noteCategory.Name, &noteCategory.ParentId); err != nil {
+		return nil, err
+	}
+	return &noteCategory, nil
 }

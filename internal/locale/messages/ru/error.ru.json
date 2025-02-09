@@ -4,5 +4,6 @@
   "unexpected_database_error": "Непредвиденная ошибка базы данных",
   "incorrect_username_or_password": "Неверно введен логин пользователя или пароль",
   "refresh_token_not_found": "Refresh token не найден",
-  "unauthorized": "Вы не авторизованы"
+  "unauthorized": "Вы не авторизованы",
+  "parent_id_of_the_category_not_found": "категория не найдена"
 }
