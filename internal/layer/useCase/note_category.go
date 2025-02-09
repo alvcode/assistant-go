@@ -38,6 +38,21 @@ func (uc *noteCategoryUseCase) Create(
 		ParentId: in.ParentId,
 	}
 
+	existingCategory, err := uc.FindAll(userEntity.ID, lang)
+	if in.ParentId != nil {
+		found := false
+		for _, cat := range existingCategory {
+			if cat.ID == *in.ParentId {
+				found = true
+				continue
+			}
+		}
+		if !found {
+			logging.GetLogger(uc.ctx).Error(err)
+			return nil, errors.New(locale.T(lang, "The parent_id of the category was not found"))
+		}
+	}
+
 	data, err := uc.noteCategoryRepository.Create(noteCategoryEntity)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
