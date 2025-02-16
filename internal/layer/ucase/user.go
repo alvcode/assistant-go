@@ -1,7 +1,7 @@
-package useCase
+package ucase
 
 import (
-	"assistant-go/internal/layer/dto/user"
+	"assistant-go/internal/layer/dto"
 	"assistant-go/internal/layer/entity"
 	"assistant-go/internal/layer/repository"
 	"assistant-go/internal/locale"
@@ -16,9 +16,9 @@ import (
 )
 
 type UserUseCase interface {
-	Create(in dtoUser.LoginAndPassword, lang string) (*entity.User, error)
-	Login(in dtoUser.LoginAndPassword, lang string) (*entity.UserToken, error)
-	RefreshToken(in dtoUser.RefreshToken, lang string) (*entity.UserToken, error)
+	Create(in dto.UserLoginAndPassword, lang string) (*entity.User, error)
+	Login(in dto.UserLoginAndPassword, lang string) (*entity.UserToken, error)
+	RefreshToken(in dto.UserRefreshToken, lang string) (*entity.UserToken, error)
 }
 
 type userUseCase struct {
@@ -33,7 +33,7 @@ func NewUserUseCase(ctx context.Context, userRepository repository.UserRepositor
 	}
 }
 
-func (uc *userUseCase) Create(in dtoUser.LoginAndPassword, lang string) (*entity.User, error) {
+func (uc *userUseCase) Create(in dto.UserLoginAndPassword, lang string) (*entity.User, error) {
 	existingUser, err := uc.userRepository.Find(in.Login)
 	if err == nil && existingUser != nil {
 		return nil, errors.New(locale.T(lang, "user_already_exists"))
@@ -59,7 +59,7 @@ func (uc *userUseCase) Create(in dtoUser.LoginAndPassword, lang string) (*entity
 	return data, nil
 }
 
-func (uc *userUseCase) Login(in dtoUser.LoginAndPassword, lang string) (*entity.UserToken, error) {
+func (uc *userUseCase) Login(in dto.UserLoginAndPassword, lang string) (*entity.UserToken, error) {
 	existingUser, err := uc.userRepository.Find(in.Login)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -88,7 +88,7 @@ func (uc *userUseCase) Login(in dtoUser.LoginAndPassword, lang string) (*entity.
 	return data, nil
 }
 
-func (uc *userUseCase) RefreshToken(in dtoUser.RefreshToken, lang string) (*entity.UserToken, error) {
+func (uc *userUseCase) RefreshToken(in dto.UserRefreshToken, lang string) (*entity.UserToken, error) {
 	existingToken, err := uc.userRepository.FindUserToken(in.Token)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -129,10 +129,10 @@ func (uc *userUseCase) generateTokenPair(userId int) (*entity.UserToken, error) 
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				userTokenEntity = &entity.UserToken{
-					UserId:       uint32(userId),
+					UserId:       userId,
 					Token:        token,
 					RefreshToken: refreshToken,
-					ExpiredTo:    uint32(time.Now().Add(4 * time.Hour).Unix()),
+					ExpiredTo:    int(time.Now().Add(4 * time.Hour).Unix()),
 				}
 				break
 			}

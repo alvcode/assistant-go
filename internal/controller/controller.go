@@ -4,7 +4,7 @@ import (
 	"assistant-go/internal/config"
 	"assistant-go/internal/handler"
 	"assistant-go/internal/layer/repository"
-	"assistant-go/internal/layer/useCase"
+	"assistant-go/internal/layer/ucase"
 	"assistant-go/internal/logging"
 	"context"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -46,7 +46,7 @@ func (controller *Init) SetRoutes(ctx context.Context) error {
 
 func (controller *Init) setUserRoutes(ctx context.Context) {
 	userRepository := repository.NewUserRepository(ctx, controller.db)
-	userUseCase := useCase.NewUserUseCase(ctx, userRepository)
+	userUseCase := ucase.NewUserUseCase(ctx, userRepository)
 	userHandler := handler.NewUserHandler(userUseCase)
 
 	controller.router.Handler(
@@ -68,7 +68,7 @@ func (controller *Init) setUserRoutes(ctx context.Context) {
 
 func (controller *Init) setNotesCategories(ctx context.Context) {
 	noteCategoryRepository := repository.NewNoteCategoryRepository(ctx, controller.db)
-	noteCategoryUseCase := useCase.NewNoteCategoryUseCase(ctx, noteCategoryRepository)
+	noteCategoryUseCase := ucase.NewNoteCategoryUseCase(ctx, noteCategoryRepository)
 	noteCategoryHandler := handler.NewNoteCategoryHandler(noteCategoryUseCase)
 
 	controller.router.Handler(
@@ -80,5 +80,10 @@ func (controller *Init) setNotesCategories(ctx context.Context) {
 		http.MethodGet,
 		"/api/notes/categories",
 		handler.BuildHandler(noteCategoryHandler.GetAll, handler.LocaleMW, handler.AuthMW),
+	)
+	controller.router.Handler(
+		http.MethodDelete,
+		"/api/notes/categories/:id",
+		handler.BuildHandler(noteCategoryHandler.Delete, handler.LocaleMW, handler.AuthMW),
 	)
 }

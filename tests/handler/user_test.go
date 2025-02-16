@@ -4,7 +4,7 @@ import (
 	"assistant-go/internal/handler"
 	dtoUser "assistant-go/internal/layer/dto/user"
 	"assistant-go/internal/layer/entity"
-	"assistant-go/internal/layer/useCase"
+	"assistant-go/internal/layer/ucase"
 	vmUser "assistant-go/internal/layer/viewModel/user"
 	"assistant-go/pkg/vld"
 	"bytes"
@@ -55,7 +55,7 @@ func setupTest() (*MockUserRepository, *handler.UserHandler, context.Context) {
 	ctx := context.Background()
 	vld.InitValidator(ctx)
 
-	userUseCase := useCase.NewUserUseCase(ctx, mockRepo)
+	userUseCase := ucase.NewUserUseCase(ctx, mockRepo)
 	userHandler := handler.NewUserHandler(userUseCase)
 
 	return mockRepo, userHandler, ctx

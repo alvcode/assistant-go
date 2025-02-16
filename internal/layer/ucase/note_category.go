@@ -1,7 +1,7 @@
-package useCase
+package ucase
 
 import (
-	dtoNoteCategory "assistant-go/internal/layer/dto/noteCategory"
+	"assistant-go/internal/layer/dto"
 	"assistant-go/internal/layer/entity"
 	"assistant-go/internal/layer/repository"
 	"assistant-go/internal/locale"
@@ -12,8 +12,9 @@ import (
 )
 
 type NoteCategoryUseCase interface {
-	Create(in dtoNoteCategory.Create, userEntity *entity.User, lang string) (*entity.NoteCategory, error)
-	FindAll(userId uint32, lang string) ([]*entity.NoteCategory, error)
+	Create(in dto.NoteCategoryCreate, userEntity *entity.User, lang string) (*entity.NoteCategory, error)
+	FindAll(userId int, lang string) ([]*entity.NoteCategory, error)
+	Delete(userId int, catId int, lang string) error
 }
 
 type noteCategoryUseCase struct {
@@ -29,7 +30,7 @@ func NewNoteCategoryUseCase(ctx context.Context, noteCategoryRepository reposito
 }
 
 func (uc *noteCategoryUseCase) Create(
-	in dtoNoteCategory.Create,
+	in dto.NoteCategoryCreate,
 	userEntity *entity.User,
 	lang string,
 ) (*entity.NoteCategory, error) {
@@ -58,11 +59,32 @@ func (uc *noteCategoryUseCase) Create(
 	return data, nil
 }
 
-func (uc *noteCategoryUseCase) FindAll(userId uint32, lang string) ([]*entity.NoteCategory, error) {
+func (uc *noteCategoryUseCase) FindAll(userId int, lang string) ([]*entity.NoteCategory, error) {
 	data, err := uc.noteCategoryRepository.FindAll(userId)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
 		return nil, errors.New(locale.T(lang, "unexpected_database_error"))
 	}
 	return data, nil
+}
+
+func (uc *noteCategoryUseCase) Delete(userId int, catId int, lang string) error {
+	user, err := uc.noteCategoryRepository.FindByIDAndUser(userId, catId)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return errors.New(locale.T(lang, "category_not_found"))
+		}
+	}
+	if user.UserId != userId {
+		return errors.New(locale.T(lang, "category_not_found"))
+	}
+
+	// TODO: тут должна быть проверка на наличие заметок внутри категории и ошибка, т.к тогда они потеряются
+
+	err = uc.noteCategoryRepository.DeleteById(catId)
+	if err != nil {
+		logging.GetLogger(uc.ctx).Error(err)
+		return errors.New(locale.T(lang, "unexpected_database_error"))
+	}
+	return nil
 }

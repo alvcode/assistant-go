@@ -8,8 +8,9 @@ import (
 
 type NoteCategoryRepository interface {
 	Create(in entity.NoteCategory) (*entity.NoteCategory, error)
-	FindAll(userId uint32) ([]*entity.NoteCategory, error)
-	FindByIDAndUser(userId uint32, id uint32) (*entity.NoteCategory, error)
+	FindAll(userId int) ([]*entity.NoteCategory, error)
+	FindByIDAndUser(userId int, id int) (*entity.NoteCategory, error)
+	DeleteById(catId int) error
 }
 
 type noteCategoryRepository struct {
@@ -35,7 +36,7 @@ func (ur *noteCategoryRepository) Create(in entity.NoteCategory) (*entity.NoteCa
 	return &in, nil
 }
 
-func (ur *noteCategoryRepository) FindAll(userId uint32) ([]*entity.NoteCategory, error) {
+func (ur *noteCategoryRepository) FindAll(userId int) ([]*entity.NoteCategory, error) {
 	query := `SELECT * FROM note_categories WHERE user_id = $1`
 	rows, err := ur.db.Query(ur.ctx, query, userId)
 	if err != nil {
@@ -59,7 +60,7 @@ func (ur *noteCategoryRepository) FindAll(userId uint32) ([]*entity.NoteCategory
 	return categories, nil
 }
 
-func (ur *noteCategoryRepository) FindByIDAndUser(userId uint32, id uint32) (*entity.NoteCategory, error) {
+func (ur *noteCategoryRepository) FindByIDAndUser(userId int, id int) (*entity.NoteCategory, error) {
 	query := `SELECT * FROM note_categories WHERE user_id = $1 and id = $2`
 	row := ur.db.QueryRow(ur.ctx, query, userId, id)
 
@@ -68,4 +69,13 @@ func (ur *noteCategoryRepository) FindByIDAndUser(userId uint32, id uint32) (*en
 		return nil, err
 	}
 	return &noteCategory, nil
+}
+
+func (ur *noteCategoryRepository) DeleteById(catId int) error {
+	query := `DELETE FROM note_categories WHERE id = $1`
+	_, err := ur.db.Exec(ur.ctx, query, catId)
+	if err != nil {
+		return err
+	}
+	return nil
 }

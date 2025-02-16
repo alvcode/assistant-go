@@ -6,7 +6,7 @@ import (
 )
 
 type User struct {
-	ID        uint32    `json:"id"`
+	ID        int       `json:"id"`
 	Login     string    `json:"login"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -22,10 +22,10 @@ func UserVMFromEnity(entity *entity.User) *User {
 }
 
 type UserToken struct {
-	UserId       uint32 `json:"user_id"`
+	UserId       int    `json:"user_id"`
 	Token        string `json:"token"`
 	RefreshToken string `json:"refresh_token"`
-	ExpiredTo    uint32 `json:"expired_to"`
+	ExpiredTo    int    `json:"expired_to"`
 }
 
 func UserTokenVMFromEnity(entity *entity.UserToken) *UserToken {

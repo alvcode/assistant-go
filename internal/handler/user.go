@@ -1,8 +1,8 @@
 package handler
 
 import (
-	"assistant-go/internal/layer/dto/user"
-	"assistant-go/internal/layer/useCase"
+	"assistant-go/internal/layer/dto"
+	"assistant-go/internal/layer/ucase"
 	"assistant-go/internal/layer/viewModel/user"
 	"assistant-go/internal/locale"
 	"encoding/json"
@@ -11,17 +11,17 @@ import (
 )
 
 type UserHandler struct {
-	useCase useCase.UserUseCase
+	useCase ucase.UserUseCase
 }
 
-func NewUserHandler(useCase useCase.UserUseCase) *UserHandler {
+func NewUserHandler(useCase ucase.UserUseCase) *UserHandler {
 	return &UserHandler{
 		useCase: useCase,
 	}
 }
 
 func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
-	var createUserDto dtoUser.LoginAndPassword
+	var createUserDto dto.UserLoginAndPassword
 	langRequest := locale.GetLangFromContext(r.Context())
 
 	err := json.NewDecoder(r.Body).Decode(&createUserDto)
@@ -44,7 +44,7 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
-	var loginUserDto dtoUser.LoginAndPassword
+	var loginUserDto dto.UserLoginAndPassword
 	langRequest := locale.GetLangFromContext(r.Context())
 
 	err := json.NewDecoder(r.Body).Decode(&loginUserDto)
@@ -67,7 +67,7 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
-	var refreshTokenDto dtoUser.RefreshToken
+	var refreshTokenDto dto.UserRefreshToken
 	langRequest := locale.GetLangFromContext(r.Context())
 
 	err := json.NewDecoder(r.Body).Decode(&refreshTokenDto)

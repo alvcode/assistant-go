@@ -1,7 +1,7 @@
 package handler
 
 import (
-	dtoUser "assistant-go/internal/layer/dto/user"
+	"assistant-go/internal/layer/dto"
 	"assistant-go/internal/layer/repository"
 	"assistant-go/internal/locale"
 	"context"
@@ -70,7 +70,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		}
 
 		token := strings.TrimPrefix(header, prefix)
-		dtoUserToken := dtoUser.Token{Token: token}
+		dtoUserToken := dto.UserToken{Token: token}
 
 		if err := dtoUserToken.Validate(langRequest); err != nil {
 			SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
@@ -87,12 +87,12 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		if userTokenEntity.ExpiredTo < uint32(time.Now().Unix()) {
+		if userTokenEntity.ExpiredTo < int(time.Now().Unix()) {
 			SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
 			return
 		}
 
-		userEntity, err := userRepository.FindById(int(userTokenEntity.UserId))
+		userEntity, err := userRepository.FindById(userTokenEntity.UserId)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
