@@ -2,7 +2,7 @@ package handler
 
 import (
 	"assistant-go/internal/handler"
-	dtoUser "assistant-go/internal/layer/dto/user"
+	"assistant-go/internal/layer/dto"
 	"assistant-go/internal/layer/entity"
 	"assistant-go/internal/layer/ucase"
 	vmUser "assistant-go/internal/layer/viewModel/user"
@@ -71,14 +71,14 @@ func TestRegisterUserEndpoint(t *testing.T) {
 
 	tests := []struct {
 		name               string
-		requestData        dtoUser.LoginAndPassword
+		requestData        dto.UserLoginAndPassword
 		mockSetup          func()
 		expectedStatusCode int
 		expectedResponse   string
 	}{
 		{
 			name: "Success",
-			requestData: dtoUser.LoginAndPassword{
+			requestData: dto.UserLoginAndPassword{
 				Login: "test_user", Password: "test_pwd",
 			},
 			mockSetup: func() {
@@ -90,7 +90,7 @@ func TestRegisterUserEndpoint(t *testing.T) {
 		},
 		{
 			name: "User already exists",
-			requestData: dtoUser.LoginAndPassword{
+			requestData: dto.UserLoginAndPassword{
 				Login: "test_user", Password: "test_pwd",
 			},
 			mockSetup: func() {
@@ -101,7 +101,7 @@ func TestRegisterUserEndpoint(t *testing.T) {
 		},
 		{
 			name: "Missing login",
-			requestData: dtoUser.LoginAndPassword{
+			requestData: dto.UserLoginAndPassword{
 				Login: "", Password: "test_pwd",
 			},
 			mockSetup:          func() {},
@@ -110,7 +110,7 @@ func TestRegisterUserEndpoint(t *testing.T) {
 		},
 		{
 			name: "Missing Password",
-			requestData: dtoUser.LoginAndPassword{
+			requestData: dto.UserLoginAndPassword{
 				Login: "test_user", Password: "",
 			},
 			mockSetup:          func() {},
@@ -140,7 +140,7 @@ func TestRegisterUserEndpoint(t *testing.T) {
 func TestLoginEndpoint(t *testing.T) {
 	mockRepo, userHandler, _ := setupTest()
 
-	expiredToken := uint32(time.Now().Add(4 * time.Hour).Unix())
+	expiredToken := int(time.Now().Add(4 * time.Hour).Unix())
 	userTokenEntity := entity.UserToken{
 		UserId:       1,
 		Token:        "token_string_sdjhfgasdjfgasjdgfasjasdgvhajkadhsdnjhsdnjhsfnjsdfg",
@@ -163,14 +163,14 @@ func TestLoginEndpoint(t *testing.T) {
 
 	tests := []struct {
 		name               string
-		requestData        dtoUser.LoginAndPassword
+		requestData        dto.UserLoginAndPassword
 		mockSetup          func()
 		expectedStatusCode int
 		expectedResponse   string
 	}{
 		{
 			name: "Success",
-			requestData: dtoUser.LoginAndPassword{
+			requestData: dto.UserLoginAndPassword{
 				Login: "test_user", Password: "test_pwd",
 			},
 			mockSetup: func() {
@@ -183,7 +183,7 @@ func TestLoginEndpoint(t *testing.T) {
 		},
 		{
 			name: "Wrong Password",
-			requestData: dtoUser.LoginAndPassword{
+			requestData: dto.UserLoginAndPassword{
 				Login: "test_user", Password: "test_pwdd",
 			},
 			mockSetup: func() {
@@ -194,7 +194,7 @@ func TestLoginEndpoint(t *testing.T) {
 		},
 		{
 			name: "Empty Password",
-			requestData: dtoUser.LoginAndPassword{
+			requestData: dto.UserLoginAndPassword{
 				Login: "test_user", Password: "",
 			},
 			mockSetup: func() {
@@ -206,7 +206,7 @@ func TestLoginEndpoint(t *testing.T) {
 		},
 		{
 			name: "Empty Login",
-			requestData: dtoUser.LoginAndPassword{
+			requestData: dto.UserLoginAndPassword{
 				Login: "", Password: "test_pwd",
 			},
 			mockSetup: func() {
@@ -239,7 +239,7 @@ func TestLoginEndpoint(t *testing.T) {
 func TestRefreshTokenEndpoint(t *testing.T) {
 	mockRepo, userHandler, _ := setupTest()
 
-	expiredToken := uint32(time.Now().Add(4 * time.Hour).Unix())
+	expiredToken := int(time.Now().Add(4 * time.Hour).Unix())
 	userTokenEntity := entity.UserToken{
 		UserId:       1,
 		Token:        "token_string_sdjhfgasdjfgasjdgfasjasdgvhajkadhsdnjhsdnjhsfnjsdfg",
@@ -251,14 +251,14 @@ func TestRefreshTokenEndpoint(t *testing.T) {
 
 	tests := []struct {
 		name               string
-		requestData        dtoUser.RefreshToken
+		requestData        dto.UserRefreshToken
 		mockSetup          func()
 		expectedStatusCode int
 		expectedResponse   string
 	}{
 		{
 			name: "Success",
-			requestData: dtoUser.RefreshToken{
+			requestData: dto.UserRefreshToken{
 				Token:        "token_string_sdjhfgasdjfgasjdgfasjasdgvhajkadhsdnjhsdnjhsfnjsdfg",
 				RefreshToken: "refresh_token_ksdjgjasdbghjasgjasghdsfhasdhadhsdfnjhsnjh",
 			},
@@ -272,7 +272,7 @@ func TestRefreshTokenEndpoint(t *testing.T) {
 		},
 		{
 			name: "Not Found Token",
-			requestData: dtoUser.RefreshToken{
+			requestData: dto.UserRefreshToken{
 				Token:        "token_string_sdjhfgasdjfgasjdgfasjasdgvhajkadhsdnjhsdnjhsfnjsdfg",
 				RefreshToken: "refresh_token_ksdjgjasdbghjasgjasghdsfhasdhadhsdfnjhsnjh",
 			},
@@ -285,7 +285,7 @@ func TestRefreshTokenEndpoint(t *testing.T) {
 		},
 		{
 			name: "Wrong Refresh Token",
-			requestData: dtoUser.RefreshToken{
+			requestData: dto.UserRefreshToken{
 				Token:        "token_string_sdjhfgasdjfgasjdgfasjasdgvhajkadhsdnjhsdnjhsfnjsdfg",
 				RefreshToken: "refresh_token_ksdjgjasdbghjasgjasghdsfhasdhadhsdfnjhsnjhh",
 			},
