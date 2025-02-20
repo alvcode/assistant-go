@@ -87,3 +87,7 @@ func (controller *Init) setNotesCategories(ctx context.Context) {
 		handler.BuildHandler(noteCategoryHandler.Delete, handler.LocaleMW, handler.AuthMW),
 	)
 }
+
+func (controller *Init) setNotes(ctx context.Context) {
+
+}
