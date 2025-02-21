@@ -6,6 +6,21 @@ meta {
 
 post {
   url: {{domain}}/api/notes
-  body: none
+  body: json
   auth: inherit
+}
+
+body:json {
+  {
+    "category_id": 15,
+    "note_blocks": [
+      {
+        "type": "header",
+        "data": {
+          "text": "Title",
+          "level": 2
+        }
+      }
+    ]
+  }
 }

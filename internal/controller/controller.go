@@ -40,6 +40,7 @@ func (controller *Init) SetRoutes(ctx context.Context) error {
 
 	controller.setUserRoutes(ctx)
 	controller.setNotesCategories(ctx)
+	controller.setNotes(ctx)
 
 	return nil
 }
@@ -89,5 +90,14 @@ func (controller *Init) setNotesCategories(ctx context.Context) {
 }
 
 func (controller *Init) setNotes(ctx context.Context) {
+	noteRepository := repository.NewNoteRepository(ctx, controller.db)
+	noteCategoryRepository := repository.NewNoteCategoryRepository(ctx, controller.db)
+	noteUseCase := ucase.NewNoteUseCase(ctx, noteRepository, noteCategoryRepository)
+	noteHandler := handler.NewNoteHandler(noteUseCase)
 
+	controller.router.Handler(
+		http.MethodPost,
+		"/api/notes",
+		handler.BuildHandler(noteHandler.Create, handler.LocaleMW, handler.AuthMW),
+	)
 }

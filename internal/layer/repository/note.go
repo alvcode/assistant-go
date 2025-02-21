@@ -23,9 +23,9 @@ func NewNoteRepository(ctx context.Context, db *pgxpool.Pool) NoteRepository {
 }
 
 func (ur *noteRepository) Create(in entity.Note) (*entity.Note, error) {
-	query := `INSERT INTO note_categories (user_id, name, parent_id) VALUES ($1, $2, $3) RETURNING id`
+	query := `INSERT INTO notes (category_id, note_blocks, created_at, updated_at) VALUES ($1, $2, $3, $4) RETURNING id`
 
-	row := ur.db.QueryRow(ur.ctx, query, in.UserId, in.Name, in.ParentId)
+	row := ur.db.QueryRow(ur.ctx, query, in.CategoryID, in.NoteBlocks, in.CreatedAt, in.UpdatedAt)
 
 	if err := row.Scan(&in.ID); err != nil {
 		return nil, err

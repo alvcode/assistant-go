@@ -69,14 +69,13 @@ func (uc *noteCategoryUseCase) FindAll(userId int, lang string) ([]*entity.NoteC
 }
 
 func (uc *noteCategoryUseCase) Delete(userId int, catId int, lang string) error {
-	user, err := uc.noteCategoryRepository.FindByIDAndUser(userId, catId)
+	_, err := uc.noteCategoryRepository.FindByIDAndUser(userId, catId)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return errors.New(locale.T(lang, "category_not_found"))
 		}
-	}
-	if user.UserId != userId {
-		return errors.New(locale.T(lang, "category_not_found"))
+		logging.GetLogger(uc.ctx).Error(err)
+		return errors.New(locale.T(lang, "unexpected_database_error"))
 	}
 
 	// TODO: тут должна быть проверка на наличие заметок внутри категории и ошибка, т.к тогда они потеряются
