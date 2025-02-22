@@ -17,20 +17,14 @@ type NoteUseCase interface {
 }
 
 type noteUseCase struct {
-	ctx                    context.Context
-	noteRepository         repository.NoteRepository
-	noteCategoryRepository repository.NoteCategoryRepository
+	ctx          context.Context
+	repositories repository.Repositories
 }
 
-func NewNoteUseCase(
-	ctx context.Context,
-	noteRepository repository.NoteRepository,
-	noteCategoryRepository repository.NoteCategoryRepository,
-) NoteUseCase {
+func NewNoteUseCase(ctx context.Context, repositories *repository.Repositories) NoteUseCase {
 	return &noteUseCase{
-		ctx:                    ctx,
-		noteRepository:         noteRepository,
-		noteCategoryRepository: noteCategoryRepository,
+		ctx:          ctx,
+		repositories: *repositories,
 	}
 }
 
@@ -39,7 +33,7 @@ func (uc *noteUseCase) Create(
 	userEntity *entity.User,
 	lang string,
 ) (*entity.Note, error) {
-	_, err := uc.noteCategoryRepository.FindByIDAndUser(userEntity.ID, in.CategoryID)
+	_, err := uc.repositories.NoteCategoryRepository.FindByIDAndUser(userEntity.ID, in.CategoryID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, errors.New(locale.T(lang, "category_not_found"))
@@ -57,7 +51,7 @@ func (uc *noteUseCase) Create(
 		UpdatedAt:  timeNow,
 	}
 
-	data, err := uc.noteRepository.Create(noteEntity)
+	data, err := uc.repositories.NoteRepository.Create(noteEntity)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
 		return nil, errors.New(locale.T(lang, "unexpected_database_error"))

@@ -38,16 +38,17 @@ func (controller *Init) SetRoutes(ctx context.Context) error {
 	heartbeatHandler := handler.NewHeartbeatHandler()
 	controller.router.HandlerFunc(http.MethodGet, "/api/heartbeat", heartbeatHandler.Heartbeat)
 
-	controller.setUserRoutes(ctx)
-	controller.setNotesCategories(ctx)
-	controller.setNotes(ctx)
+	repos := repository.NewRepositories(ctx, controller.db)
+
+	controller.setUserRoutes(ctx, repos)
+	controller.setNotesCategories(ctx, repos)
+	controller.setNotes(ctx, repos)
 
 	return nil
 }
 
-func (controller *Init) setUserRoutes(ctx context.Context) {
-	userRepository := repository.NewUserRepository(ctx, controller.db)
-	userUseCase := ucase.NewUserUseCase(ctx, userRepository)
+func (controller *Init) setUserRoutes(ctx context.Context, repositories *repository.Repositories) {
+	userUseCase := ucase.NewUserUseCase(ctx, repositories)
 	userHandler := handler.NewUserHandler(userUseCase)
 
 	controller.router.Handler(
@@ -67,9 +68,8 @@ func (controller *Init) setUserRoutes(ctx context.Context) {
 	)
 }
 
-func (controller *Init) setNotesCategories(ctx context.Context) {
-	noteCategoryRepository := repository.NewNoteCategoryRepository(ctx, controller.db)
-	noteCategoryUseCase := ucase.NewNoteCategoryUseCase(ctx, noteCategoryRepository)
+func (controller *Init) setNotesCategories(ctx context.Context, repositories *repository.Repositories) {
+	noteCategoryUseCase := ucase.NewNoteCategoryUseCase(ctx, repositories)
 	noteCategoryHandler := handler.NewNoteCategoryHandler(noteCategoryUseCase)
 
 	controller.router.Handler(
@@ -89,10 +89,8 @@ func (controller *Init) setNotesCategories(ctx context.Context) {
 	)
 }
 
-func (controller *Init) setNotes(ctx context.Context) {
-	noteRepository := repository.NewNoteRepository(ctx, controller.db)
-	noteCategoryRepository := repository.NewNoteCategoryRepository(ctx, controller.db)
-	noteUseCase := ucase.NewNoteUseCase(ctx, noteRepository, noteCategoryRepository)
+func (controller *Init) setNotes(ctx context.Context, repositories *repository.Repositories) {
+	noteUseCase := ucase.NewNoteUseCase(ctx, repositories)
 	noteHandler := handler.NewNoteHandler(noteUseCase)
 
 	controller.router.Handler(
