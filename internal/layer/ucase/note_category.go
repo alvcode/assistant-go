@@ -15,7 +15,6 @@ type NoteCategoryUseCase interface {
 	Create(in dto.NoteCategoryCreate, userEntity *entity.User, lang string) (*entity.NoteCategory, error)
 	FindAll(userId int, lang string) ([]*entity.NoteCategory, error)
 	Delete(userId int, catId int, lang string) error
-	DeleteByUserId(userId int, lang string) error
 }
 
 type noteCategoryUseCase struct {
@@ -82,20 +81,6 @@ func (uc *noteCategoryUseCase) Delete(userId int, catId int, lang string) error 
 	// TODO: тут должна быть проверка на наличие заметок внутри категории и ошибка, т.к тогда они потеряются
 
 	err = uc.repositories.NoteCategoryRepository.DeleteById(catId)
-	if err != nil {
-		logging.GetLogger(uc.ctx).Error(err)
-		return errors.New(locale.T(lang, "unexpected_database_error"))
-	}
-	return nil
-}
-
-func (uc *noteCategoryUseCase) DeleteByUserId(userId int, lang string) error {
-	_, err := uc.FindAll(userId, lang)
-	if err != nil {
-		logging.GetLogger(uc.ctx).Error(err)
-		return errors.New(locale.T(lang, "unexpected_database_error"))
-	}
-	err = uc.noteCategoryRepository.DeleteByUserId(userId)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
 		return errors.New(locale.T(lang, "unexpected_database_error"))

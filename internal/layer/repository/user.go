@@ -13,8 +13,8 @@ type UserRepository interface {
 	FindById(id int) (*entity.User, error)
 	FindUserToken(token string) (*entity.UserToken, error)
 	SetUserToken(in entity.UserToken) (*entity.UserToken, error)
-	Delete(id int) error
-	DeleteUserTokensByID(id int) error
+	Delete(userID int) error
+	DeleteUserTokensByID(userID int) error
 }
 
 type userRepository struct {
@@ -84,20 +84,20 @@ func (ur *userRepository) SetUserToken(in entity.UserToken) (*entity.UserToken, 
 	return &in, err
 }
 
-func (ur *userRepository) Delete(id int) error {
+func (ur *userRepository) Delete(userID int) error {
 	query := `DELETE FROM users WHERE id = $1`
 
-	_, err := ur.db.Exec(ur.ctx, query, id)
+	_, err := ur.db.Exec(ur.ctx, query, userID)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (ur *userRepository) DeleteUserTokensByID(id int) error {
+func (ur *userRepository) DeleteUserTokensByID(userID int) error {
 	query := `DELETE FROM user_tokens WHERE user_id = $1`
 
-	_, err := ur.db.Exec(ur.ctx, query, id)
+	_, err := ur.db.Exec(ur.ctx, query, userID)
 	if err != nil {
 		return err
 	}

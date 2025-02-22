@@ -8,10 +8,10 @@ import (
 
 type NoteCategoryRepository interface {
 	Create(in entity.NoteCategory) (*entity.NoteCategory, error)
-	FindAll(userId int) ([]*entity.NoteCategory, error)
-	FindByIDAndUser(userId int, id int) (*entity.NoteCategory, error)
-	DeleteById(catId int) error
-	DeleteByUserId(userId int) error
+	FindAll(userID int) ([]*entity.NoteCategory, error)
+	FindByIDAndUser(userID int, id int) (*entity.NoteCategory, error)
+	DeleteById(catID int) error
+	DeleteByUserId(userID int) error
 }
 
 type noteCategoryRepository struct {
@@ -37,9 +37,9 @@ func (ur *noteCategoryRepository) Create(in entity.NoteCategory) (*entity.NoteCa
 	return &in, nil
 }
 
-func (ur *noteCategoryRepository) FindAll(userId int) ([]*entity.NoteCategory, error) {
+func (ur *noteCategoryRepository) FindAll(userID int) ([]*entity.NoteCategory, error) {
 	query := `SELECT * FROM note_categories WHERE user_id = $1`
-	rows, err := ur.db.Query(ur.ctx, query, userId)
+	rows, err := ur.db.Query(ur.ctx, query, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -61,9 +61,9 @@ func (ur *noteCategoryRepository) FindAll(userId int) ([]*entity.NoteCategory, e
 	return categories, nil
 }
 
-func (ur *noteCategoryRepository) FindByIDAndUser(userId int, id int) (*entity.NoteCategory, error) {
+func (ur *noteCategoryRepository) FindByIDAndUser(userID int, id int) (*entity.NoteCategory, error) {
 	query := `SELECT * FROM note_categories WHERE user_id = $1 and id = $2`
-	row := ur.db.QueryRow(ur.ctx, query, userId, id)
+	row := ur.db.QueryRow(ur.ctx, query, userID, id)
 
 	var noteCategory entity.NoteCategory
 	if err := row.Scan(&noteCategory.ID, &noteCategory.UserId, &noteCategory.Name, &noteCategory.ParentId); err != nil {
@@ -72,18 +72,18 @@ func (ur *noteCategoryRepository) FindByIDAndUser(userId int, id int) (*entity.N
 	return &noteCategory, nil
 }
 
-func (ur *noteCategoryRepository) DeleteById(catId int) error {
+func (ur *noteCategoryRepository) DeleteById(catID int) error {
 	query := `DELETE FROM note_categories WHERE id = $1`
-	_, err := ur.db.Exec(ur.ctx, query, catId)
+	_, err := ur.db.Exec(ur.ctx, query, catID)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (ur *noteCategoryRepository) DeleteByUserId(userId int) error {
+func (ur *noteCategoryRepository) DeleteByUserId(userID int) error {
 	query := `DELETE FROM note_categories WHERE user_id = $1`
-	_, err := ur.db.Exec(ur.ctx, query, userId)
+	_, err := ur.db.Exec(ur.ctx, query, userID)
 	if err != nil {
 		return err
 	}

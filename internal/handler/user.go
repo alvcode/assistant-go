@@ -90,7 +90,6 @@ func (h *UserHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) Delete(w http.ResponseWriter, r *http.Request) {
-
 	langRequest := locale.GetLangFromContext(r.Context())
 
 	authUser, err := GetAuthUser(r)
@@ -105,5 +104,5 @@ func (h *UserHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	SendResponse(w, http.StatusOK, nil)
+	SendResponse(w, http.StatusNoContent, nil)
 }

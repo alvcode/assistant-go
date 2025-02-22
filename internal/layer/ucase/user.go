@@ -152,15 +152,20 @@ func generateAPIToken() (string, error) {
 }
 
 func (uc *userUseCase) Delete(userID int, lang string) error {
-	user, err := uc.userRepository.FindById(userID)
 
-	err = uc.userRepository.Delete(user.ID)
+	err := uc.repositories.UserRepository.Delete(userID)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
 		return errors.New(locale.T(lang, "unexpected_database_error"))
 	}
 
-	err = uc.userRepository.DeleteUserTokensByID(user.ID)
+	err = uc.repositories.UserRepository.DeleteUserTokensByID(userID)
+	if err != nil {
+		logging.GetLogger(uc.ctx).Error(err)
+		return errors.New(locale.T(lang, "unexpected_database_error"))
+	}
+
+	err = uc.repositories.NoteCategoryRepository.DeleteByUserId(userID)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
 		return errors.New(locale.T(lang, "unexpected_database_error"))

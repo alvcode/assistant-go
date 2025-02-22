@@ -69,7 +69,7 @@ func (controller *Init) setUserRoutes(ctx context.Context, repositories *reposit
 	controller.router.Handler(
 		http.MethodDelete,
 		"/api/user",
-		handler.BuildHandler(userHandler.Delete, handler.AuthMW),
+		handler.BuildHandler(userHandler.Delete, handler.LocaleMW, handler.AuthMW),
 	)
 }
 
