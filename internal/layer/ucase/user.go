@@ -23,19 +23,19 @@ type UserUseCase interface {
 }
 
 type userUseCase struct {
-	ctx            context.Context
-	userRepository repository.UserRepository
+	ctx          context.Context
+	repositories *repository.Repositories
 }
 
-func NewUserUseCase(ctx context.Context, userRepository repository.UserRepository) UserUseCase {
+func NewUserUseCase(ctx context.Context, repositories *repository.Repositories) UserUseCase {
 	return &userUseCase{
-		ctx:            ctx,
-		userRepository: userRepository,
+		ctx:          ctx,
+		repositories: repositories,
 	}
 }
 
 func (uc *userUseCase) Create(in dto.UserLoginAndPassword, lang string) (*entity.User, error) {
-	existingUser, err := uc.userRepository.Find(in.Login)
+	existingUser, err := uc.repositories.UserRepository.Find(in.Login)
 	if err == nil && existingUser != nil {
 		return nil, errors.New(locale.T(lang, "user_already_exists"))
 	}
@@ -52,7 +52,7 @@ func (uc *userUseCase) Create(in dto.UserLoginAndPassword, lang string) (*entity
 		UpdatedAt: time.Now(),
 	}
 
-	data, err := uc.userRepository.Create(userEntity)
+	data, err := uc.repositories.UserRepository.Create(userEntity)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
 		return nil, errors.New(locale.T(lang, "unexpected_database_error"))
@@ -61,7 +61,7 @@ func (uc *userUseCase) Create(in dto.UserLoginAndPassword, lang string) (*entity
 }
 
 func (uc *userUseCase) Login(in dto.UserLoginAndPassword, lang string) (*entity.UserToken, error) {
-	existingUser, err := uc.userRepository.Find(in.Login)
+	existingUser, err := uc.repositories.UserRepository.Find(in.Login)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, errors.New(locale.T(lang, "incorrect_username_or_password"))
@@ -81,7 +81,7 @@ func (uc *userUseCase) Login(in dto.UserLoginAndPassword, lang string) (*entity.
 		return nil, errors.New(locale.T(lang, "unexpected_error"))
 	}
 
-	data, err := uc.userRepository.SetUserToken(*userTokenEntity)
+	data, err := uc.repositories.UserRepository.SetUserToken(*userTokenEntity)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
 		return nil, errors.New(locale.T(lang, "unexpected_database_error"))
@@ -90,7 +90,7 @@ func (uc *userUseCase) Login(in dto.UserLoginAndPassword, lang string) (*entity.
 }
 
 func (uc *userUseCase) RefreshToken(in dto.UserRefreshToken, lang string) (*entity.UserToken, error) {
-	existingToken, err := uc.userRepository.FindUserToken(in.Token)
+	existingToken, err := uc.repositories.UserRepository.FindUserToken(in.Token)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, errors.New(locale.T(lang, "refresh_token_not_found"))
@@ -106,7 +106,7 @@ func (uc *userUseCase) RefreshToken(in dto.UserRefreshToken, lang string) (*enti
 		logging.GetLogger(uc.ctx).Error(err)
 		return nil, errors.New(locale.T(lang, "unexpected_error"))
 	}
-	data, err := uc.userRepository.SetUserToken(*userTokenEntity)
+	data, err := uc.repositories.UserRepository.SetUserToken(*userTokenEntity)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
 		return nil, errors.New(locale.T(lang, "unexpected_database_error"))
@@ -126,7 +126,7 @@ func (uc *userUseCase) generateTokenPair(userId int) (*entity.UserToken, error) 
 			return nil, err
 		}
 
-		_, err = uc.userRepository.FindUserToken(token)
+		_, err = uc.repositories.UserRepository.FindUserToken(token)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				userTokenEntity = &entity.UserToken{
