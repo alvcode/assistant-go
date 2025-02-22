@@ -88,3 +88,22 @@ func (h *UserHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	userTokenVM := vmUser.UserTokenVMFromEnity(entity)
 	SendResponse(w, http.StatusOK, userTokenVM)
 }
+
+func (h *UserHandler) Delete(w http.ResponseWriter, r *http.Request) {
+
+	langRequest := locale.GetLangFromContext(r.Context())
+
+	authUser, err := GetAuthUser(r)
+	if err != nil {
+		SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
+		return
+	}
+
+	err = h.useCase.Delete(authUser.ID, langRequest)
+	if err != nil {
+		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
+		return
+	}
+
+	SendResponse(w, http.StatusOK, nil)
+}

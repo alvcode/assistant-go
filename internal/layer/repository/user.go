@@ -3,6 +3,7 @@ package repository
 import (
 	"assistant-go/internal/layer/entity"
 	"context"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -12,6 +13,8 @@ type UserRepository interface {
 	FindById(id int) (*entity.User, error)
 	FindUserToken(token string) (*entity.UserToken, error)
 	SetUserToken(in entity.UserToken) (*entity.UserToken, error)
+	Delete(id int) error
+	DeleteUserTokensByID(id int) error
 }
 
 type userRepository struct {
@@ -79,4 +82,24 @@ func (ur *userRepository) SetUserToken(in entity.UserToken) (*entity.UserToken, 
 
 	_, err := ur.db.Exec(ur.ctx, query, in.UserId, in.Token, in.RefreshToken, in.ExpiredTo)
 	return &in, err
+}
+
+func (ur *userRepository) Delete(id int) error {
+	query := `DELETE FROM users WHERE id = $1`
+
+	_, err := ur.db.Exec(ur.ctx, query, id)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (ur *userRepository) DeleteUserTokensByID(id int) error {
+	query := `DELETE FROM user_tokens WHERE user_id = $1`
+
+	_, err := ur.db.Exec(ur.ctx, query, id)
+	if err != nil {
+		return err
+	}
+	return nil
 }

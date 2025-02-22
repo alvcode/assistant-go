@@ -19,6 +19,7 @@ type UserUseCase interface {
 	Create(in dto.UserLoginAndPassword, lang string) (*entity.User, error)
 	Login(in dto.UserLoginAndPassword, lang string) (*entity.UserToken, error)
 	RefreshToken(in dto.UserRefreshToken, lang string) (*entity.UserToken, error)
+	Delete(userID int, lang string) error
 }
 
 type userUseCase struct {
@@ -148,4 +149,22 @@ func generateAPIToken() (string, error) {
 		return "", err
 	}
 	return base64.URLEncoding.EncodeToString(bytes), nil
+}
+
+func (uc *userUseCase) Delete(userID int, lang string) error {
+	user, err := uc.userRepository.FindById(userID)
+
+	err = uc.userRepository.Delete(user.ID)
+	if err != nil {
+		logging.GetLogger(uc.ctx).Error(err)
+		return errors.New(locale.T(lang, "unexpected_database_error"))
+	}
+
+	err = uc.userRepository.DeleteUserTokensByID(user.ID)
+	if err != nil {
+		logging.GetLogger(uc.ctx).Error(err)
+		return errors.New(locale.T(lang, "unexpected_database_error"))
+	}
+
+	return nil
 }

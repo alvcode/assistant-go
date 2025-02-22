@@ -11,6 +11,7 @@ type NoteCategoryRepository interface {
 	FindAll(userId int) ([]*entity.NoteCategory, error)
 	FindByIDAndUser(userId int, id int) (*entity.NoteCategory, error)
 	DeleteById(catId int) error
+	DeleteByUserId(userId int) error
 }
 
 type noteCategoryRepository struct {
@@ -74,6 +75,15 @@ func (ur *noteCategoryRepository) FindByIDAndUser(userId int, id int) (*entity.N
 func (ur *noteCategoryRepository) DeleteById(catId int) error {
 	query := `DELETE FROM note_categories WHERE id = $1`
 	_, err := ur.db.Exec(ur.ctx, query, catId)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (ur *noteCategoryRepository) DeleteByUserId(userId int) error {
+	query := `DELETE FROM note_categories WHERE user_id = $1`
+	_, err := ur.db.Exec(ur.ctx, query, userId)
 	if err != nil {
 		return err
 	}

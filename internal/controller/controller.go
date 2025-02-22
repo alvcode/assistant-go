@@ -64,6 +64,11 @@ func (controller *Init) setUserRoutes(ctx context.Context) {
 		"/api/auth/refresh-token",
 		handler.BuildHandler(userHandler.RefreshToken, handler.LocaleMW),
 	)
+	controller.router.Handler(
+		http.MethodDelete,
+		"/api/user",
+		handler.BuildHandler(userHandler.Delete, handler.AuthMW),
+	)
 }
 
 func (controller *Init) setNotesCategories(ctx context.Context) {
@@ -86,4 +91,5 @@ func (controller *Init) setNotesCategories(ctx context.Context) {
 		"/api/notes/categories/:id",
 		handler.BuildHandler(noteCategoryHandler.Delete, handler.LocaleMW, handler.AuthMW),
 	)
+
 }
