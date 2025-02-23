@@ -11,4 +11,5 @@ type Note struct {
 	NoteBlocks json.RawMessage `db:"note_blocks"`
 	CreatedAt  time.Time       `db:"created_at"`
 	UpdatedAt  time.Time       `db:"updated_at"`
+	Title      *string         `db:"title"`
 }

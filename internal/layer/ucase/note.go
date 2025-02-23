@@ -6,9 +6,12 @@ import (
 	"assistant-go/internal/layer/repository"
 	"assistant-go/internal/locale"
 	"assistant-go/internal/logging"
+	"assistant-go/internal/service/utils"
 	"context"
 	"errors"
 	"github.com/jackc/pgx/v5"
+	"github.com/tidwall/gjson"
+	"strings"
 	"time"
 )
 
@@ -49,6 +52,7 @@ func (uc *noteUseCase) Create(
 		NoteBlocks: in.NoteBlocks,
 		CreatedAt:  timeNow,
 		UpdatedAt:  timeNow,
+		Title:      uc.getNoteTitle(string(in.NoteBlocks)),
 	}
 
 	data, err := uc.repositories.NoteRepository.Create(noteEntity)
@@ -57,4 +61,17 @@ func (uc *noteUseCase) Create(
 		return nil, errors.New(locale.T(lang, "unexpected_database_error"))
 	}
 	return data, nil
+}
+
+func (uc *noteUseCase) getNoteTitle(blocks string) *string {
+	firstBlockText := gjson.Get(blocks, `0.data.text`)
+	stringUtils := utils.NewStringUtils()
+	titleWithoutHtml := stringUtils.RemoveHTMLTags(firstBlockText.Str)
+	titleTruncate := strings.TrimSpace(stringUtils.TruncateString(titleWithoutHtml, 50))
+
+	if titleTruncate == "" {
+		return nil
+	} else {
+		return &titleTruncate
+	}
 }
