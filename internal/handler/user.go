@@ -106,34 +106,3 @@ func (h *UserHandler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	SendResponse(w, http.StatusNoContent, nil)
 }
-
-func (h *UserHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
-	var changePasswordDto dto.ChangePassword
-	langRequest := locale.GetLangFromContext(r.Context())
-
-	authUser, err := GetAuthUser(r)
-	if err != nil {
-		SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
-		return
-	}
-
-	err = json.NewDecoder(r.Body).Decode(&changePasswordDto)
-	if err != nil {
-		SendErrorResponse(w, locale.T(langRequest, "error_reading_request_body"), http.StatusBadRequest, 0)
-		return
-	}
-
-	if err := changePasswordDto.Validate(langRequest); err != nil {
-		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
-		return
-	}
-
-	err = h.useCase.ChangePassword(authUser.ID, changePasswordDto, langRequest)
-	if err != nil {
-		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
-		return
-	}
-
-	SendResponse(w, http.StatusNoContent, nil)
-
-}
