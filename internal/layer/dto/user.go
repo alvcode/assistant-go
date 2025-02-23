@@ -41,3 +41,16 @@ func (dto *UserToken) Validate(lang string) error {
 	}
 	return nil
 }
+
+type ChangePassword struct {
+	CurrentPassword string `json:"current_password" validate:"required,max=200"`
+	NewPassword     string `json:"new_password" validate:"required,max=200"`
+}
+
+func (dto *ChangePassword) Validate(lang string) error {
+	err := vld.Validate.Struct(dto)
+	if err != nil {
+		return vld.TextFromFirstError(err, lang)
+	}
+	return nil
+}
