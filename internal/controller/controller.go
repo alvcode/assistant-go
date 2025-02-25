@@ -92,6 +92,11 @@ func (controller *Init) setNotesCategories(ctx context.Context, repositories *re
 		"/api/notes/categories/:id",
 		handler.BuildHandler(noteCategoryHandler.Delete, handler.LocaleMW, handler.AuthMW),
 	)
+	controller.router.Handler(
+		http.MethodPatch,
+		"/api/notes/categories/:id",
+		handler.BuildHandler(noteCategoryHandler.Update, handler.LocaleMW, handler.AuthMW),
+	)
 
 }
 

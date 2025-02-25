@@ -14,3 +14,17 @@ func (dto *NoteCategoryCreate) Validate(lang string) error {
 	}
 	return nil
 }
+
+type CategoryUpdate struct {
+	ID       int    `json:"id" validate:"required"`
+	Name     string `json:"name" validate:"required,max=255"`
+	ParentID *int   `json:"parent_id"`
+}
+
+func (dto *CategoryUpdate) Validate(lang string) error {
+	err := vld.Validate.Struct(dto)
+	if err != nil {
+		return vld.TextFromFirstError(err, lang)
+	}
+	return nil
+}
