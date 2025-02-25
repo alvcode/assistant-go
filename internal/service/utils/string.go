@@ -1,6 +1,9 @@
 package utils
 
-import "regexp"
+import (
+	"regexp"
+	"strings"
+)
 
 type StringUtils struct {
 }
@@ -22,4 +25,8 @@ func (su *StringUtils) TruncateString(input string, maxLength int) string {
 		return input[:maxLength]
 	}
 	return input
+}
+
+func (su *StringUtils) Trim(input string) string {
+	return strings.TrimSpace(input)
 }

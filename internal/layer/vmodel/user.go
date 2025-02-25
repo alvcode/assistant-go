@@ -1,4 +1,4 @@
-package vmUser
+package vmodel
 
 import (
 	"assistant-go/internal/layer/entity"
@@ -12,7 +12,7 @@ type User struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-func UserVMFromEnity(entity *entity.User) *User {
+func UserFromEnity(entity *entity.User) *User {
 	return &User{
 		ID:        entity.ID,
 		Login:     entity.Login,
@@ -28,7 +28,7 @@ type UserToken struct {
 	ExpiredTo    int    `json:"expired_to"`
 }
 
-func UserTokenVMFromEnity(entity *entity.UserToken) *UserToken {
+func UserTokenFromEnity(entity *entity.UserToken) *UserToken {
 	return &UserToken{
 		UserId:       entity.UserId,
 		Token:        entity.Token,

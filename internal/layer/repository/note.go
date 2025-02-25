@@ -8,6 +8,7 @@ import (
 
 type NoteRepository interface {
 	Create(in entity.Note) (*entity.Note, error)
+	GetMinimalByCategoryIds(catIds []int) ([]*entity.Note, error)
 }
 
 type noteRepository struct {
@@ -31,4 +32,29 @@ func (ur *noteRepository) Create(in entity.Note) (*entity.Note, error) {
 		return nil, err
 	}
 	return &in, nil
+}
+
+func (ur *noteRepository) GetMinimalByCategoryIds(catIds []int) ([]*entity.Note, error) {
+	query := `select n.id, n.category_id, n.created_at, n.updated_at, n.title from notes n where n.category_id = ANY($1)`
+
+	rows, err := ur.db.Query(ur.ctx, query, catIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	notes := make([]*entity.Note, 0)
+	for rows.Next() {
+		note := &entity.Note{}
+		if err := rows.Scan(&note.ID, &note.CategoryID, &note.CreatedAt, &note.UpdatedAt, &note.Title); err != nil {
+			return nil, err
+		}
+		notes = append(notes, note)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return notes, nil
 }

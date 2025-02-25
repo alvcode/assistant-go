@@ -10,6 +10,7 @@ type NoteCategoryRepository interface {
 	Create(in entity.NoteCategory) (*entity.NoteCategory, error)
 	FindAll(userID int) ([]*entity.NoteCategory, error)
 	FindByIDAndUser(userID int, id int) (*entity.NoteCategory, error)
+	FindByIDAndUserWithChildren(userID int, id int) ([]*entity.NoteCategory, error)
 	DeleteById(catID int) error
 	DeleteByUserId(userID int) error
 	Update(in *entity.NoteCategory) error
@@ -71,6 +72,44 @@ func (ur *noteCategoryRepository) FindByIDAndUser(userID int, id int) (*entity.N
 		return nil, err
 	}
 	return &noteCategory, nil
+}
+
+func (ur *noteCategoryRepository) FindByIDAndUserWithChildren(userID int, id int) ([]*entity.NoteCategory, error) {
+	query := `
+		WITH RECURSIVE subcategories AS (
+			SELECT id, user_id, name, parent_id
+			FROM note_categories
+			WHERE id = $1 and user_id = $2
+		
+			UNION ALL
+		
+			SELECT c.id, c.user_id, c.name, c.parent_id
+			FROM note_categories c
+			INNER JOIN subcategories s ON c.parent_id = s.id
+		)
+		SELECT id, user_id, name, parent_id FROM subcategories
+	`
+
+	rows, err := ur.db.Query(ur.ctx, query, id, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	categories := make([]*entity.NoteCategory, 0)
+	for rows.Next() {
+		category := &entity.NoteCategory{}
+		if err := rows.Scan(&category.ID, &category.UserId, &category.Name, &category.ParentId); err != nil {
+			return nil, err
+		}
+		categories = append(categories, category)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return categories, nil
 }
 
 func (ur *noteCategoryRepository) DeleteById(catID int) error {
