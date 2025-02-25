@@ -42,12 +42,14 @@ func (h *NoteHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = h.useCase.Create(createNoteDto, authUser, langRequest)
+	note, err := h.useCase.Create(createNoteDto, authUser, langRequest)
 	if err != nil {
 		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
 		return
 	}
-	SendResponse(w, http.StatusNoContent, nil)
+
+	noteVModel := vmodel.NoteFromEnity(note)
+	SendResponse(w, http.StatusCreated, noteVModel)
 }
 
 func (h *NoteHandler) GetAll(w http.ResponseWriter, r *http.Request) {
