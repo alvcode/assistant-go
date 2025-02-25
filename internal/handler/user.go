@@ -3,7 +3,7 @@ package handler
 import (
 	"assistant-go/internal/layer/dto"
 	"assistant-go/internal/layer/ucase"
-	"assistant-go/internal/layer/viewModel/user"
+	"assistant-go/internal/layer/vmodel"
 	"assistant-go/internal/locale"
 	"encoding/json"
 	"fmt"
@@ -39,7 +39,7 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
 		return
 	}
-	userVM := vmUser.UserVMFromEnity(entity)
+	userVM := vmodel.UserFromEnity(entity)
 	SendResponse(w, http.StatusCreated, userVM)
 }
 
@@ -62,7 +62,7 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userTokenVM := vmUser.UserTokenVMFromEnity(entity)
+	userTokenVM := vmodel.UserTokenFromEnity(entity)
 	SendResponse(w, http.StatusOK, userTokenVM)
 }
 
@@ -85,7 +85,7 @@ func (h *UserHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
 		return
 	}
-	userTokenVM := vmUser.UserTokenVMFromEnity(entity)
+	userTokenVM := vmodel.UserTokenFromEnity(entity)
 	SendResponse(w, http.StatusOK, userTokenVM)
 }
 

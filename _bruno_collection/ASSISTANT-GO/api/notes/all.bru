@@ -1,0 +1,15 @@
+meta {
+  name: all
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{domain}}/api/notes/?categoryId=9
+  body: none
+  auth: inherit
+}
+
+params:query {
+  categoryId: 9
+}

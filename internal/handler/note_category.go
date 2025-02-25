@@ -3,6 +3,7 @@ package handler
 import (
 	"assistant-go/internal/layer/dto"
 	"assistant-go/internal/layer/ucase"
+	"assistant-go/internal/layer/vmodel"
 	"assistant-go/internal/locale"
 	"encoding/json"
 	"fmt"
@@ -47,7 +48,9 @@ func (h *NoteCategoryHandler) Create(w http.ResponseWriter, r *http.Request) {
 		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
 		return
 	}
-	SendResponse(w, http.StatusCreated, entity)
+
+	result := vmodel.NoteCategoryFromEnity(entity)
+	SendResponse(w, http.StatusCreated, result)
 }
 
 func (h *NoteCategoryHandler) GetAll(w http.ResponseWriter, r *http.Request) {
@@ -65,7 +68,8 @@ func (h *NoteCategoryHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	SendResponse(w, http.StatusOK, entities)
+	result := vmodel.NoteCategoriesFromEntities(entities)
+	SendResponse(w, http.StatusOK, result)
 }
 
 func (h *NoteCategoryHandler) Delete(w http.ResponseWriter, r *http.Request) {
@@ -79,6 +83,7 @@ func (h *NoteCategoryHandler) Delete(w http.ResponseWriter, r *http.Request) {
 
 		if err != nil {
 			SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
+			return
 		}
 		idDto.ID = catIdInt
 	}

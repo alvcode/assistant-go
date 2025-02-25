@@ -11,12 +11,12 @@ import (
 	"errors"
 	"github.com/jackc/pgx/v5"
 	"github.com/tidwall/gjson"
-	"strings"
 	"time"
 )
 
 type NoteUseCase interface {
 	Create(in dto.NoteCreate, userEntity *entity.User, lang string) (*entity.Note, error)
+	GetAll(catIdStruct dto.RequiredID, userEntity *entity.User, lang string) ([]*entity.Note, error)
 }
 
 type noteUseCase struct {
@@ -63,11 +63,43 @@ func (uc *noteUseCase) Create(
 	return data, nil
 }
 
+func (uc *noteUseCase) GetAll(
+	catIdStruct dto.RequiredID,
+	userEntity *entity.User,
+	lang string,
+) ([]*entity.Note, error) {
+	categories, err := uc.repositories.NoteCategoryRepository.FindByIDAndUserWithChildren(userEntity.ID, catIdStruct.ID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, errors.New(locale.T(lang, "category_not_found"))
+		}
+		logging.GetLogger(uc.ctx).Error(err)
+		return nil, errors.New(locale.T(lang, "unexpected_database_error"))
+	}
+
+	catIds := make([]int, 0)
+	for _, cat := range categories {
+		catIds = append(catIds, cat.ID)
+	}
+	if len(catIds) == 0 {
+		return nil, errors.New(locale.T(lang, "category_not_found"))
+	}
+
+	notes, err := uc.repositories.NoteRepository.GetMinimalByCategoryIds(catIds)
+	if err != nil {
+		if !errors.Is(err, pgx.ErrNoRows) {
+			logging.GetLogger(uc.ctx).Error(err)
+			return nil, errors.New(locale.T(lang, "unexpected_database_error"))
+		}
+	}
+	return notes, nil
+}
+
 func (uc *noteUseCase) getNoteTitle(blocks string) *string {
 	firstBlockText := gjson.Get(blocks, `0.data.text`)
 	stringUtils := utils.NewStringUtils()
 	titleWithoutHtml := stringUtils.RemoveHTMLTags(firstBlockText.Str)
-	titleTruncate := strings.TrimSpace(stringUtils.TruncateString(titleWithoutHtml, 50))
+	titleTruncate := stringUtils.Trim(stringUtils.TruncateString(titleWithoutHtml, 50))
 
 	if titleTruncate == "" {
 		return nil
