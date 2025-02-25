@@ -104,7 +104,7 @@ func (h *NoteCategoryHandler) Delete(w http.ResponseWriter, r *http.Request) {
 
 func (h *NoteCategoryHandler) Update(w http.ResponseWriter, r *http.Request) {
 	langRequest := locale.GetLangFromContext(r.Context())
-	var updateNoteCategoryDto dto.CategoryUpdate
+	var updateNoteCategoryDto dto.NoteCategoryUpdate
 
 	params := httprouter.ParamsFromContext(r.Context())
 
@@ -134,7 +134,7 @@ func (h *NoteCategoryHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	entity, err := h.useCase.Update(updateNoteCategoryDto.ID, updateNoteCategoryDto.Name, updateNoteCategoryDto.ParentID, authUser.ID, langRequest)
+	entity, err := h.useCase.Update(updateNoteCategoryDto, authUser.ID, langRequest)
 	if err != nil {
 		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
 		return

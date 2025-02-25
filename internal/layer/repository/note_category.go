@@ -12,7 +12,7 @@ type NoteCategoryRepository interface {
 	FindByIDAndUser(userID int, id int) (*entity.NoteCategory, error)
 	DeleteById(catID int) error
 	DeleteByUserId(userID int) error
-	Update(in entity.NoteCategory) (*entity.NoteCategory, error)
+	Update(in *entity.NoteCategory) error
 }
 
 type noteCategoryRepository struct {
@@ -91,11 +91,12 @@ func (ur *noteCategoryRepository) DeleteByUserId(userID int) error {
 	return nil
 }
 
-func (ur *noteCategoryRepository) Update(in entity.NoteCategory) (*entity.NoteCategory, error) {
+func (ur *noteCategoryRepository) Update(in *entity.NoteCategory) error {
 	query := `UPDATE note_categories SET name = $3, parent_id = $4 WHERE id = $1 and user_id = $2`
-	row := ur.db.QueryRow(ur.ctx, query, in.Name, in.ParentId, in.ID, in.UserId)
-	if err := row.Scan(&in.ID, &in.Name, &in.ParentId, &in.ID, &in.UserId); err != nil {
-		return nil, err
+
+	_, err := ur.db.Exec(ur.ctx, query, in.ID, in.UserId, in.Name, in.ParentId)
+	if err != nil {
+		return err
 	}
-	return &in, nil
+	return nil
 }
