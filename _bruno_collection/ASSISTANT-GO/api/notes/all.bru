@@ -5,7 +5,11 @@ meta {
 }
 
 get {
-  url: {{domain}}/api/notes
+  url: {{domain}}/api/notes/?categoryId=9
   body: none
   auth: inherit
+}
+
+params:query {
+  categoryId: 9
 }
