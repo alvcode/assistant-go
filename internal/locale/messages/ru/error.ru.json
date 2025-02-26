@@ -8,5 +8,6 @@
   "unauthorized": "Вы не авторизованы",
   "category_not_found": "Категория не найдена",
   "parent_id_of_the_category_not_found": "Родительская категория не найдена",
-  "parameter_conversion_error": "Ошибка преобразования параметра"
+  "parameter_conversion_error": "Ошибка преобразования параметра",
+  "note_not_found": "Заметка не найдена"
 }

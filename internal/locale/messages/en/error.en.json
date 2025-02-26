@@ -8,5 +8,6 @@
   "unauthorized": "You are unauthorized",
   "category_not_found": "Category not found",
   "parent_id_of_the_category_not_found": "Parent category not found",
-  "parameter_conversion_error": "Parameter conversion error"
+  "parameter_conversion_error": "Parameter conversion error",
+  "note_not_found": "Note not found"
 }
