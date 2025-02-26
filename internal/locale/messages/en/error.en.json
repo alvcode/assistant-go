@@ -9,5 +9,5 @@
   "category_not_found": "Category not found",
   "parent_id_of_the_category_not_found": "Parent category not found",
   "parameter_conversion_error": "Parameter conversion error",
-  "incorrect_password": "The entered password does not match the current one"
+  "passwords_are_not_identical": "The entered password does not match the current one"
 }

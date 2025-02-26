@@ -107,6 +107,7 @@ func (ur *userRepository) DeleteUserTokensByID(userID int) error {
 
 func (ur *userRepository) ChangePassword(userID int, newPassword string) error {
 	query := `UPDATE users SET password = $2 WHERE id = $1`
+
 	_, err := ur.db.Exec(ur.ctx, query, userID, newPassword)
 	if err != nil {
 		return err

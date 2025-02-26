@@ -20,7 +20,7 @@ type UserUseCase interface {
 	Login(in dto.UserLoginAndPassword, lang string) (*entity.UserToken, error)
 	RefreshToken(in dto.UserRefreshToken, lang string) (*entity.UserToken, error)
 	Delete(userID int, lang string) error
-	ChangePassword(userID int, in dto.ChangePassword, lang string) error
+	ChangePassword(userID int, in dto.UserChangePassword, lang string) error
 }
 
 type userUseCase struct {
@@ -175,12 +175,16 @@ func (uc *userUseCase) Delete(userID int, lang string) error {
 	return nil
 }
 
-func (uc *userUseCase) ChangePassword(userID int, in dto.ChangePassword, lang string) error {
+func (uc *userUseCase) ChangePassword(userID int, in dto.UserChangePassword, lang string) error {
 	user, err := uc.repositories.UserRepository.FindById(userID)
+	if err != nil {
+		logging.GetLogger(uc.ctx).Error(err)
+		return errors.New(locale.T(lang, "unexpected_database_error"))
+	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(in.CurrentPassword))
 	if err != nil {
-		return errors.New(locale.T(lang, "incorrect_password"))
+		return errors.New(locale.T(lang, "passwords_are_not_identical"))
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(in.NewPassword), 11)
@@ -199,18 +203,5 @@ func (uc *userUseCase) ChangePassword(userID int, in dto.ChangePassword, lang st
 		return errors.New(locale.T(lang, "unexpected_database_error"))
 	}
 
-	userTokenEntity, err := uc.generateTokenPair(int(userID))
-	if err != nil {
-		logging.GetLogger(uc.ctx).Error(err)
-		return errors.New(locale.T(lang, "unexpected_error"))
-	}
-
-	_, err = uc.repositories.UserRepository.SetUserToken(*userTokenEntity)
-	if err != nil {
-		logging.GetLogger(uc.ctx).Error(err)
-		return errors.New(locale.T(lang, "unexpected_database_error"))
-	}
-
 	return nil
-
 }
