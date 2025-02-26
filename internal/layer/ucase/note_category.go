@@ -101,7 +101,7 @@ func (uc *noteCategoryUseCase) Update(in dto.NoteCategoryUpdate, userID int, lan
 		_, err := uc.repositories.NoteCategoryRepository.FindByIDAndUser(userID, *in.ParentID)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				return nil, errors.New(locale.T(lang, "parent_id_of_the_category_not_found"))
+				return nil, errors.New(locale.T(lang, "category_not_found"))
 			}
 			logging.GetLogger(uc.ctx).Error(err)
 			return nil, errors.New(locale.T(lang, "unexpected_database_error"))

@@ -145,5 +145,6 @@ func (h *NoteCategoryHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	SendResponse(w, http.StatusOK, entity)
+	result := vmodel.NoteCategoryFromEnity(entity)
+	SendResponse(w, http.StatusOK, result)
 }
