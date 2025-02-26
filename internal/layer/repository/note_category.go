@@ -13,6 +13,7 @@ type NoteCategoryRepository interface {
 	FindByIDAndUserWithChildren(userID int, id int) ([]*entity.NoteCategory, error)
 	DeleteById(catID int) error
 	DeleteByUserId(userID int) error
+	Update(in *entity.NoteCategory) error
 }
 
 type noteCategoryRepository struct {
@@ -123,6 +124,16 @@ func (ur *noteCategoryRepository) DeleteById(catID int) error {
 func (ur *noteCategoryRepository) DeleteByUserId(userID int) error {
 	query := `DELETE FROM note_categories WHERE user_id = $1`
 	_, err := ur.db.Exec(ur.ctx, query, userID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (ur *noteCategoryRepository) Update(in *entity.NoteCategory) error {
+	query := `UPDATE note_categories SET name = $3, parent_id = $4 WHERE id = $1 and user_id = $2`
+
+	_, err := ur.db.Exec(ur.ctx, query, in.ID, in.UserId, in.Name, in.ParentId)
 	if err != nil {
 		return err
 	}
