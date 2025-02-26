@@ -7,6 +7,7 @@ import (
 	"assistant-go/internal/locale"
 	"encoding/json"
 	"fmt"
+	"github.com/julienschmidt/httprouter"
 	"net/http"
 	"strconv"
 )
@@ -131,9 +132,8 @@ func (h *NoteHandler) GetOne(w http.ResponseWriter, r *http.Request) {
 
 	var noteID dto.RequiredID
 
-	noteIDStr := r.URL.Query().Get("id")
-
-	if noteIDStr != "" {
+	params := httprouter.ParamsFromContext(r.Context())
+	if noteIDStr := params.ByName("id"); noteIDStr != "" {
 		noteIDInt, err := strconv.Atoi(noteIDStr)
 
 		if err != nil {
