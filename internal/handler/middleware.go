@@ -29,7 +29,6 @@ const (
 var MapMiddleware = map[string]Middleware{
 	LocaleMW: LocaleMiddleware,
 	AuthMW:   AuthMiddleware,
-	//BlockIPMW: BlockIPMiddleware,
 }
 
 type Middleware func(http.HandlerFunc) http.HandlerFunc
@@ -107,8 +106,3 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		next(w, r.WithContext(ctx))
 	}
 }
-
-//func BlockIPMiddleware(next http.HandlerFunc) http.HandlerFunc {
-//	return func(w http.ResponseWriter, r *http.Request) {
-//		langRequest := locale.GetLangFromContext(r.Context())
-//}
