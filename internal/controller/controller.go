@@ -124,4 +124,9 @@ func (controller *Init) setNotes(ctx context.Context, repositories *repository.R
 		"/api/notes/:id",
 		handler.BuildHandler(noteHandler.GetOne, handler.LocaleMW, handler.AuthMW),
 	)
+	controller.router.Handler(
+		http.MethodDelete,
+		"/api/notes/:id",
+		handler.BuildHandler(noteHandler.DeleteOne, handler.LocaleMW, handler.AuthMW),
+	)
 }
