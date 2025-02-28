@@ -178,8 +178,9 @@ func (uc *userUseCase) Delete(userID int, lang string) error {
 func (uc *userUseCase) ChangePassword(userID int, in dto.UserChangePassword, lang string) error {
 	user, err := uc.repositories.UserRepository.FindById(userID)
 	if err != nil {
-		logging.GetLogger(uc.ctx).Error(err)
-		return errors.New(locale.T(lang, "unexpected_database_error"))
+		if errors.Is(err, pgx.ErrNoRows) {
+			return errors.New(locale.T(lang, "user_not_found"))
+		}
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(in.CurrentPassword))
