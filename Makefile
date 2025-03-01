@@ -8,6 +8,11 @@ prod-stop:
 prod-bash:
 	docker exec -it ast-app sh
 
+deploy:
+	git pull;
+	make prod-start;
+	make prod-m;
+
 # =============== MIGRATIONS =========================
 # prod
 prod-m:
