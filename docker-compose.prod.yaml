@@ -8,6 +8,8 @@ services:
     container_name: ast-app
     ports:
       - "8075:8083"
+    volumes:
+      - ./logs:/app/logs
     env_file:
       - .env
     networks:
