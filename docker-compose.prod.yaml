@@ -1,0 +1,35 @@
+version: '3.5'
+
+services:
+  ast-app:
+    build:
+      context: .
+      dockerfile: _docker/app/Dockerfile
+    container_name: ast-app
+    ports:
+      - "8075:8083"
+    env_file:
+      - .env
+    networks:
+      - ast-network
+    restart: always
+
+  ast-db:
+    image: postgres:16.8-bookworm
+    container_name: ast-db
+    environment:
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    env_file:
+      - .env
+    ports:
+      - "5489:5432"
+    volumes:
+      - /var/lib/ast-pg:/var/lib/postgresql/data:rw
+    networks:
+      - ast-network
+    restart: always
+
+networks:
+  ast-network:
+    driver: bridge
