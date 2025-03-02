@@ -15,6 +15,7 @@ type UserRepository interface {
 	SetUserToken(in entity.UserToken) (*entity.UserToken, error)
 	Delete(userID int) error
 	DeleteUserTokensByID(userID int) error
+	FindIP(in entity.BlockIP) (bool, error)
 }
 
 type userRepository struct {
@@ -102,4 +103,14 @@ func (ur *userRepository) DeleteUserTokensByID(userID int) error {
 		return err
 	}
 	return nil
+}
+
+func (ur *userRepository) FindIP(in entity.BlockIP) (bool, error) {
+	query := `SELECT 1 FROM block_ip WHERE ip = $1 and blocked_until > $2 LIMIT 1`
+
+	row := ur.db.QueryRow(ur.ctx, query, in.IP, in.BlockedUntil)
+	if err := row.Scan(&in.IP); err != nil {
+		return false, err
+	}
+	return true, nil
 }
