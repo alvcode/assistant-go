@@ -2,12 +2,14 @@ package handler
 
 import (
 	"assistant-go/internal/layer/dto"
+	"assistant-go/internal/layer/entity"
 	"assistant-go/internal/layer/repository"
 	"assistant-go/internal/locale"
 	"context"
 	"errors"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -22,13 +24,15 @@ func InitMiddleware(ctx context.Context, db *pgxpool.Pool) {
 }
 
 const (
-	LocaleMW = "LocaleMW"
-	AuthMW   = "AuthMW"
+	LocaleMW  = "LocaleMW"
+	AuthMW    = "AuthMW"
+	BlockIPMW = "BlockIPMW"
 )
 
 var MapMiddleware = map[string]Middleware{
-	LocaleMW: LocaleMiddleware,
-	AuthMW:   AuthMiddleware,
+	LocaleMW:  LocaleMiddleware,
+	AuthMW:    AuthMiddleware,
+	BlockIPMW: BlockIPMiddleware,
 }
 
 type Middleware func(http.HandlerFunc) http.HandlerFunc
@@ -104,5 +108,37 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 
 		ctx := context.WithValue(r.Context(), UserContextKey, userEntity)
 		next(w, r.WithContext(ctx))
+	}
+}
+
+func BlockIPMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		langRequest := locale.GetLangFromContext(r.Context())
+
+		IPAddress := r.Header.Get("X-Real-Ip")
+		if IPAddress == "" {
+			IPAddress = r.Header.Get("X-Forwarded-For")
+		}
+		if IPAddress == "" {
+			IPAddress = r.RemoteAddr
+		}
+
+		ip, _, err := net.SplitHostPort(IPAddress)
+		if err != nil {
+			return
+		}
+
+		entityBlockIP := entity.BlockIP{
+			IP:           ip,
+			BlockedUntil: time.Now(),
+		}
+
+		foundIP, err := userRepository.FindIP(entityBlockIP)
+
+		if foundIP == true {
+			SendErrorResponse(w, locale.T(langRequest, "access_denied"), http.StatusForbidden, 0)
+			return
+		}
+		next(w, r)
 	}
 }
