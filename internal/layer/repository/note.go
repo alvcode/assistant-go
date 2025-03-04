@@ -8,7 +8,10 @@ import (
 
 type NoteRepository interface {
 	Create(in entity.Note) (*entity.Note, error)
+	Update(in *entity.Note) error
+	GetById(ID int) (*entity.Note, error)
 	GetMinimalByCategoryIds(catIds []int) ([]*entity.Note, error)
+	DeleteOne(noteID int) error
 }
 
 type noteRepository struct {
@@ -34,6 +37,26 @@ func (ur *noteRepository) Create(in entity.Note) (*entity.Note, error) {
 	return &in, nil
 }
 
+func (ur *noteRepository) Update(in *entity.Note) error {
+	query := `UPDATE notes SET category_id = $2, note_blocks = $3, updated_at = $4, title = $5 WHERE id = $1`
+
+	_, err := ur.db.Exec(ur.ctx, query, in.ID, in.CategoryID, in.NoteBlocks, in.UpdatedAt, in.Title)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (ur *noteRepository) GetById(ID int) (*entity.Note, error) {
+	query := `select * from notes where id = $1`
+	row := ur.db.QueryRow(ur.ctx, query, ID)
+	var note entity.Note
+	if err := row.Scan(&note.ID, &note.CategoryID, &note.NoteBlocks, &note.CreatedAt, &note.UpdatedAt, &note.Title); err != nil {
+		return nil, err
+	}
+	return &note, nil
+}
+
 func (ur *noteRepository) GetMinimalByCategoryIds(catIds []int) ([]*entity.Note, error) {
 	query := `select n.id, n.category_id, n.created_at, n.updated_at, n.title from notes n where n.category_id = ANY($1)`
 
@@ -57,4 +80,14 @@ func (ur *noteRepository) GetMinimalByCategoryIds(catIds []int) ([]*entity.Note,
 	}
 
 	return notes, nil
+}
+
+func (ur *noteRepository) DeleteOne(noteID int) error {
+	query := `DELETE FROM notes WHERE id = $1`
+
+	_, err := ur.db.Exec(ur.ctx, query, noteID)
+	if err != nil {
+		return err
+	}
+	return nil
 }

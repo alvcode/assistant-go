@@ -106,3 +106,45 @@ func (h *NoteCategoryHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 	SendResponse(w, http.StatusNoContent, nil)
 }
+
+func (h *NoteCategoryHandler) Update(w http.ResponseWriter, r *http.Request) {
+	langRequest := locale.GetLangFromContext(r.Context())
+	var updateNoteCategoryDto dto.NoteCategoryUpdate
+
+	params := httprouter.ParamsFromContext(r.Context())
+
+	err := json.NewDecoder(r.Body).Decode(&updateNoteCategoryDto)
+	if err != nil {
+		SendErrorResponse(w, locale.T(langRequest, "error_reading_request_body"), http.StatusBadRequest, 0)
+		return
+	}
+
+	if catIDStr := params.ByName("id"); catIDStr != "" {
+		catIdInt, err := strconv.Atoi(catIDStr)
+
+		if err != nil {
+			SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
+		}
+		updateNoteCategoryDto.ID = catIdInt
+	}
+
+	if err := updateNoteCategoryDto.Validate(langRequest); err != nil {
+		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
+		return
+	}
+
+	authUser, err := GetAuthUser(r)
+	if err != nil {
+		SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
+		return
+	}
+
+	entity, err := h.useCase.Update(updateNoteCategoryDto, authUser.ID, langRequest)
+	if err != nil {
+		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
+		return
+	}
+
+	result := vmodel.NoteCategoryFromEnity(entity)
+	SendResponse(w, http.StatusOK, result)
+}
