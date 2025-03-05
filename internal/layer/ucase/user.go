@@ -181,6 +181,7 @@ func (uc *userUseCase) ChangePassword(userID int, in dto.UserChangePassword, lan
 		if errors.Is(err, pgx.ErrNoRows) {
 			return errors.New(locale.T(lang, "user_not_found"))
 		}
+		return errors.New(locale.T(lang, "unexpected_database_error"))
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(in.CurrentPassword))
