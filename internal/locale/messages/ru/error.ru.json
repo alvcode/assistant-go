@@ -10,5 +10,6 @@
   "parent_id_of_the_category_not_found": "Родительская категория не найдена",
   "parameter_conversion_error": "Ошибка преобразования параметра",
   "note_not_found": "Заметка не найдена",
-  "access_denied": "Доступ к ресурсу запрещен"
+  "access_denied": "Доступ к ресурсу запрещен",
+  "failed_to_determine_ip": "Не удалось определить IP-адрес"
 }

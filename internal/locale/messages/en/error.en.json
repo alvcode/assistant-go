@@ -10,5 +10,6 @@
   "parent_id_of_the_category_not_found": "Parent category not found",
   "parameter_conversion_error": "Parameter conversion error",
   "note_not_found": "Note not found",
-  "access_denied": "Access to the resource is denied"
+  "access_denied": "Access to the resource is denied",
+  "failed_to_determine_ip": "The IP address could not be determined"
 }

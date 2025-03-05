@@ -2,7 +2,6 @@ package handler
 
 import (
 	"assistant-go/internal/layer/dto"
-	"assistant-go/internal/layer/entity"
 	"assistant-go/internal/layer/repository"
 	"assistant-go/internal/locale"
 	"context"
@@ -10,17 +9,20 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"net"
+
 	"net/http"
 	"strings"
 	"time"
 )
 
 var userRepository repository.UserRepository
+var blockIpRepository repository.BlockIPRepository
 
 const UserContextKey = "user"
 
 func InitMiddleware(ctx context.Context, db *pgxpool.Pool) {
 	userRepository = repository.NewUserRepository(ctx, db)
+	blockIpRepository = repository.NewBlockIpRepository(ctx, db)
 }
 
 const (
@@ -125,15 +127,16 @@ func BlockIPMiddleware(next http.HandlerFunc) http.HandlerFunc {
 
 		ip, _, err := net.SplitHostPort(IPAddress)
 		if err != nil {
-			return
+			SendErrorResponse(w, locale.T(langRequest, "failed_to_determine_ip"), http.StatusForbidden, 0)
 		}
 
-		entityBlockIP := entity.BlockIP{
-			IP:           ip,
-			BlockedUntil: time.Now(),
+		foundIP, err := blockIpRepository.FindBlocking(ip, time.Now().UTC())
+		if err != nil {
+			if !errors.Is(err, pgx.ErrNoRows) {
+				SendErrorResponse(w, locale.T(langRequest, "unexpected_database_error"), http.StatusForbidden, 0)
+				return
+			}
 		}
-
-		foundIP, err := userRepository.FindIP(entityBlockIP)
 
 		if foundIP == true {
 			SendErrorResponse(w, locale.T(langRequest, "access_denied"), http.StatusForbidden, 0)

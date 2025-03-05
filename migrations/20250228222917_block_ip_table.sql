@@ -5,7 +5,7 @@ CREATE TABLE block_ip (
       ip INET NOT NULL,
       blocked_until TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL
 );
-CREATE UNIQUE INDEX idx_ip_id ON block_ip (id);
+CREATE INDEX idx_ip_id ON block_ip (ip);
 -- +goose StatementEnd
 
 -- +goose Down
