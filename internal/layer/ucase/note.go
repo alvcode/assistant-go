@@ -17,6 +17,9 @@ import (
 type NoteUseCase interface {
 	Create(in dto.NoteCreate, userEntity *entity.User, lang string) (*entity.Note, error)
 	GetAll(catIdStruct dto.RequiredID, userEntity *entity.User, lang string) ([]*entity.Note, error)
+	Update(in dto.NoteUpdate, userEntity *entity.User, lang string) (*entity.Note, error)
+	GetOne(noteIdStruct dto.RequiredID, userEntity *entity.User, lang string) (*entity.Note, error)
+	DeleteOne(noteIdStruct dto.RequiredID, userEntity *entity.User, lang string) error
 }
 
 type noteUseCase struct {
@@ -31,11 +34,7 @@ func NewNoteUseCase(ctx context.Context, repositories *repository.Repositories) 
 	}
 }
 
-func (uc *noteUseCase) Create(
-	in dto.NoteCreate,
-	userEntity *entity.User,
-	lang string,
-) (*entity.Note, error) {
+func (uc *noteUseCase) Create(in dto.NoteCreate, userEntity *entity.User, lang string) (*entity.Note, error) {
 	_, err := uc.repositories.NoteCategoryRepository.FindByIDAndUser(userEntity.ID, in.CategoryID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -63,11 +62,7 @@ func (uc *noteUseCase) Create(
 	return data, nil
 }
 
-func (uc *noteUseCase) GetAll(
-	catIdStruct dto.RequiredID,
-	userEntity *entity.User,
-	lang string,
-) ([]*entity.Note, error) {
+func (uc *noteUseCase) GetAll(catIdStruct dto.RequiredID, userEntity *entity.User, lang string) ([]*entity.Note, error) {
 	categories, err := uc.repositories.NoteCategoryRepository.FindByIDAndUserWithChildren(userEntity.ID, catIdStruct.ID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -93,6 +88,102 @@ func (uc *noteUseCase) GetAll(
 		}
 	}
 	return notes, nil
+}
+
+func (uc *noteUseCase) Update(in dto.NoteUpdate, userEntity *entity.User, lang string) (*entity.Note, error) {
+	currentNote, err := uc.repositories.NoteRepository.GetById(in.ID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, errors.New(locale.T(lang, "note_not_found"))
+		}
+		logging.GetLogger(uc.ctx).Error(err)
+		return nil, errors.New(locale.T(lang, "unexpected_database_error"))
+	}
+
+	// проверим, что текущая категория заметки принадлежит пользователю
+	_, err = uc.repositories.NoteCategoryRepository.FindByIDAndUser(userEntity.ID, currentNote.CategoryID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, errors.New(locale.T(lang, "note_not_found"))
+		}
+		logging.GetLogger(uc.ctx).Error(err)
+		return nil, errors.New(locale.T(lang, "unexpected_database_error"))
+	}
+
+	// проверим, что новая категория заметки принадлежит пользователю, если она изменяется
+	if currentNote.CategoryID != in.CategoryID {
+		_, err := uc.repositories.NoteCategoryRepository.FindByIDAndUser(userEntity.ID, in.CategoryID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return nil, errors.New(locale.T(lang, "category_not_found"))
+			}
+			logging.GetLogger(uc.ctx).Error(err)
+			return nil, errors.New(locale.T(lang, "unexpected_database_error"))
+		}
+	}
+
+	currentNote.NoteBlocks = in.NoteBlocks
+	currentNote.CategoryID = in.CategoryID
+	currentNote.Title = uc.getNoteTitle(string(in.NoteBlocks))
+	currentNote.UpdatedAt = time.Now().UTC()
+
+	err = uc.repositories.NoteRepository.Update(currentNote)
+	if err != nil {
+		logging.GetLogger(uc.ctx).Error(err)
+		return nil, errors.New(locale.T(lang, "unexpected_database_error"))
+	}
+	return currentNote, nil
+}
+
+func (uc *noteUseCase) GetOne(noteIdStruct dto.RequiredID, userEntity *entity.User, lang string) (*entity.Note, error) {
+	currentNote, err := uc.repositories.NoteRepository.GetById(noteIdStruct.ID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, errors.New(locale.T(lang, "note_not_found"))
+		}
+		logging.GetLogger(uc.ctx).Error(err)
+		return nil, errors.New(locale.T(lang, "unexpected_database_error"))
+	}
+
+	// проверим, что текущая категория заметки принадлежит пользователю
+	_, err = uc.repositories.NoteCategoryRepository.FindByIDAndUser(userEntity.ID, currentNote.CategoryID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, errors.New(locale.T(lang, "note_not_found"))
+		}
+		logging.GetLogger(uc.ctx).Error(err)
+		return nil, errors.New(locale.T(lang, "unexpected_database_error"))
+	}
+
+	return currentNote, nil
+}
+
+func (uc *noteUseCase) DeleteOne(noteIdStruct dto.RequiredID, userEntity *entity.User, lang string) error {
+	currentNote, err := uc.repositories.NoteRepository.GetById(noteIdStruct.ID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return errors.New(locale.T(lang, "note_not_found"))
+		}
+		logging.GetLogger(uc.ctx).Error(err)
+		return errors.New(locale.T(lang, "unexpected_database_error"))
+	}
+
+	// проверим, что текущая категория заметки принадлежит пользователю
+	_, err = uc.repositories.NoteCategoryRepository.FindByIDAndUser(userEntity.ID, currentNote.CategoryID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return errors.New(locale.T(lang, "note_not_found"))
+		}
+		logging.GetLogger(uc.ctx).Error(err)
+		return errors.New(locale.T(lang, "unexpected_database_error"))
+	}
+
+	err = uc.repositories.NoteRepository.DeleteOne(currentNote.ID)
+	if err != nil {
+		logging.GetLogger(uc.ctx).Error(err)
+		return errors.New(locale.T(lang, "unexpected_database_error"))
+	}
+	return nil
 }
 
 func (uc *noteUseCase) getNoteTitle(blocks string) *string {

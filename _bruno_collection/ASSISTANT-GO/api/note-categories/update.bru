@@ -1,0 +1,17 @@
+meta {
+  name: update
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{domain}}/api/note-categories/60
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "name": "ссылки"
+  }
+}

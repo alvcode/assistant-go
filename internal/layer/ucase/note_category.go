@@ -15,6 +15,7 @@ type NoteCategoryUseCase interface {
 	Create(in dto.NoteCategoryCreate, userEntity *entity.User, lang string) (*entity.NoteCategory, error)
 	FindAll(userId int, lang string) ([]*entity.NoteCategory, error)
 	Delete(userId int, catId int, lang string) error
+	Update(in dto.NoteCategoryUpdate, userID int, lang string) (*entity.NoteCategory, error)
 }
 
 type noteCategoryUseCase struct {
@@ -86,4 +87,32 @@ func (uc *noteCategoryUseCase) Delete(userId int, catId int, lang string) error 
 		return errors.New(locale.T(lang, "unexpected_database_error"))
 	}
 	return nil
+}
+
+func (uc *noteCategoryUseCase) Update(in dto.NoteCategoryUpdate, userID int, lang string) (*entity.NoteCategory, error) {
+	noteCategoryEntity := &entity.NoteCategory{
+		ID:       in.ID,
+		UserId:   userID,
+		Name:     in.Name,
+		ParentId: in.ParentID,
+	}
+
+	if in.ParentID != nil {
+		_, err := uc.repositories.NoteCategoryRepository.FindByIDAndUser(userID, *in.ParentID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return nil, errors.New(locale.T(lang, "category_not_found"))
+			}
+			logging.GetLogger(uc.ctx).Error(err)
+			return nil, errors.New(locale.T(lang, "unexpected_database_error"))
+		}
+	}
+
+	err := uc.repositories.NoteCategoryRepository.Update(noteCategoryEntity)
+	if err != nil {
+		logging.GetLogger(uc.ctx).Error(err)
+		return nil, errors.New(locale.T(lang, "unexpected_database_error"))
+	}
+	return noteCategoryEntity, nil
+
 }
