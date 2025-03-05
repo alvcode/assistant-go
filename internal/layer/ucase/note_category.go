@@ -64,7 +64,7 @@ func (uc *noteCategoryUseCase) FindAll(userId int, lang string) ([]*entity.NoteC
 	data, err := uc.repositories.NoteCategoryRepository.FindAll(userId)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
-		return nil, errors.New(locale.T(lang, "unexpected_database_error"))
+		return nil, errors.New(locale.T(lang, "unexpected_database_errorr"))
 	}
 	return data, nil
 }
