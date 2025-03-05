@@ -71,6 +71,11 @@ func (controller *Init) setUserRoutes(ctx context.Context, repositories *reposit
 		"/api/user",
 		handler.BuildHandler(userHandler.Delete, handler.LocaleMW, handler.AuthMW),
 	)
+	controller.router.Handler(
+		http.MethodPatch,
+		"/api/user/change-password",
+		handler.BuildHandler(userHandler.ChangePassword, handler.LocaleMW, handler.AuthMW),
+	)
 }
 
 func (controller *Init) setNotesCategories(ctx context.Context, repositories *repository.Repositories) {
