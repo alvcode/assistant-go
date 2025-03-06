@@ -126,8 +126,10 @@ func BlockIPMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		}
 
 		ip, _, err := net.SplitHostPort(IPAddress)
-		if err != nil {
-			SendErrorResponse(w, locale.T(langRequest, "failed_to_determine_ip"), http.StatusForbidden, 0)
+		dtoBlockIP := dto.BlockIP{IP: ip}
+		if err := dtoBlockIP.Validate(langRequest); err != nil {
+			SendErrorResponse(w, locale.T(langRequest, "failed_to_determine_ip"), http.StatusUnauthorized, 0)
+			return
 		}
 
 		foundIP, err := blockIpRepository.FindBlocking(ip, time.Now().UTC())

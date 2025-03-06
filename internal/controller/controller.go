@@ -54,22 +54,22 @@ func (controller *Init) setUserRoutes(ctx context.Context, repositories *reposit
 	controller.router.Handler(
 		http.MethodPost,
 		"/api/auth/register",
-		handler.BuildHandler(userHandler.Create, handler.BlockIPMW, handler.LocaleMW),
+		handler.BuildHandler(userHandler.Create, handler.LocaleMW),
 	)
 	controller.router.Handler(
 		http.MethodPost,
 		"/api/auth/login",
-		handler.BuildHandler(userHandler.Login, handler.BlockIPMW, handler.LocaleMW),
+		handler.BuildHandler(userHandler.Login, handler.LocaleMW),
 	)
 	controller.router.Handler(
 		http.MethodPost,
 		"/api/auth/refresh-token",
-		handler.BuildHandler(userHandler.RefreshToken, handler.BlockIPMW, handler.LocaleMW),
+		handler.BuildHandler(userHandler.RefreshToken, handler.LocaleMW),
 	)
 	controller.router.Handler(
 		http.MethodDelete,
 		"/api/user",
-		handler.BuildHandler(userHandler.Delete, handler.BlockIPMW, handler.LocaleMW, handler.AuthMW),
+		handler.BuildHandler(userHandler.Delete, handler.LocaleMW, handler.AuthMW),
 	)
 }
 
@@ -79,18 +79,23 @@ func (controller *Init) setNotesCategories(ctx context.Context, repositories *re
 
 	controller.router.Handler(
 		http.MethodPost,
-		"/api/notes/categories",
-		handler.BuildHandler(noteCategoryHandler.Create, handler.BlockIPMW, handler.LocaleMW, handler.AuthMW),
+		"/api/note-categories",
+		handler.BuildHandler(noteCategoryHandler.Create, handler.LocaleMW, handler.AuthMW),
 	)
 	controller.router.Handler(
 		http.MethodGet,
-		"/api/notes/categories",
-		handler.BuildHandler(noteCategoryHandler.GetAll, handler.BlockIPMW, handler.LocaleMW, handler.AuthMW),
+		"/api/note-categories",
+		handler.BuildHandler(noteCategoryHandler.GetAll, handler.LocaleMW, handler.AuthMW),
 	)
 	controller.router.Handler(
 		http.MethodDelete,
-		"/api/notes/categories/:id",
-		handler.BuildHandler(noteCategoryHandler.Delete, handler.BlockIPMW, handler.LocaleMW, handler.AuthMW),
+		"/api/note-categories/:id",
+		handler.BuildHandler(noteCategoryHandler.Delete, handler.LocaleMW, handler.AuthMW),
+	)
+	controller.router.Handler(
+		http.MethodPatch,
+		"/api/note-categories/:id",
+		handler.BuildHandler(noteCategoryHandler.Update, handler.LocaleMW, handler.AuthMW),
 	)
 
 }
@@ -102,11 +107,26 @@ func (controller *Init) setNotes(ctx context.Context, repositories *repository.R
 	controller.router.Handler(
 		http.MethodPost,
 		"/api/notes",
-		handler.BuildHandler(noteHandler.Create, handler.BlockIPMW, handler.LocaleMW, handler.AuthMW),
+		handler.BuildHandler(noteHandler.Create, handler.LocaleMW, handler.AuthMW),
 	)
 	controller.router.Handler(
 		http.MethodGet,
 		"/api/notes",
-		handler.BuildHandler(noteHandler.GetAll, handler.BlockIPMW, handler.LocaleMW, handler.AuthMW),
+		handler.BuildHandler(noteHandler.GetAll, handler.LocaleMW, handler.AuthMW),
+	)
+	controller.router.Handler(
+		http.MethodPatch,
+		"/api/notes",
+		handler.BuildHandler(noteHandler.Update, handler.LocaleMW, handler.AuthMW),
+	)
+	controller.router.Handler(
+		http.MethodGet,
+		"/api/notes/:id",
+		handler.BuildHandler(noteHandler.GetOne, handler.LocaleMW, handler.AuthMW),
+	)
+	controller.router.Handler(
+		http.MethodDelete,
+		"/api/notes/:id",
+		handler.BuildHandler(noteHandler.DeleteOne, handler.LocaleMW, handler.AuthMW),
 	)
 }
