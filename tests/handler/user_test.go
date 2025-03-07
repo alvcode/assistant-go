@@ -7,6 +7,7 @@ import (
 	"assistant-go/internal/layer/repository"
 	"assistant-go/internal/layer/ucase"
 	"assistant-go/internal/layer/vmodel"
+	mocks "assistant-go/mocks/layer/repository"
 	"assistant-go/pkg/vld"
 	"bytes"
 	"context"
@@ -22,47 +23,8 @@ import (
 	"time"
 )
 
-type MockUserRepository struct {
-	mock.Mock
-}
-
-func (m *MockUserRepository) Create(in entity.User) (*entity.User, error) {
-	args := m.Called(in)
-	return args.Get(0).(*entity.User), args.Error(1)
-}
-
-func (m *MockUserRepository) Find(login string) (*entity.User, error) {
-	args := m.Called(login)
-	return args.Get(0).(*entity.User), args.Error(1)
-}
-
-func (m *MockUserRepository) FindById(id int) (*entity.User, error) {
-	args := m.Called(id)
-	return args.Get(0).(*entity.User), args.Error(1)
-}
-
-func (m *MockUserRepository) FindUserToken(token string) (*entity.UserToken, error) {
-	args := m.Called(token)
-	return args.Get(0).(*entity.UserToken), args.Error(1)
-}
-
-func (m *MockUserRepository) SetUserToken(in entity.UserToken) (*entity.UserToken, error) {
-	args := m.Called(in)
-	return args.Get(0).(*entity.UserToken), args.Error(1)
-}
-
-func (m *MockUserRepository) Delete(userID int) error {
-	args := m.Called(userID)
-	return args.Error(1)
-}
-
-func (m *MockUserRepository) DeleteUserTokensByID(userID int) error {
-	args := m.Called(userID)
-	return args.Error(1)
-}
-
-func setupTest() (*MockUserRepository, *handler.UserHandler, context.Context) {
-	mockRepo := new(MockUserRepository)
+func setupTest() (*mocks.MockUserRepository, *handler.UserHandler, context.Context) {
+	mockRepo := &mocks.MockUserRepository{}
 	ctx := context.Background()
 	vld.InitValidator(ctx)
 

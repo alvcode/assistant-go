@@ -44,10 +44,23 @@ md: # down one last migration
 md-to: # $(timestamp) - откат конкретной миграции. пример: make md-to timestamp=20170506082527
 	goose down-to $(timestamp)
 
+# =============== BACKUP/RESTORE =========================
+
+backup-db:
+	docker exec ast-db pg_dump -U $(DB_USERNAME) -d $(DB_DATABASE) > $(DB_LOCAL_BACKUP_PATH)/$(shell date +%Y-%m-%d_%H-%M-%S).sql
+	chown -R $(DB_LOCAL_BACKUP_OWNER):$(DB_LOCAL_BACKUP_OWNER) $(DB_LOCAL_BACKUP_PATH);
+	echo "Database backup created successfully"
+
+restore-db: # with param file=path/to/backup/dump.sql
+	docker exec -i ast-db psql -U $(DB_USERNAME) -d $(DB_DATABASE) < $(file)
+	echo "Database restored successfully"
 
 # =======================================================
 swag:
 	swag init -g ./cmd/main.go -o ./swagger
+
+mockery:
+	mockery
 
 test:
 	go test ./tests/...
