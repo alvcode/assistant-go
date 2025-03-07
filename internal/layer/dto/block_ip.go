@@ -3,7 +3,7 @@ package dto
 import "assistant-go/pkg/vld"
 
 type BlockIP struct {
-	IP string `json:"ip" validate:"required"`
+	IP string `json:"ip" validate:"required,ipv4"`
 }
 
 func (dto *BlockIP) Validate(lang string) error {

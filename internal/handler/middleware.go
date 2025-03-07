@@ -144,6 +144,7 @@ func BlockIPMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			SendErrorResponse(w, locale.T(langRequest, "access_denied"), http.StatusForbidden, 0)
 			return
 		}
+
 		next(w, r)
 	}
 }
