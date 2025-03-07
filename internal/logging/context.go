@@ -5,6 +5,7 @@ import (
 )
 
 const defaultEnv = "prod"
+const TestsEnv = "dev"
 
 type ctxLogger struct{}
 

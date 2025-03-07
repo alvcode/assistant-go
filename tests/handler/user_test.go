@@ -7,6 +7,7 @@ import (
 	"assistant-go/internal/layer/repository"
 	"assistant-go/internal/layer/ucase"
 	"assistant-go/internal/layer/vmodel"
+	"assistant-go/internal/logging"
 	mocks "assistant-go/mocks/layer/repository"
 	"assistant-go/pkg/vld"
 	"bytes"
@@ -25,7 +26,11 @@ import (
 
 func setupTest() (*mocks.MockUserRepository, *handler.UserHandler, context.Context) {
 	mockRepo := &mocks.MockUserRepository{}
+
 	ctx := context.Background()
+	logger := logging.NewLogger(logging.TestsEnv)
+	ctx = logging.ContextWithLogger(ctx, logger)
+
 	vld.InitValidator(ctx)
 
 	repos := &repository.Repositories{
