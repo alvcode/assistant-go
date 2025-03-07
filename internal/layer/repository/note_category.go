@@ -11,10 +11,9 @@ type NoteCategoryRepository interface {
 	FindAll(userID int) ([]*entity.NoteCategory, error)
 	FindByIDAndUser(userID int, id int) (*entity.NoteCategory, error)
 	FindByIDAndUserWithChildren(userID int, id int) ([]*entity.NoteCategory, error)
-	DeleteById(catID []int) error
+	DeleteByIds(catIDs []int) error
 	DeleteByUserId(userID int) error
 	Update(in *entity.NoteCategory) error
-	CheckExistsByCategoryIDs(catID []int) (bool, error)
 }
 
 type noteCategoryRepository struct {
@@ -113,9 +112,9 @@ func (ur *noteCategoryRepository) FindByIDAndUserWithChildren(userID int, id int
 	return categories, nil
 }
 
-func (ur *noteCategoryRepository) DeleteById(catID []int) error {
+func (ur *noteCategoryRepository) DeleteByIds(catIDs []int) error {
 	query := `DELETE FROM note_categories WHERE id = ANY($1)`
-	_, err := ur.db.Exec(ur.ctx, query, catID)
+	_, err := ur.db.Exec(ur.ctx, query, catIDs)
 	if err != nil {
 		return err
 	}
@@ -139,16 +138,4 @@ func (ur *noteCategoryRepository) Update(in *entity.NoteCategory) error {
 		return err
 	}
 	return nil
-}
-
-func (ur *noteCategoryRepository) CheckExistsByCategoryIDs(catIDs []int) (bool, error) {
-	query := `SELECT EXISTS(SELECT 1 FROM notes WHERE category_id = ANY($1) LIMIT 1)`
-
-	var exists bool
-	err := ur.db.QueryRow(ur.ctx, query, catIDs).Scan(&exists)
-	if err != nil {
-		return false, err
-	}
-
-	return exists, nil
 }

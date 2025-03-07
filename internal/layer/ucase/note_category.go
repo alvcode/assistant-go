@@ -87,11 +87,8 @@ func (uc *noteCategoryUseCase) Delete(userId int, catId int, lang string) error 
 		return errors.New(locale.T(lang, "category_not_found"))
 	}
 
-	checkExists, err := uc.repositories.NoteCategoryRepository.CheckExistsByCategoryIDs(catIds)
+	checkExists, err := uc.repositories.NoteRepository.CheckExistsByCategoryIDs(catIds)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return errors.New(locale.T(lang, "note_not_found"))
-		}
 		logging.GetLogger(uc.ctx).Error(err)
 		return errors.New(locale.T(lang, "unexpected_database_error"))
 	}
@@ -99,7 +96,7 @@ func (uc *noteCategoryUseCase) Delete(userId int, catId int, lang string) error 
 		return errors.New(locale.T(lang, "category_has_notes"))
 	}
 
-	err = uc.repositories.NoteCategoryRepository.DeleteById(catIds)
+	err = uc.repositories.NoteCategoryRepository.DeleteByIds(catIds)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
 		return errors.New(locale.T(lang, "unexpected_database_error"))
