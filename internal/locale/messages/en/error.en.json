@@ -9,5 +9,6 @@
   "category_not_found": "Category not found",
   "parent_id_of_the_category_not_found": "Parent category not found",
   "parameter_conversion_error": "Parameter conversion error",
-  "note_not_found": "Note not found"
+  "note_not_found": "Note not found",
+  "category_has_notes": "The category has notes. You must first move them to another category or delete them"
 }
