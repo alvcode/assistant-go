@@ -1,3 +1,5 @@
+Notes and reminders system
+
 install package goose for migrations
 and swagg for swagger
 
