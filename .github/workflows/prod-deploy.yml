@@ -25,6 +25,7 @@ jobs:
       - name: Deploy to server
         run: |
           sshpass -p "${{ secrets.SSH_PASSWORD }}" ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+            echo "${{ secrets.SUDO_PASSWORD }}" | sudo -S su -
             cd ${{ secrets.PROJECT_PATH }}
             make deploy
           EOF
