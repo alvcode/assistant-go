@@ -49,7 +49,7 @@ md-to: # $(timestamp) - откат конкретной миграции. при
 # =============== BACKUP/RESTORE =========================
 
 backup-db:
-	docker exec ast-db pg_dump -U $(DB_USERNAME) -d $(DB_DATABASE) > $(DB_LOCAL_BACKUP_PATH)/$(shell date +%Y-%m-%d_%H-%M-%S).sql
+	docker exec dev-postgres pg_dump -U $(DB_USERNAME) -d $(DB_DATABASE) | gzip > $(DB_LOCAL_BACKUP_PATH)/$(shell date +%Y-%m-%d_%H-%M-%S).sql.gz
 	chown -R $(DB_LOCAL_BACKUP_OWNER):$(DB_LOCAL_BACKUP_OWNER) $(DB_LOCAL_BACKUP_PATH);
 	echo "Database backup created successfully"
 
@@ -57,7 +57,7 @@ db-remove-old-backups: # Удаляет бэкапы БД, которые был
 	find $(DB_LOCAL_BACKUP_PATH) -type f -mtime +5 -exec rm -rf {} +
 
 restore-db: # with param file=path/to/backup/dump.sql
-	docker exec -i ast-db psql -U $(DB_USERNAME) -d $(DB_DATABASE) < $(file)
+	gunzip -c $(file) | docker exec -i dev-postgres psql -U $(DB_USERNAME) -d $(DB_DATABASE)
 	echo "Database restored successfully"
 
 # =======================================================
