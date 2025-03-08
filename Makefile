@@ -28,6 +28,7 @@ deploy:
 		fi; \
 	done
 	make prod-m;
+	yes | docker system prune -a --volumes;
 
 # =============== MIGRATIONS =========================
 # prod
