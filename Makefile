@@ -13,20 +13,7 @@ prod-bash:
 deploy:
 	git pull;
 	make prod-start;
-	@echo "Waiting for the application to start..."
-	@for i in 1 2 3 4 5; do \
-		if curl -s -o /dev/null -w "%{http_code}" http://localhost:8075/api/heartbeat | grep -q "200"; then \
-			echo "Application is up!"; \
-			break; \
-		else \
-			echo "Attempt $$i: Application not ready, retrying in 2 seconds..."; \
-			sleep 2; \
-		fi; \
-		if [ $$i -eq 5 ]; then \
-			echo "Application did not start within 10 seconds. Exiting."; \
-			exit 1; \
-		fi; \
-	done
+	sleep 5;
 	make prod-m;
 	yes | docker system prune -a --volumes;
 
