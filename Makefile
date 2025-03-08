@@ -20,7 +20,7 @@ deploy:
 # =============== MIGRATIONS =========================
 # prod
 prod-m:
-	docker exec -it ast-app goose up;
+	docker exec ast-app goose up;
 
 prod-m-one:
 	docker exec -it ast-app goose up-by-one;
