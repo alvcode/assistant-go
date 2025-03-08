@@ -12,9 +12,5 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. Настройка Buildx
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
       - name: Run tests
-        run: make test  # Запуск тестов
+        run: go test ./tests/...
