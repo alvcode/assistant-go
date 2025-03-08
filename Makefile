@@ -51,6 +51,9 @@ backup-db:
 	chown -R $(DB_LOCAL_BACKUP_OWNER):$(DB_LOCAL_BACKUP_OWNER) $(DB_LOCAL_BACKUP_PATH);
 	echo "Database backup created successfully"
 
+db-remove-old-backups: # Удаляет бэкапы БД, которые были созданы более 5 дней назад
+	find $(DB_LOCAL_BACKUP_PATH) -type f -mtime +5 -exec rm -rf {} +
+
 restore-db: # with param file=path/to/backup/dump.sql
 	docker exec -i ast-db psql -U $(DB_USERNAME) -d $(DB_DATABASE) < $(file)
 	echo "Database restored successfully"

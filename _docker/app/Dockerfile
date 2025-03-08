@@ -1,7 +1,6 @@
 FROM golang:1.23.4-alpine AS builder
 
 RUN go install github.com/pressly/goose/v3/cmd/goose@latest
-RUN go install github.com/vektra/mockery/v2@latest
 
 WORKDIR /app
 
