@@ -15,7 +15,7 @@ deploy:
 	make prod-start;
 	@echo "Waiting for the application to start..."
 	@for i in 1 2 3 4 5; do \
-		if curl -s -o /dev/null -w "%{http_code}" http://localhost:$(HTTP_PORT)/api/heartbeat | grep -q "200"; then \
+		if curl -s -o /dev/null -w "%{http_code}" http://localhost:8075/api/heartbeat | grep -q "200"; then \
 			echo "Application is up!"; \
 			break; \
 		else \
