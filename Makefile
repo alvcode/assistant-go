@@ -13,6 +13,20 @@ prod-bash:
 deploy:
 	git pull;
 	make prod-start;
+	@echo "Waiting for the application to start..."
+	@for i in 1 2 3 4 5; do \
+		if curl -s -o /dev/null -w "%{http_code}" http://localhost:$(HTTP_PORT)/api/heartbeat | grep -q "200"; then \
+			echo "Application is up!"; \
+			break; \
+		else \
+			echo "Attempt $$i: Application not ready, retrying in 2 seconds..."; \
+			sleep 2; \
+		fi; \
+		if [ $$i -eq 5 ]; then \
+			echo "Application did not start within 10 seconds. Exiting."; \
+			exit 1; \
+		fi; \
+	done
 	make prod-m;
 
 # =============== MIGRATIONS =========================
@@ -49,7 +63,7 @@ md-to: # $(timestamp) - откат конкретной миграции. при
 # =============== BACKUP/RESTORE =========================
 
 backup-db:
-	docker exec dev-postgres pg_dump -U $(DB_USERNAME) -d $(DB_DATABASE) | gzip > $(DB_LOCAL_BACKUP_PATH)/$(shell date +%Y-%m-%d_%H-%M-%S).sql.gz
+	docker exec ast-db pg_dump -U $(DB_USERNAME) -d $(DB_DATABASE) | gzip > $(DB_LOCAL_BACKUP_PATH)/$(shell date +%Y-%m-%d_%H-%M-%S).sql.gz
 	chown -R $(DB_LOCAL_BACKUP_OWNER):$(DB_LOCAL_BACKUP_OWNER) $(DB_LOCAL_BACKUP_PATH);
 	echo "Database backup created successfully"
 
@@ -57,7 +71,7 @@ db-remove-old-backups: # Удаляет бэкапы БД, которые был
 	find $(DB_LOCAL_BACKUP_PATH) -type f -mtime +5 -exec rm -rf {} +
 
 restore-db: # with param file=path/to/backup/dump.sql
-	gunzip -c $(file) | docker exec -i dev-postgres psql -U $(DB_USERNAME) -d $(DB_DATABASE)
+	gunzip -c $(file) | docker exec -i ast-db psql -U $(DB_USERNAME) -d $(DB_DATABASE)
 	echo "Database restored successfully"
 
 # =======================================================
