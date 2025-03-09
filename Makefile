@@ -1,3 +1,5 @@
+include .env
+
 # =============== PRODUCTION =========================
 prod-start:
 	docker compose -f docker-compose.prod.yaml up --build -d
@@ -11,12 +13,14 @@ prod-bash:
 deploy:
 	git pull;
 	make prod-start;
+	sleep 5;
 	make prod-m;
+	yes | docker system prune -a --volumes;
 
 # =============== MIGRATIONS =========================
 # prod
 prod-m:
-	docker exec -it ast-app goose up;
+	docker exec ast-app goose up;
 
 prod-m-one:
 	docker exec -it ast-app goose up-by-one;
@@ -44,10 +48,26 @@ md: # down one last migration
 md-to: # $(timestamp) - откат конкретной миграции. пример: make md-to timestamp=20170506082527
 	goose down-to $(timestamp)
 
+# =============== BACKUP/RESTORE =========================
+
+backup-db:
+	docker exec ast-db pg_dump -U $(DB_USERNAME) -d $(DB_DATABASE) | gzip > $(DB_LOCAL_BACKUP_PATH)/$(shell date +%Y-%m-%d_%H-%M-%S).sql.gz
+	chown -R $(DB_LOCAL_BACKUP_OWNER):$(DB_LOCAL_BACKUP_OWNER) $(DB_LOCAL_BACKUP_PATH);
+	echo "Database backup created successfully"
+
+db-remove-old-backups: # Удаляет бэкапы БД, которые были созданы более 5 дней назад
+	find $(DB_LOCAL_BACKUP_PATH) -type f -mtime +5 -exec rm -rf {} +
+
+restore-db: # with param file=path/to/backup/dump.sql
+	gunzip -c $(file) | docker exec -i ast-db psql -U $(DB_USERNAME) -d $(DB_DATABASE)
+	echo "Database restored successfully"
 
 # =======================================================
 swag:
 	swag init -g ./cmd/main.go -o ./swagger
+
+mockery:
+	mockery
 
 test:
 	go test ./tests/...

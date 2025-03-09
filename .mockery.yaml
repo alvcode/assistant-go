@@ -1,0 +1,19 @@
+packages:
+  assistant-go/internal/layer/repository:
+    interfaces:
+      NoteRepository:
+        config:
+          dir: ./mocks/layer/repository
+      NoteCategoryRepository:
+        config:
+          dir: ./mocks/layer/repository
+      UserRepository:
+        config:
+          dir: ./mocks/layer/repository
+    keep-tree: false
+    case: underscore
+
+outpkg: mocks
+resolve-type-alias: false
+disable-version-string: true
+issue-845-fix: true

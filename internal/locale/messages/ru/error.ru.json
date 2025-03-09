@@ -9,6 +9,8 @@
   "category_not_found": "Категория не найдена",
   "parent_id_of_the_category_not_found": "Родительская категория не найдена",
   "parameter_conversion_error": "Ошибка преобразования параметра",
+  "passwords_are_not_identical": "Введеный пароль не совпадает с текущим",
+  "user_not_found": "Пользователь не найден",
   "note_not_found": "Заметка не найдена",
   "access_denied": "Доступ к ресурсу запрещен",
   "failed_to_determine_ip": "Не удалось определить IP-адрес"
