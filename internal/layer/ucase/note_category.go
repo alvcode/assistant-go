@@ -70,7 +70,7 @@ func (uc *noteCategoryUseCase) FindAll(userId int, lang string) ([]*entity.NoteC
 }
 
 func (uc *noteCategoryUseCase) Delete(userId int, catId int, lang string) error {
-	_, err := uc.repositories.NoteCategoryRepository.FindByIDAndUser(userId, catId)
+	categories, err := uc.repositories.NoteCategoryRepository.FindByIDAndUserWithChildren(userId, catId)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return errors.New(locale.T(lang, "category_not_found"))
@@ -79,9 +79,26 @@ func (uc *noteCategoryUseCase) Delete(userId int, catId int, lang string) error 
 		return errors.New(locale.T(lang, "unexpected_database_error"))
 	}
 
-	// TODO: тут должна быть проверка на наличие заметок внутри категории и ошибка, т.к тогда они потеряются
+	catIds := make([]int, 0)
+	for _, cat := range categories {
+		catIds = append(catIds, cat.ID)
+	}
+	if len(catIds) == 0 {
+		return errors.New(locale.T(lang, "category_not_found"))
+	}
 
-	err = uc.repositories.NoteCategoryRepository.DeleteById(catId)
+	checkExists, err := uc.repositories.NoteRepository.CheckExistsByCategoryIDs(catIds)
+	if err != nil {
+		if !errors.Is(err, pgx.ErrNoRows) {
+			logging.GetLogger(uc.ctx).Error(err)
+			return errors.New(locale.T(lang, "unexpected_database_error"))
+		}
+	}
+	if checkExists == true {
+		return errors.New(locale.T(lang, "category_has_notes"))
+	}
+
+	err = uc.repositories.NoteCategoryRepository.DeleteByIds(catIds)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
 		return errors.New(locale.T(lang, "unexpected_database_error"))
