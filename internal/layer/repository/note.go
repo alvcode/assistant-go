@@ -12,6 +12,8 @@ type NoteRepository interface {
 	GetById(ID int) (*entity.Note, error)
 	GetMinimalByCategoryIds(catIds []int) ([]*entity.Note, error)
 	DeleteOne(noteID int) error
+	Pin(noteID int) error
+	UnPin(noteID int) error
 }
 
 type noteRepository struct {
@@ -51,14 +53,14 @@ func (ur *noteRepository) GetById(ID int) (*entity.Note, error) {
 	query := `select * from notes where id = $1`
 	row := ur.db.QueryRow(ur.ctx, query, ID)
 	var note entity.Note
-	if err := row.Scan(&note.ID, &note.CategoryID, &note.NoteBlocks, &note.CreatedAt, &note.UpdatedAt, &note.Title); err != nil {
+	if err := row.Scan(&note.ID, &note.CategoryID, &note.NoteBlocks, &note.CreatedAt, &note.UpdatedAt, &note.Title, &note.Pinned); err != nil {
 		return nil, err
 	}
 	return &note, nil
 }
 
 func (ur *noteRepository) GetMinimalByCategoryIds(catIds []int) ([]*entity.Note, error) {
-	query := `select n.id, n.category_id, n.created_at, n.updated_at, n.title from notes n where n.category_id = ANY($1)`
+	query := `select n.id, n.category_id, n.created_at, n.updated_at, n.title, n.pinned from notes n where n.category_id = ANY($1)`
 
 	rows, err := ur.db.Query(ur.ctx, query, catIds)
 	if err != nil {
@@ -69,7 +71,7 @@ func (ur *noteRepository) GetMinimalByCategoryIds(catIds []int) ([]*entity.Note,
 	notes := make([]*entity.Note, 0)
 	for rows.Next() {
 		note := &entity.Note{}
-		if err := rows.Scan(&note.ID, &note.CategoryID, &note.CreatedAt, &note.UpdatedAt, &note.Title); err != nil {
+		if err := rows.Scan(&note.ID, &note.CategoryID, &note.CreatedAt, &note.UpdatedAt, &note.Title, &note.Pinned); err != nil {
 			return nil, err
 		}
 		notes = append(notes, note)
@@ -84,6 +86,26 @@ func (ur *noteRepository) GetMinimalByCategoryIds(catIds []int) ([]*entity.Note,
 
 func (ur *noteRepository) DeleteOne(noteID int) error {
 	query := `DELETE FROM notes WHERE id = $1`
+
+	_, err := ur.db.Exec(ur.ctx, query, noteID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (ur *noteRepository) Pin(noteID int) error {
+	query := `UPDATE notes SET pinned = true WHERE id = $1`
+
+	_, err := ur.db.Exec(ur.ctx, query, noteID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (ur *noteRepository) UnPin(noteID int) error {
+	query := `UPDATE notes SET pinned = false WHERE id = $1`
 
 	_, err := ur.db.Exec(ur.ctx, query, noteID)
 	if err != nil {
