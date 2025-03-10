@@ -9,7 +9,6 @@ import (
 	"assistant-go/internal/service/utils"
 	"context"
 	"errors"
-	"fmt"
 	"github.com/jackc/pgx/v5"
 	"github.com/tidwall/gjson"
 	"time"
@@ -55,8 +54,6 @@ func (uc *noteUseCase) Create(in dto.NoteCreate, userEntity *entity.User, lang s
 	} else {
 		pinned = *in.Pinned
 	}
-
-	fmt.Println(pinned)
 
 	noteEntity := entity.Note{
 		CategoryID: in.CategoryID,
