@@ -11,6 +11,8 @@
   "parameter_conversion_error": "Parameter conversion error",
   "passwords_are_not_identical": "The entered password does not match the current one",
   "user_not_found": "User was not found",
+  "category_has_notes": "The category has notes. You must first move them to another category or delete them",
   "note_not_found": "Note not found",
-  "category_has_notes": "The category has notes. You must first move them to another category or delete them"
+  "access_denied": "Access to the resource is denied",
+  "failed_to_determine_ip": "The IP address could not be determined"
 }
