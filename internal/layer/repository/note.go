@@ -96,7 +96,7 @@ func (ur *noteRepository) DeleteOne(noteID int) error {
 }
 
 func (ur *noteRepository) CheckExistsByCategoryIDs(catIDs []int) (bool, error) {
-	query := `SELECT EXISTS(SELECT 1 FROM notes WHERE category_id = ANY($1) LIMIT 1)`
+	query := `SELECT EXISTS(SELECT 1 FROM notes WHERE category_id = ANY($1))`
 
 	var exists bool
 	err := ur.db.QueryRow(ur.ctx, query, catIDs).Scan(&exists)
