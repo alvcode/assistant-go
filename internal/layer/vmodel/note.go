@@ -12,7 +12,7 @@ type NoteMinimal struct {
 	CategoryID int       `json:"category_id"`
 	CreatedAt  time.Time `json:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at"`
-	Pinned     *bool     `json:"pinned"`
+	Pinned     bool      `json:"pinned"`
 }
 
 func NoteMinimalFromEnity(entity *entity.Note) *NoteMinimal {
@@ -41,7 +41,7 @@ type Note struct {
 	NoteBlocks json.RawMessage `json:"note_blocks"`
 	CreatedAt  time.Time       `json:"created_at"`
 	UpdatedAt  time.Time       `json:"updated_at"`
-	Pinned     *bool           `json:"pinned"`
+	Pinned     bool            `json:"pinned"`
 }
 
 func NoteFromEnity(entity *entity.Note) *Note {

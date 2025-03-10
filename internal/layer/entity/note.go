@@ -12,5 +12,5 @@ type Note struct {
 	CreatedAt  time.Time       `db:"created_at"`
 	UpdatedAt  time.Time       `db:"updated_at"`
 	Title      *string         `db:"title"`
-	Pinned     *bool           `db:"pinned"`
+	Pinned     bool            `db:"pinned"`
 }
