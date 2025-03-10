@@ -23,7 +23,7 @@ func NewBlockIpRepository(ctx context.Context, db *pgxpool.Pool) BlockIPReposito
 }
 
 func (ur *blockIpRepository) FindBlocking(ip string, time time.Time) (bool, error) {
-	query := `SELECT EXISTS(SELECT 1 FROM block_ip WHERE ip = $1 and blocked_until > $2 LIMIT 1)`
+	query := `SELECT EXISTS(SELECT 1 FROM block_ip WHERE ip = $1 and blocked_until > $2)`
 
 	var exists bool
 	err := ur.db.QueryRow(ur.ctx, query, ip, time).Scan(&exists)
