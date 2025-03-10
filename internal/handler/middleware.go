@@ -6,11 +6,9 @@ import (
 	"assistant-go/internal/locale"
 	"context"
 	"errors"
-	"fmt"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"net"
-
 	"net/http"
 	"strings"
 	"time"
@@ -119,27 +117,30 @@ func BlockIPMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		langRequest := locale.GetLangFromContext(r.Context())
 
 		IPAddress := r.Header.Get("X-Real-Ip")
-		fmt.Println("X-Real-Ip")
-		fmt.Println(IPAddress)
 		if IPAddress == "" {
 			IPAddress = r.Header.Get("X-Forwarded-For")
-			fmt.Println("X-Forwarded-For")
-			fmt.Println(IPAddress)
 		}
 		if IPAddress == "" {
 			IPAddress = r.RemoteAddr
-			fmt.Println("RemoteAddr")
-			fmt.Println(IPAddress)
 		}
 
-		ip, _, err := net.SplitHostPort(IPAddress)
-		dtoBlockIP := dto.BlockIP{IP: ip}
+		if strings.Contains(IPAddress, ":") {
+			host, _, err := net.SplitHostPort(IPAddress)
+			if err == nil {
+				IPAddress = host
+			} else {
+				SendErrorResponse(w, "Error split host", http.StatusForbidden, 0)
+				return
+			}
+		}
+
+		dtoBlockIP := dto.BlockIP{IP: IPAddress}
 		if err := dtoBlockIP.Validate(langRequest); err != nil {
 			SendErrorResponse(w, locale.T(langRequest, "failed_to_determine_ip"), http.StatusForbidden, 0)
 			return
 		}
 
-		foundIP, err := blockIpRepository.FindBlocking(ip, time.Now().UTC())
+		foundIP, err := blockIpRepository.FindBlocking(IPAddress, time.Now().UTC())
 		if err != nil {
 			if !errors.Is(err, pgx.ErrNoRows) {
 				SendErrorResponse(w, locale.T(langRequest, "unexpected_database_error"), http.StatusForbidden, 0)
