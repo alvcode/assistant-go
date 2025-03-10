@@ -134,4 +134,14 @@ func (controller *Init) setNotes(ctx context.Context, repositories *repository.R
 		"/api/notes/:id",
 		handler.BuildHandler(noteHandler.DeleteOne, handler.BlockIPMW, handler.LocaleMW, handler.AuthMW),
 	)
+	controller.router.Handler(
+		http.MethodPost,
+		"/api/notes/:id/pin",
+		handler.BuildHandler(noteHandler.Pin, handler.LocaleMW, handler.AuthMW),
+	)
+	controller.router.Handler(
+		http.MethodPost,
+		"/api/notes/:id/unpin",
+		handler.BuildHandler(noteHandler.UnPin, handler.LocaleMW, handler.AuthMW),
+	)
 }

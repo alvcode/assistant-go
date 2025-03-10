@@ -20,6 +20,8 @@ type NoteUseCase interface {
 	Update(in dto.NoteUpdate, userEntity *entity.User, lang string) (*entity.Note, error)
 	GetOne(noteIdStruct dto.RequiredID, userEntity *entity.User, lang string) (*entity.Note, error)
 	DeleteOne(noteIdStruct dto.RequiredID, userEntity *entity.User, lang string) error
+	Pin(noteIdStruct dto.RequiredID, userEntity *entity.User, lang string) error
+	UnPin(noteIdStruct dto.RequiredID, userEntity *entity.User, lang string) error
 }
 
 type noteUseCase struct {
@@ -126,6 +128,7 @@ func (uc *noteUseCase) Update(in dto.NoteUpdate, userEntity *entity.User, lang s
 	currentNote.CategoryID = in.CategoryID
 	currentNote.Title = uc.getNoteTitle(string(in.NoteBlocks))
 	currentNote.UpdatedAt = time.Now().UTC()
+	currentNote.Pinned = true
 
 	err = uc.repositories.NoteRepository.Update(currentNote)
 	if err != nil {
@@ -197,4 +200,59 @@ func (uc *noteUseCase) getNoteTitle(blocks string) *string {
 	} else {
 		return &titleTruncate
 	}
+}
+
+func (uc *noteUseCase) Pin(noteIdStruct dto.RequiredID, userEntity *entity.User, lang string) error {
+	currentNote, err := uc.repositories.NoteRepository.GetById(noteIdStruct.ID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return errors.New(locale.T(lang, "note_not_found"))
+		}
+		logging.GetLogger(uc.ctx).Error(err)
+		return errors.New(locale.T(lang, "unexpected_database_error"))
+	}
+
+	// проверим, что текущая категория заметки принадлежит пользователю
+	_, err = uc.repositories.NoteCategoryRepository.FindByIDAndUser(userEntity.ID, currentNote.CategoryID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return errors.New(locale.T(lang, "note_not_found"))
+		}
+		logging.GetLogger(uc.ctx).Error(err)
+		return errors.New(locale.T(lang, "unexpected_database_error"))
+	}
+
+	err = uc.repositories.NoteRepository.Pin(currentNote.ID)
+	if err != nil {
+		logging.GetLogger(uc.ctx).Error(err)
+		return errors.New(locale.T(lang, "unexpected_database_error"))
+	}
+	return nil
+}
+
+func (uc *noteUseCase) UnPin(noteIdStruct dto.RequiredID, userEntity *entity.User, lang string) error {
+	currentNote, err := uc.repositories.NoteRepository.GetById(noteIdStruct.ID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return errors.New(locale.T(lang, "note_not_found"))
+		}
+		logging.GetLogger(uc.ctx).Error(err)
+		return errors.New(locale.T(lang, "unexpected_database_error"))
+	}
+
+	_, err = uc.repositories.NoteCategoryRepository.FindByIDAndUser(userEntity.ID, currentNote.CategoryID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return errors.New(locale.T(lang, "note_not_found"))
+		}
+		logging.GetLogger(uc.ctx).Error(err)
+		return errors.New(locale.T(lang, "unexpected_database_error"))
+	}
+
+	err = uc.repositories.NoteRepository.UnPin(currentNote.ID)
+	if err != nil {
+		logging.GetLogger(uc.ctx).Error(err)
+		return errors.New(locale.T(lang, "unexpected_database_error"))
+	}
+	return nil
 }
