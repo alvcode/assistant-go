@@ -128,6 +128,7 @@ func (uc *noteUseCase) Update(in dto.NoteUpdate, userEntity *entity.User, lang s
 	currentNote.CategoryID = in.CategoryID
 	currentNote.Title = uc.getNoteTitle(string(in.NoteBlocks))
 	currentNote.UpdatedAt = time.Now().UTC()
+	currentNote.Pinned = true
 
 	err = uc.repositories.NoteRepository.Update(currentNote)
 	if err != nil {
