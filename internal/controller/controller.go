@@ -74,7 +74,7 @@ func (controller *Init) setUserRoutes(ctx context.Context, repositories *reposit
 	controller.router.Handler(
 		http.MethodPatch,
 		"/api/user/change-password",
-		handler.BuildHandler(userHandler.ChangePassword, handler.LocaleMW, handler.AuthMW),
+		handler.BuildHandler(userHandler.ChangePassword, handler.BlockIPMW, handler.LocaleMW, handler.AuthMW),
 	)
 }
 
