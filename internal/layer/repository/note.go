@@ -12,6 +12,7 @@ type NoteRepository interface {
 	GetById(ID int) (*entity.Note, error)
 	GetMinimalByCategoryIds(catIds []int) ([]*entity.Note, error)
 	DeleteOne(noteID int) error
+	CheckExistsByCategoryIDs(catIDs []int) (bool, error)
 }
 
 type noteRepository struct {
@@ -90,4 +91,16 @@ func (ur *noteRepository) DeleteOne(noteID int) error {
 		return err
 	}
 	return nil
+}
+
+func (ur *noteRepository) CheckExistsByCategoryIDs(catIDs []int) (bool, error) {
+	query := `SELECT EXISTS(SELECT 1 FROM notes WHERE category_id = ANY($1) LIMIT 1)`
+
+	var exists bool
+	err := ur.db.QueryRow(ur.ctx, query, catIDs).Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+
+	return exists, nil
 }
