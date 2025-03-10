@@ -9,6 +9,7 @@ import (
 	"assistant-go/internal/service/utils"
 	"context"
 	"errors"
+	"fmt"
 	"github.com/jackc/pgx/v5"
 	"github.com/tidwall/gjson"
 	"time"
@@ -48,12 +49,22 @@ func (uc *noteUseCase) Create(in dto.NoteCreate, userEntity *entity.User, lang s
 
 	timeNow := time.Now().UTC()
 
+	var pinned bool
+	if in.Pinned == nil {
+		pinned = false
+	} else {
+		pinned = *in.Pinned
+	}
+
+	fmt.Println(pinned)
+
 	noteEntity := entity.Note{
 		CategoryID: in.CategoryID,
 		NoteBlocks: in.NoteBlocks,
 		CreatedAt:  timeNow,
 		UpdatedAt:  timeNow,
 		Title:      uc.getNoteTitle(string(in.NoteBlocks)),
+		Pinned:     pinned,
 	}
 
 	data, err := uc.repositories.NoteRepository.Create(noteEntity)
@@ -124,11 +135,18 @@ func (uc *noteUseCase) Update(in dto.NoteUpdate, userEntity *entity.User, lang s
 		}
 	}
 
+	var pinned bool
+	if in.Pinned == nil {
+		pinned = currentNote.Pinned
+	} else {
+		pinned = *in.Pinned
+	}
+
 	currentNote.NoteBlocks = in.NoteBlocks
 	currentNote.CategoryID = in.CategoryID
 	currentNote.Title = uc.getNoteTitle(string(in.NoteBlocks))
 	currentNote.UpdatedAt = time.Now().UTC()
-	currentNote.Pinned = true
+	currentNote.Pinned = pinned
 
 	err = uc.repositories.NoteRepository.Update(currentNote)
 	if err != nil {
