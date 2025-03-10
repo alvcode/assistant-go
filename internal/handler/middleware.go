@@ -8,27 +8,33 @@ import (
 	"errors"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"net"
+
 	"net/http"
 	"strings"
 	"time"
 )
 
 var userRepository repository.UserRepository
+var blockIpRepository repository.BlockIPRepository
 
 const UserContextKey = "user"
 
 func InitMiddleware(ctx context.Context, db *pgxpool.Pool) {
 	userRepository = repository.NewUserRepository(ctx, db)
+	blockIpRepository = repository.NewBlockIpRepository(ctx, db)
 }
 
 const (
-	LocaleMW = "LocaleMW"
-	AuthMW   = "AuthMW"
+	LocaleMW  = "LocaleMW"
+	AuthMW    = "AuthMW"
+	BlockIPMW = "BlockIPMW"
 )
 
 var MapMiddleware = map[string]Middleware{
-	LocaleMW: LocaleMiddleware,
-	AuthMW:   AuthMiddleware,
+	LocaleMW:  LocaleMiddleware,
+	AuthMW:    AuthMiddleware,
+	BlockIPMW: BlockIPMiddleware,
 }
 
 type Middleware func(http.HandlerFunc) http.HandlerFunc
@@ -104,5 +110,41 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 
 		ctx := context.WithValue(r.Context(), UserContextKey, userEntity)
 		next(w, r.WithContext(ctx))
+	}
+}
+
+func BlockIPMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		langRequest := locale.GetLangFromContext(r.Context())
+
+		IPAddress := r.Header.Get("X-Real-Ip")
+		if IPAddress == "" {
+			IPAddress = r.Header.Get("X-Forwarded-For")
+		}
+		if IPAddress == "" {
+			IPAddress = r.RemoteAddr
+		}
+
+		ip, _, err := net.SplitHostPort(IPAddress)
+		dtoBlockIP := dto.BlockIP{IP: ip}
+		if err := dtoBlockIP.Validate(langRequest); err != nil {
+			SendErrorResponse(w, locale.T(langRequest, "failed_to_determine_ip"), http.StatusForbidden, 0)
+			return
+		}
+
+		foundIP, err := blockIpRepository.FindBlocking(ip, time.Now().UTC())
+		if err != nil {
+			if !errors.Is(err, pgx.ErrNoRows) {
+				SendErrorResponse(w, locale.T(langRequest, "unexpected_database_error"), http.StatusForbidden, 0)
+				return
+			}
+		}
+
+		if foundIP == true {
+			SendErrorResponse(w, locale.T(langRequest, "access_denied"), http.StatusForbidden, 0)
+			return
+		}
+
+		next(w, r)
 	}
 }
