@@ -6,6 +6,7 @@ import (
 	"assistant-go/internal/locale"
 	"context"
 	"errors"
+	"fmt"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"net"
@@ -118,11 +119,17 @@ func BlockIPMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		langRequest := locale.GetLangFromContext(r.Context())
 
 		IPAddress := r.Header.Get("X-Real-Ip")
+		fmt.Println("X-Real-Ip")
+		fmt.Println(IPAddress)
 		if IPAddress == "" {
 			IPAddress = r.Header.Get("X-Forwarded-For")
+			fmt.Println("X-Forwarded-For")
+			fmt.Println(IPAddress)
 		}
 		if IPAddress == "" {
 			IPAddress = r.RemoteAddr
+			fmt.Println("RemoteAddr")
+			fmt.Println(IPAddress)
 		}
 
 		ip, _, err := net.SplitHostPort(IPAddress)
