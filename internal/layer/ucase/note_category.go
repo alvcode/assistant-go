@@ -4,10 +4,12 @@ import (
 	"assistant-go/internal/layer/dto"
 	"assistant-go/internal/layer/entity"
 	"assistant-go/internal/layer/repository"
+	service "assistant-go/internal/layer/service/note_category"
 	"assistant-go/internal/locale"
 	"assistant-go/internal/logging"
 	"context"
 	"errors"
+	"fmt"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -35,6 +37,14 @@ func (uc *noteCategoryUseCase) Create(
 	userEntity *entity.User,
 	lang string,
 ) (*entity.NoteCategory, error) {
+
+	positionService := service.NewNoteCategory().PositionService(uc.ctx, uc.repositories)
+	res := positionService.CalculateForNew(userEntity.ID, in.ParentId)
+
+	fmt.Println(res)
+
+	return nil, errors.New(locale.T(lang, "parent_id_of_the_category_not_found"))
+
 	noteCategoryEntity := entity.NoteCategory{
 		UserId:   userEntity.ID,
 		Name:     in.Name,

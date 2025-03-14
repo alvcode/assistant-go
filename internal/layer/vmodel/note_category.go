@@ -9,6 +9,7 @@ type NoteCategory struct {
 	UserId   int    `json:"user_id"`
 	Name     string `json:"name"`
 	ParentId *int   `json:"parent_id"`
+	Position int    `json:"position"`
 }
 
 func NoteCategoryFromEnity(entity *entity.NoteCategory) *NoteCategory {
