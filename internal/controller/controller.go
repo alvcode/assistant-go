@@ -102,7 +102,11 @@ func (controller *Init) setNotesCategories(ctx context.Context, repositories *re
 		"/api/note-categories/:id",
 		handler.BuildHandler(noteCategoryHandler.Update, handler.BlockIPMW, handler.LocaleMW, handler.AuthMW),
 	)
-
+	controller.router.Handler(
+		http.MethodPost,
+		"/api/note-categories/position-up",
+		handler.BuildHandler(noteCategoryHandler.PositionUp, handler.BlockIPMW, handler.LocaleMW, handler.AuthMW),
+	)
 }
 
 func (controller *Init) setNotes(ctx context.Context, repositories *repository.Repositories) {

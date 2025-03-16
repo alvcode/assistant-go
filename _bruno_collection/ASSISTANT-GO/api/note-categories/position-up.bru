@@ -1,0 +1,17 @@
+meta {
+  name: position-up
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{domain}}/api/note-categories/position-up
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "id": 15
+  }
+}

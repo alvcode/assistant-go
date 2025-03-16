@@ -18,6 +18,7 @@ func NoteCategoryFromEnity(entity *entity.NoteCategory) *NoteCategory {
 		UserId:   entity.UserId,
 		Name:     entity.Name,
 		ParentId: entity.ParentId,
+		Position: entity.Position,
 	}
 }
 

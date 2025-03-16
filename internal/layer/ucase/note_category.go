@@ -9,7 +9,6 @@ import (
 	"assistant-go/internal/logging"
 	"context"
 	"errors"
-	"fmt"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -18,6 +17,7 @@ type NoteCategoryUseCase interface {
 	FindAll(userId int, lang string) ([]*entity.NoteCategory, error)
 	Delete(userId int, catId int, lang string) error
 	Update(in dto.NoteCategoryUpdate, userID int, lang string) (*entity.NoteCategory, error)
+	PositionUp(in dto.RequiredID, userID int, lang string) error
 }
 
 type noteCategoryUseCase struct {
@@ -37,14 +37,6 @@ func (uc *noteCategoryUseCase) Create(
 	userEntity *entity.User,
 	lang string,
 ) (*entity.NoteCategory, error) {
-
-	positionService := service.NewNoteCategory().PositionService(uc.ctx, uc.repositories)
-	res := positionService.CalculateForNew(userEntity.ID, in.ParentId)
-
-	fmt.Println(res)
-
-	return nil, errors.New(locale.T(lang, "parent_id_of_the_category_not_found"))
-
 	noteCategoryEntity := entity.NoteCategory{
 		UserId:   userEntity.ID,
 		Name:     in.Name,
@@ -61,6 +53,15 @@ func (uc *noteCategoryUseCase) Create(
 			return nil, errors.New(locale.T(lang, "unexpected_database_error"))
 		}
 	}
+
+	positionService := service.NewNoteCategory().PositionService(uc.ctx, uc.repositories)
+	newPosition, err := positionService.CalculateForNew(userEntity.ID, in.ParentId)
+	if err != nil {
+		logging.GetLogger(uc.ctx).Error(err)
+		return nil, errors.New(locale.T(lang, "unexpected_database_error"))
+	}
+
+	noteCategoryEntity.Position = newPosition
 
 	data, err := uc.repositories.NoteCategoryRepository.Create(noteCategoryEntity)
 	if err != nil {
@@ -141,5 +142,22 @@ func (uc *noteCategoryUseCase) Update(in dto.NoteCategoryUpdate, userID int, lan
 		return nil, errors.New(locale.T(lang, "unexpected_database_error"))
 	}
 	return noteCategoryEntity, nil
+}
 
+func (uc *noteCategoryUseCase) PositionUp(in dto.RequiredID, userID int, lang string) error {
+	_, err := uc.repositories.NoteCategoryRepository.FindByIDAndUser(userID, in.ID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return errors.New(locale.T(lang, "category_not_found"))
+		}
+		logging.GetLogger(uc.ctx).Error(err)
+		return errors.New(locale.T(lang, "unexpected_database_error"))
+	}
+
+	positionService := service.NewNoteCategory().PositionService(uc.ctx, uc.repositories)
+	err = positionService.PositionUp(userID, in.ID, lang)
+	if err != nil {
+		return err
+	}
+	return nil
 }
