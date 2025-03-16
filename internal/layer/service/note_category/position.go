@@ -66,7 +66,6 @@ func (ps *positionService) PositionUp(userID int, catID int, lang string) error 
 		})
 	}
 
-	// Проверяем, находится ли уже на первой позиции
 	if grouped[needUpCategoryKey][0].ID == catID {
 		return errors.New(locale.T(lang, "category_already_in_1_position"))
 	}
