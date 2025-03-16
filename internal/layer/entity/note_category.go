@@ -1,8 +1,9 @@
 package entity
 
 type NoteCategory struct {
-	ID       int    `json:"id" db:"id"`
-	UserId   int    `json:"user_id" db:"user_id"`
-	Name     string `json:"name" db:"name"`
-	ParentId *int   `json:"parent_id" db:"parent_id"`
+	ID       int    `db:"id"`
+	UserId   int    `db:"user_id"`
+	Name     string `db:"name"`
+	ParentId *int   `db:"parent_id"`
+	Position int    `db:"position"`
 }

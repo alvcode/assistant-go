@@ -148,3 +148,33 @@ func (h *NoteCategoryHandler) Update(w http.ResponseWriter, r *http.Request) {
 	result := vmodel.NoteCategoryFromEnity(entity)
 	SendResponse(w, http.StatusOK, result)
 }
+
+func (h *NoteCategoryHandler) PositionUp(w http.ResponseWriter, r *http.Request) {
+	langRequest := locale.GetLangFromContext(r.Context())
+	var categoryIDDto dto.RequiredID
+
+	authUser, err := GetAuthUser(r)
+	if err != nil {
+		SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
+		return
+	}
+
+	err = json.NewDecoder(r.Body).Decode(&categoryIDDto)
+	if err != nil {
+		SendErrorResponse(w, locale.T(langRequest, "error_reading_request_body"), http.StatusBadRequest, 0)
+		return
+	}
+
+	if err := categoryIDDto.Validate(langRequest); err != nil {
+		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
+		return
+	}
+
+	err = h.useCase.PositionUp(categoryIDDto, authUser.ID, langRequest)
+	if err != nil {
+		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
+		return
+	}
+
+	SendResponse(w, http.StatusNoContent, nil)
+}

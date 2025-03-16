@@ -14,5 +14,6 @@
   "category_has_notes": "The category has notes. You must first move them to another category or delete them",
   "note_not_found": "Note not found",
   "access_denied": "Access to the resource is denied",
-  "failed_to_determine_ip": "The IP address could not be determined"
+  "failed_to_determine_ip": "The IP address could not be determined",
+  "category_already_in_1_position": "Category is already in position 1"
 }

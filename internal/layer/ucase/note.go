@@ -6,7 +6,7 @@ import (
 	"assistant-go/internal/layer/repository"
 	"assistant-go/internal/locale"
 	"assistant-go/internal/logging"
-	"assistant-go/internal/service/utils"
+	"assistant-go/pkg/utils"
 	"context"
 	"errors"
 	"github.com/jackc/pgx/v5"
