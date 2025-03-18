@@ -133,9 +133,9 @@ func (ur *noteCategoryRepository) DeleteByUserId(userID int) error {
 }
 
 func (ur *noteCategoryRepository) Update(in *entity.NoteCategory) error {
-	query := `UPDATE note_categories SET name = $3, parent_id = $4 WHERE id = $1 and user_id = $2`
+	query := `UPDATE note_categories SET name = $3, parent_id = $4, position = $5 WHERE id = $1 and user_id = $2`
 
-	_, err := ur.db.Exec(ur.ctx, query, in.ID, in.UserId, in.Name, in.ParentId)
+	_, err := ur.db.Exec(ur.ctx, query, in.ID, in.UserId, in.Name, in.ParentId, in.Position)
 	if err != nil {
 		return err
 	}

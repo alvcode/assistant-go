@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"github.com/jackc/pgx/v5"
+	"reflect"
 )
 
 type NoteCategoryUseCase interface {
@@ -125,8 +126,18 @@ func (uc *noteCategoryUseCase) Update(in dto.NoteCategoryUpdate, userID int, lan
 		ParentId: in.ParentID,
 	}
 
+	currentCategory, err := uc.repositories.NoteCategoryRepository.FindByIDAndUser(userID, in.ID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, errors.New(locale.T(lang, "category_not_found"))
+		}
+		logging.GetLogger(uc.ctx).Error(err)
+		return nil, errors.New(locale.T(lang, "unexpected_database_error"))
+	}
+	noteCategoryEntity.Position = currentCategory.Position
+
 	if in.ParentID != nil {
-		_, err := uc.repositories.NoteCategoryRepository.FindByIDAndUser(userID, *in.ParentID)
+		_, err = uc.repositories.NoteCategoryRepository.FindByIDAndUser(userID, *in.ParentID)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return nil, errors.New(locale.T(lang, "category_not_found"))
@@ -136,7 +147,17 @@ func (uc *noteCategoryUseCase) Update(in dto.NoteCategoryUpdate, userID int, lan
 		}
 	}
 
-	err := uc.repositories.NoteCategoryRepository.Update(noteCategoryEntity)
+	if !reflect.DeepEqual(in.ParentID, currentCategory.ParentId) {
+		positionService := service.NewNoteCategory().PositionService(uc.ctx, uc.repositories)
+		newPosition, err := positionService.CalculateForNew(userID, in.ParentID)
+		if err != nil {
+			logging.GetLogger(uc.ctx).Error(err)
+			return nil, errors.New(locale.T(lang, "unexpected_database_error"))
+		}
+		noteCategoryEntity.Position = newPosition
+	}
+
+	err = uc.repositories.NoteCategoryRepository.Update(noteCategoryEntity)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
 		return nil, errors.New(locale.T(lang, "unexpected_database_error"))

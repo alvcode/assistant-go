@@ -82,11 +82,14 @@ func (ps *positionService) PositionUp(userID int, catID int, lang string) error 
 	// Пересчет позиций
 	for key := range grouped {
 		for i := range grouped[key] {
-			grouped[key][i].Position = i + 1
-			err = ps.repositories.NoteCategoryRepository.UpdatePosition(grouped[key][i])
-			if err != nil {
-				logging.GetLogger(ps.ctx).Error(err)
-				return errors.New(locale.T(lang, "unexpected_database_error"))
+			newPosition := i + 1
+			if grouped[key][i].Position != newPosition {
+				grouped[key][i].Position = newPosition
+				err = ps.repositories.NoteCategoryRepository.UpdatePosition(grouped[key][i])
+				if err != nil {
+					logging.GetLogger(ps.ctx).Error(err)
+					return errors.New(locale.T(lang, "unexpected_database_error"))
+				}
 			}
 		}
 	}
