@@ -79,17 +79,17 @@ func (_c *MockNoteCategoryRepository_Create_Call) RunAndReturn(run func(entity.N
 	return _c
 }
 
-// DeleteById provides a mock function with given fields: catID
-func (_m *MockNoteCategoryRepository) DeleteById(catID int) error {
-	ret := _m.Called(catID)
+// DeleteByIds provides a mock function with given fields: catIDs
+func (_m *MockNoteCategoryRepository) DeleteByIds(catIDs []int) error {
+	ret := _m.Called(catIDs)
 
 	if len(ret) == 0 {
-		panic("no return value specified for DeleteById")
+		panic("no return value specified for DeleteByIds")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(int) error); ok {
-		r0 = rf(catID)
+	if rf, ok := ret.Get(0).(func([]int) error); ok {
+		r0 = rf(catIDs)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -97,30 +97,30 @@ func (_m *MockNoteCategoryRepository) DeleteById(catID int) error {
 	return r0
 }
 
-// MockNoteCategoryRepository_DeleteById_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteById'
-type MockNoteCategoryRepository_DeleteById_Call struct {
+// MockNoteCategoryRepository_DeleteByIds_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteByIds'
+type MockNoteCategoryRepository_DeleteByIds_Call struct {
 	*mock.Call
 }
 
-// DeleteById is a helper method to define mock.On call
-//   - catID int
-func (_e *MockNoteCategoryRepository_Expecter) DeleteById(catID interface{}) *MockNoteCategoryRepository_DeleteById_Call {
-	return &MockNoteCategoryRepository_DeleteById_Call{Call: _e.mock.On("DeleteById", catID)}
+// DeleteByIds is a helper method to define mock.On call
+//   - catIDs []int
+func (_e *MockNoteCategoryRepository_Expecter) DeleteByIds(catIDs interface{}) *MockNoteCategoryRepository_DeleteByIds_Call {
+	return &MockNoteCategoryRepository_DeleteByIds_Call{Call: _e.mock.On("DeleteByIds", catIDs)}
 }
 
-func (_c *MockNoteCategoryRepository_DeleteById_Call) Run(run func(catID int)) *MockNoteCategoryRepository_DeleteById_Call {
+func (_c *MockNoteCategoryRepository_DeleteByIds_Call) Run(run func(catIDs []int)) *MockNoteCategoryRepository_DeleteByIds_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(int))
+		run(args[0].([]int))
 	})
 	return _c
 }
 
-func (_c *MockNoteCategoryRepository_DeleteById_Call) Return(_a0 error) *MockNoteCategoryRepository_DeleteById_Call {
+func (_c *MockNoteCategoryRepository_DeleteByIds_Call) Return(_a0 error) *MockNoteCategoryRepository_DeleteByIds_Call {
 	_c.Call.Return(_a0)
 	return _c
 }
 
-func (_c *MockNoteCategoryRepository_DeleteById_Call) RunAndReturn(run func(int) error) *MockNoteCategoryRepository_DeleteById_Call {
+func (_c *MockNoteCategoryRepository_DeleteByIds_Call) RunAndReturn(run func([]int) error) *MockNoteCategoryRepository_DeleteByIds_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -347,6 +347,63 @@ func (_c *MockNoteCategoryRepository_FindByIDAndUserWithChildren_Call) RunAndRet
 	return _c
 }
 
+// GetMaxPosition provides a mock function with given fields: userID, parentID
+func (_m *MockNoteCategoryRepository) GetMaxPosition(userID int, parentID *int) (int, error) {
+	ret := _m.Called(userID, parentID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetMaxPosition")
+	}
+
+	var r0 int
+	var r1 error
+	if rf, ok := ret.Get(0).(func(int, *int) (int, error)); ok {
+		return rf(userID, parentID)
+	}
+	if rf, ok := ret.Get(0).(func(int, *int) int); ok {
+		r0 = rf(userID, parentID)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+
+	if rf, ok := ret.Get(1).(func(int, *int) error); ok {
+		r1 = rf(userID, parentID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockNoteCategoryRepository_GetMaxPosition_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetMaxPosition'
+type MockNoteCategoryRepository_GetMaxPosition_Call struct {
+	*mock.Call
+}
+
+// GetMaxPosition is a helper method to define mock.On call
+//   - userID int
+//   - parentID *int
+func (_e *MockNoteCategoryRepository_Expecter) GetMaxPosition(userID interface{}, parentID interface{}) *MockNoteCategoryRepository_GetMaxPosition_Call {
+	return &MockNoteCategoryRepository_GetMaxPosition_Call{Call: _e.mock.On("GetMaxPosition", userID, parentID)}
+}
+
+func (_c *MockNoteCategoryRepository_GetMaxPosition_Call) Run(run func(userID int, parentID *int)) *MockNoteCategoryRepository_GetMaxPosition_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(int), args[1].(*int))
+	})
+	return _c
+}
+
+func (_c *MockNoteCategoryRepository_GetMaxPosition_Call) Return(_a0 int, _a1 error) *MockNoteCategoryRepository_GetMaxPosition_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockNoteCategoryRepository_GetMaxPosition_Call) RunAndReturn(run func(int, *int) (int, error)) *MockNoteCategoryRepository_GetMaxPosition_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Update provides a mock function with given fields: in
 func (_m *MockNoteCategoryRepository) Update(in *entity.NoteCategory) error {
 	ret := _m.Called(in)
@@ -389,6 +446,52 @@ func (_c *MockNoteCategoryRepository_Update_Call) Return(_a0 error) *MockNoteCat
 }
 
 func (_c *MockNoteCategoryRepository_Update_Call) RunAndReturn(run func(*entity.NoteCategory) error) *MockNoteCategoryRepository_Update_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UpdatePosition provides a mock function with given fields: in
+func (_m *MockNoteCategoryRepository) UpdatePosition(in *entity.NoteCategory) error {
+	ret := _m.Called(in)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdatePosition")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*entity.NoteCategory) error); ok {
+		r0 = rf(in)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockNoteCategoryRepository_UpdatePosition_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdatePosition'
+type MockNoteCategoryRepository_UpdatePosition_Call struct {
+	*mock.Call
+}
+
+// UpdatePosition is a helper method to define mock.On call
+//   - in *entity.NoteCategory
+func (_e *MockNoteCategoryRepository_Expecter) UpdatePosition(in interface{}) *MockNoteCategoryRepository_UpdatePosition_Call {
+	return &MockNoteCategoryRepository_UpdatePosition_Call{Call: _e.mock.On("UpdatePosition", in)}
+}
+
+func (_c *MockNoteCategoryRepository_UpdatePosition_Call) Run(run func(in *entity.NoteCategory)) *MockNoteCategoryRepository_UpdatePosition_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*entity.NoteCategory))
+	})
+	return _c
+}
+
+func (_c *MockNoteCategoryRepository_UpdatePosition_Call) Return(_a0 error) *MockNoteCategoryRepository_UpdatePosition_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockNoteCategoryRepository_UpdatePosition_Call) RunAndReturn(run func(*entity.NoteCategory) error) *MockNoteCategoryRepository_UpdatePosition_Call {
 	_c.Call.Return(run)
 	return _c
 }

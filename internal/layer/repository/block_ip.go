@@ -8,6 +8,7 @@ import (
 
 type BlockIPRepository interface {
 	FindBlocking(ip string, time time.Time) (bool, error)
+	RemoveByDateExpired(time time.Time) error
 }
 
 type blockIpRepository struct {
@@ -31,4 +32,14 @@ func (ur *blockIpRepository) FindBlocking(ip string, time time.Time) (bool, erro
 		return false, err
 	}
 	return exists, nil
+}
+
+func (ur *blockIpRepository) RemoveByDateExpired(time time.Time) error {
+	query := `DELETE FROM block_ip WHERE blocked_until < $1`
+
+	_, err := ur.db.Exec(ur.ctx, query, time)
+	if err != nil {
+		return err
+	}
+	return nil
 }

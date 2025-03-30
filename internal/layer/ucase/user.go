@@ -15,12 +15,15 @@ import (
 	"time"
 )
 
+const userTokenLifeHours = 4
+
 type UserUseCase interface {
 	Create(in dto.UserLoginAndPassword, lang string) (*entity.User, error)
 	Login(in dto.UserLoginAndPassword, lang string) (*entity.UserToken, error)
 	RefreshToken(in dto.UserRefreshToken, lang string) (*entity.UserToken, error)
 	Delete(userID int, lang string) error
 	ChangePassword(userID int, in dto.UserChangePassword, lang string) error
+	CleanOldTokens() error
 }
 
 type userUseCase struct {
@@ -76,7 +79,7 @@ func (uc *userUseCase) Login(in dto.UserLoginAndPassword, lang string) (*entity.
 		return nil, errors.New(locale.T(lang, "incorrect_username_or_password"))
 	}
 
-	userTokenEntity, err := uc.generateTokenPair(int(existingUser.ID))
+	userTokenEntity, err := uc.generateTokenPair(existingUser.ID)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
 		return nil, errors.New(locale.T(lang, "unexpected_error"))
@@ -134,7 +137,7 @@ func (uc *userUseCase) generateTokenPair(userId int) (*entity.UserToken, error) 
 					UserId:       userId,
 					Token:        token,
 					RefreshToken: refreshToken,
-					ExpiredTo:    int(time.Now().Add(4 * time.Hour).Unix()),
+					ExpiredTo:    int(time.Now().Add(userTokenLifeHours * time.Hour).Unix()),
 				}
 				break
 			}
@@ -206,5 +209,16 @@ func (uc *userUseCase) ChangePassword(userID int, in dto.UserChangePassword, lan
 		return errors.New(locale.T(lang, "unexpected_database_error"))
 	}
 
+	return nil
+}
+
+func (uc *userUseCase) CleanOldTokens() error {
+	err := uc.repositories.UserRepository.RemoveTokensByDateExpired(
+		int(time.Now().AddDate(0, 0, -30).Unix()),
+	)
+
+	if err != nil {
+		return err
+	}
 	return nil
 }

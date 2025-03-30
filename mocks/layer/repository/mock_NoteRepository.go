@@ -21,6 +21,62 @@ func (_m *MockNoteRepository) EXPECT() *MockNoteRepository_Expecter {
 	return &MockNoteRepository_Expecter{mock: &_m.Mock}
 }
 
+// CheckExistsByCategoryIDs provides a mock function with given fields: catIDs
+func (_m *MockNoteRepository) CheckExistsByCategoryIDs(catIDs []int) (bool, error) {
+	ret := _m.Called(catIDs)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CheckExistsByCategoryIDs")
+	}
+
+	var r0 bool
+	var r1 error
+	if rf, ok := ret.Get(0).(func([]int) (bool, error)); ok {
+		return rf(catIDs)
+	}
+	if rf, ok := ret.Get(0).(func([]int) bool); ok {
+		r0 = rf(catIDs)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	if rf, ok := ret.Get(1).(func([]int) error); ok {
+		r1 = rf(catIDs)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockNoteRepository_CheckExistsByCategoryIDs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CheckExistsByCategoryIDs'
+type MockNoteRepository_CheckExistsByCategoryIDs_Call struct {
+	*mock.Call
+}
+
+// CheckExistsByCategoryIDs is a helper method to define mock.On call
+//   - catIDs []int
+func (_e *MockNoteRepository_Expecter) CheckExistsByCategoryIDs(catIDs interface{}) *MockNoteRepository_CheckExistsByCategoryIDs_Call {
+	return &MockNoteRepository_CheckExistsByCategoryIDs_Call{Call: _e.mock.On("CheckExistsByCategoryIDs", catIDs)}
+}
+
+func (_c *MockNoteRepository_CheckExistsByCategoryIDs_Call) Run(run func(catIDs []int)) *MockNoteRepository_CheckExistsByCategoryIDs_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].([]int))
+	})
+	return _c
+}
+
+func (_c *MockNoteRepository_CheckExistsByCategoryIDs_Call) Return(_a0 bool, _a1 error) *MockNoteRepository_CheckExistsByCategoryIDs_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockNoteRepository_CheckExistsByCategoryIDs_Call) RunAndReturn(run func([]int) (bool, error)) *MockNoteRepository_CheckExistsByCategoryIDs_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Create provides a mock function with given fields: in
 func (_m *MockNoteRepository) Create(in entity.Note) (*entity.Note, error) {
 	ret := _m.Called(in)
@@ -237,6 +293,98 @@ func (_c *MockNoteRepository_GetMinimalByCategoryIds_Call) Return(_a0 []*entity.
 }
 
 func (_c *MockNoteRepository_GetMinimalByCategoryIds_Call) RunAndReturn(run func([]int) ([]*entity.Note, error)) *MockNoteRepository_GetMinimalByCategoryIds_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Pin provides a mock function with given fields: noteID
+func (_m *MockNoteRepository) Pin(noteID int) error {
+	ret := _m.Called(noteID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Pin")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(int) error); ok {
+		r0 = rf(noteID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockNoteRepository_Pin_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Pin'
+type MockNoteRepository_Pin_Call struct {
+	*mock.Call
+}
+
+// Pin is a helper method to define mock.On call
+//   - noteID int
+func (_e *MockNoteRepository_Expecter) Pin(noteID interface{}) *MockNoteRepository_Pin_Call {
+	return &MockNoteRepository_Pin_Call{Call: _e.mock.On("Pin", noteID)}
+}
+
+func (_c *MockNoteRepository_Pin_Call) Run(run func(noteID int)) *MockNoteRepository_Pin_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(int))
+	})
+	return _c
+}
+
+func (_c *MockNoteRepository_Pin_Call) Return(_a0 error) *MockNoteRepository_Pin_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockNoteRepository_Pin_Call) RunAndReturn(run func(int) error) *MockNoteRepository_Pin_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UnPin provides a mock function with given fields: noteID
+func (_m *MockNoteRepository) UnPin(noteID int) error {
+	ret := _m.Called(noteID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UnPin")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(int) error); ok {
+		r0 = rf(noteID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockNoteRepository_UnPin_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UnPin'
+type MockNoteRepository_UnPin_Call struct {
+	*mock.Call
+}
+
+// UnPin is a helper method to define mock.On call
+//   - noteID int
+func (_e *MockNoteRepository_Expecter) UnPin(noteID interface{}) *MockNoteRepository_UnPin_Call {
+	return &MockNoteRepository_UnPin_Call{Call: _e.mock.On("UnPin", noteID)}
+}
+
+func (_c *MockNoteRepository_UnPin_Call) Run(run func(noteID int)) *MockNoteRepository_UnPin_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(int))
+	})
+	return _c
+}
+
+func (_c *MockNoteRepository_UnPin_Call) Return(_a0 error) *MockNoteRepository_UnPin_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockNoteRepository_UnPin_Call) RunAndReturn(run func(int) error) *MockNoteRepository_UnPin_Call {
 	_c.Call.Return(run)
 	return _c
 }

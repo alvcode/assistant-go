@@ -15,7 +15,7 @@ deploy:
 	make prod-start;
 	sleep 5;
 	make prod-m;
-	yes | docker system prune -a --volumes;
+	yes | docker system prune --volumes -f;
 
 # =============== MIGRATIONS =========================
 # prod
@@ -61,6 +61,15 @@ db-remove-old-backups: # Удаляет бэкапы БД, которые был
 restore-db: # with param file=path/to/backup/dump.sql
 	gunzip -c $(file) | docker exec -i ast-db psql -U $(DB_USERNAME) -d $(DB_DATABASE)
 	echo "Database restored successfully"
+
+# =============== CLI =========================
+#prod
+cli-clean-db-p:
+	docker exec ast-app ./cliApp clean-db;
+
+#local
+cli-clean-db:
+	go run cmd/cli/main.go clean-db;
 
 # =======================================================
 swag:

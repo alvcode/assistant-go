@@ -16,6 +16,7 @@ type UserRepository interface {
 	Delete(userID int) error
 	DeleteUserTokensByID(userID int) error
 	ChangePassword(userID int, newPassword string) error
+	RemoveTokensByDateExpired(time int) error
 }
 
 type userRepository struct {
@@ -109,6 +110,16 @@ func (ur *userRepository) ChangePassword(userID int, newPassword string) error {
 	query := `UPDATE users SET password = $2 WHERE id = $1`
 
 	_, err := ur.db.Exec(ur.ctx, query, userID, newPassword)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (ur *userRepository) RemoveTokensByDateExpired(time int) error {
+	query := `DELETE FROM user_tokens WHERE expired_to < $1`
+
+	_, err := ur.db.Exec(ur.ctx, query, time)
 	if err != nil {
 		return err
 	}

@@ -392,6 +392,52 @@ func (_c *MockUserRepository_FindUserToken_Call) RunAndReturn(run func(string) (
 	return _c
 }
 
+// RemoveTokensByDateExpired provides a mock function with given fields: time
+func (_m *MockUserRepository) RemoveTokensByDateExpired(time int) error {
+	ret := _m.Called(time)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RemoveTokensByDateExpired")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(int) error); ok {
+		r0 = rf(time)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockUserRepository_RemoveTokensByDateExpired_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RemoveTokensByDateExpired'
+type MockUserRepository_RemoveTokensByDateExpired_Call struct {
+	*mock.Call
+}
+
+// RemoveTokensByDateExpired is a helper method to define mock.On call
+//   - time int
+func (_e *MockUserRepository_Expecter) RemoveTokensByDateExpired(time interface{}) *MockUserRepository_RemoveTokensByDateExpired_Call {
+	return &MockUserRepository_RemoveTokensByDateExpired_Call{Call: _e.mock.On("RemoveTokensByDateExpired", time)}
+}
+
+func (_c *MockUserRepository_RemoveTokensByDateExpired_Call) Run(run func(time int)) *MockUserRepository_RemoveTokensByDateExpired_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(int))
+	})
+	return _c
+}
+
+func (_c *MockUserRepository_RemoveTokensByDateExpired_Call) Return(_a0 error) *MockUserRepository_RemoveTokensByDateExpired_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockUserRepository_RemoveTokensByDateExpired_Call) RunAndReturn(run func(int) error) *MockUserRepository_RemoveTokensByDateExpired_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SetUserToken provides a mock function with given fields: in
 func (_m *MockUserRepository) SetUserToken(in entity.UserToken) (*entity.UserToken, error) {
 	ret := _m.Called(in)
