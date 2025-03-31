@@ -15,7 +15,12 @@ deploy:
 	make prod-start;
 	sleep 5;
 	make prod-m;
-	yes | docker system prune --volumes -f;
+	@if [ $$(df -BG --output=avail / | tail -n 1 | tr -d 'G') -lt 3 ]; then \
+		echo "Мало места (<3GB), чистим Docker..."; \
+		yes | docker system prune --volumes -f; \
+	else \
+		echo "Места достаточно, пропускаем очистку."; \
+	fi
 
 # =============== MIGRATIONS =========================
 # prod
