@@ -9,11 +9,22 @@ frontend: <a href="https://github.com/alvcode/assistant-front" target="_blank">h
 - install packages
 
 ~~~
-go install github.com/pressly/goose/v3/cmd/goose@latest
 go install github.com/vektra/mockery/v2@latest
 go install github.com/swaggo/swag/cmd/swag@latest
 go install github.com/spf13/cobra-cli@latest
 ~~~
+
+- run commands
+```
+// launch when deploying a project for the first time
+make install
+
+// for development
+make start
+
+// for stop development
+make stop
+```
 
 <h2>For Production</h2>
 
