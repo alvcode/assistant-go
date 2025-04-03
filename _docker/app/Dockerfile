@@ -1,9 +1,5 @@
 FROM golang:1.23.4-alpine AS builder
 
-RUN --mount=type=cache,target=/root/.cache/go-build \
-    --mount=type=cache,target=/go/pkg \
-    go install github.com/pressly/goose/v3/cmd/goose@latest
-
 WORKDIR /app
 
 COPY go.mod go.sum ./
@@ -26,7 +22,6 @@ WORKDIR /app
 
 COPY --from=builder /app/httpApp .
 COPY --from=builder /app/cliApp .
-COPY --from=builder /go/bin/goose /usr/local/bin/goose
 COPY migrations ./migrations
 COPY internal/locale ./internal/locale
 

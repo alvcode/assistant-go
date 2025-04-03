@@ -1,21 +1,4 @@
-version: '3.5'
-
 services:
-  ast-app:
-    build:
-      context: .
-      dockerfile: _docker/app/Dockerfile
-    container_name: ast-app
-    ports:
-      - "8075:8083"
-    volumes:
-      - ./logs:/app/logs
-    env_file:
-      - .env
-    networks:
-      - ast-network
-    restart: always
-
   ast-db:
     image: postgres:16.8-bookworm
     container_name: ast-db
@@ -30,7 +13,6 @@ services:
       - /var/lib/ast-pg:/var/lib/postgresql/data:rw
     networks:
       - ast-network
-    restart: always
 
   ast-goose:
     build:

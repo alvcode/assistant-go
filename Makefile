@@ -1,6 +1,43 @@
 include .env
 
-# =============== PRODUCTION =========================
+# ================================================ LOCAL =====================================
+install:
+	docker compose up --build -d
+	docker compose down;
+
+start:
+	docker compose up -d ast-db
+
+stop:
+	docker compose down;
+
+
+
+# migrations
+mc: # $(name)
+	docker compose run --rm ast-goose create $(name) sql
+
+m:
+	docker compose run --rm ast-goose up
+
+m-one:
+	docker compose run --rm ast-goose up-by-one
+
+md: # down one last migration
+	docker compose run --rm ast-goose down
+
+md-to: # $(timestamp) - откат конкретной миграции. пример: make md-to timestamp=20170506082527
+	docker compose run --rm ast-goose down-to $(timestamp)
+
+
+# CLI
+cli-clean-db:
+	go run cmd/cli/main.go clean-db;
+
+
+
+# ================================================ PRODUCTION ===========================================
+
 prod-start:
 	docker compose -f docker-compose.prod.yaml up --build -d
 
@@ -22,36 +59,24 @@ deploy:
 		echo "Места достаточно, пропускаем очистку."; \
 	fi
 
-# =============== MIGRATIONS =========================
-# prod
+
+# migrations
 prod-m:
-	docker exec ast-app goose up;
+	docker compose -f docker-compose.prod.yaml run --rm ast-goose up
 
 prod-m-one:
-	docker exec -it ast-app goose up-by-one;
+	docker compose -f docker-compose.prod.yaml run --rm ast-goose up-by-one
 
 prod-md: # down one last migration
-	docker exec -it ast-app goose down;
+	docker compose -f docker-compose.prod.yaml run --rm ast-goose down
 
 prod-md-to: # $(timestamp) - откат конкретной миграции. пример: make md-to timestamp=20170506082527
-	docker exec -it ast-app goose down-to $(timestamp);
+	docker compose -f docker-compose.prod.yaml run --rm ast-goose down-to $(timestamp)
 
 
-# local
-mc: # $(name)
-	goose create $(name) sql
-
-m:
-	goose up
-
-m-one:
-	goose up-by-one
-
-md: # down one last migration
-	goose down
-
-md-to: # $(timestamp) - откат конкретной миграции. пример: make md-to timestamp=20170506082527
-	goose down-to $(timestamp)
+#CLI
+cli-clean-db-p:
+	docker exec ast-app ./cliApp clean-db;
 
 # =============== BACKUP/RESTORE =========================
 
@@ -66,15 +91,6 @@ db-remove-old-backups: # Удаляет бэкапы БД, которые был
 restore-db: # with param file=path/to/backup/dump.sql
 	gunzip -c $(file) | docker exec -i ast-db psql -U $(DB_USERNAME) -d $(DB_DATABASE)
 	echo "Database restored successfully"
-
-# =============== CLI =========================
-#prod
-cli-clean-db-p:
-	docker exec ast-app ./cliApp clean-db;
-
-#local
-cli-clean-db:
-	go run cmd/cli/main.go clean-db;
 
 # =======================================================
 swag:
