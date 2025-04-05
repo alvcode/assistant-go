@@ -7,6 +7,7 @@ import (
 
 type NoteCreate struct {
 	CategoryID int             `json:"category_id" validate:"required"`
+	Title      string          `json:"title" validate:"max=150"`
 	NoteBlocks json.RawMessage `json:"note_blocks" validate:"json"`
 	Pinned     *bool           `json:"pinned"`
 }
@@ -22,6 +23,7 @@ func (dto *NoteCreate) Validate(lang string) error {
 type NoteUpdate struct {
 	ID         int             `json:"id" validate:"required"`
 	CategoryID int             `json:"category_id" validate:"required"`
+	Title      string          `json:"title" validate:"max=150"`
 	NoteBlocks json.RawMessage `json:"note_blocks" validate:"json"`
 	Pinned     *bool           `json:"pinned"`
 }

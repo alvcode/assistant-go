@@ -60,7 +60,7 @@ func (uc *noteUseCase) Create(in dto.NoteCreate, userEntity *entity.User, lang s
 		NoteBlocks: in.NoteBlocks,
 		CreatedAt:  timeNow,
 		UpdatedAt:  timeNow,
-		Title:      uc.getNoteTitle(string(in.NoteBlocks)),
+		Title:      uc.getNoteTitle(in.Title, string(in.NoteBlocks)),
 		Pinned:     pinned,
 	}
 
@@ -141,7 +141,7 @@ func (uc *noteUseCase) Update(in dto.NoteUpdate, userEntity *entity.User, lang s
 
 	currentNote.NoteBlocks = in.NoteBlocks
 	currentNote.CategoryID = in.CategoryID
-	currentNote.Title = uc.getNoteTitle(string(in.NoteBlocks))
+	currentNote.Title = uc.getNoteTitle(in.Title, string(in.NoteBlocks))
 	currentNote.UpdatedAt = time.Now().UTC()
 	currentNote.Pinned = pinned
 
@@ -204,11 +204,17 @@ func (uc *noteUseCase) DeleteOne(noteIdStruct dto.RequiredID, userEntity *entity
 	return nil
 }
 
-func (uc *noteUseCase) getNoteTitle(blocks string) *string {
-	firstBlockText := gjson.Get(blocks, `0.data.text`)
+func (uc *noteUseCase) getNoteTitle(title string, blocks string) *string {
 	stringUtils := utils.NewStringUtils()
-	titleWithoutHtml := stringUtils.RemoveHTMLTags(firstBlockText.Str)
-	titleTruncate := stringUtils.Trim(stringUtils.TruncateString(titleWithoutHtml, 50))
+
+	var titleTruncate string
+	if title != "" {
+		titleTruncate = stringUtils.Trim(stringUtils.TruncateString(title, 150))
+	} else {
+		firstBlockText := gjson.Get(blocks, `0.data.text`)
+		titleWithoutHtml := stringUtils.RemoveHTMLTags(firstBlockText.Str)
+		titleTruncate = stringUtils.Trim(stringUtils.TruncateString(titleWithoutHtml, 150))
+	}
 
 	if titleTruncate == "" {
 		return nil
