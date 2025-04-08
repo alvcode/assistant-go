@@ -6,6 +6,7 @@ import (
 	"assistant-go/internal/layer/vmodel"
 	"assistant-go/internal/locale"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 )
@@ -49,16 +50,19 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&loginUserDto)
 	if err != nil {
+		BlockEventHandle(r, BlockEventDecodeBodyType)
 		SendErrorResponse(w, locale.T(langRequest, "error_reading_request_body"), http.StatusBadRequest, 0)
 		return
 	}
 	if err := loginUserDto.Validate(langRequest); err != nil {
+		BlockEventHandle(r, BlockEventInputDataType)
 		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
 		return
 	}
 	entity, err := h.useCase.Login(loginUserDto, langRequest)
 	if err != nil {
-		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
+		BlockEventHandle(r, BlockEventOtherType)
+		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
 		return
 	}
 
@@ -135,5 +139,13 @@ func (h *UserHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	SendResponse(w, http.StatusNoContent, nil)
+}
 
+func buildErrorMessage(lang string, err error) string {
+	switch {
+	case errors.Is(err, ucase.ErrIncorrectUsernameOrPassword):
+		return locale.T(lang, "incorrect_username_or_password")
+	default:
+		return BuildErrorMessageCommon(lang, err)
+	}
 }

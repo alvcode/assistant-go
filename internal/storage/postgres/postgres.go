@@ -2,10 +2,15 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"log"
 	"time"
+)
+
+var (
+	ErrUnexpectedDBError = errors.New("unexpected database error")
 )
 
 type PgConfig struct {

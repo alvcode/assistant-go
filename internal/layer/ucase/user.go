@@ -6,6 +6,7 @@ import (
 	"assistant-go/internal/layer/repository"
 	"assistant-go/internal/locale"
 	"assistant-go/internal/logging"
+	"assistant-go/internal/storage/postgres"
 	"context"
 	"crypto/rand"
 	"encoding/base64"
@@ -16,6 +17,10 @@ import (
 )
 
 const userTokenLifeHours = 4
+
+var (
+	ErrIncorrectUsernameOrPassword = errors.New("incorrect username or password")
+)
 
 type UserUseCase interface {
 	Create(in dto.UserLoginAndPassword, lang string) (*entity.User, error)
@@ -68,10 +73,10 @@ func (uc *userUseCase) Login(in dto.UserLoginAndPassword, lang string) (*entity.
 	existingUser, err := uc.repositories.UserRepository.Find(in.Login)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, errors.New(locale.T(lang, "incorrect_username_or_password"))
+			return nil, ErrIncorrectUsernameOrPassword
 		}
 		logging.GetLogger(uc.ctx).Error(err)
-		return nil, errors.New(locale.T(lang, "unexpected_database_error"))
+		return nil, postgres.ErrUnexpectedDBError
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(existingUser.Password), []byte(in.Password))

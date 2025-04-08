@@ -16,6 +16,7 @@ stop:
 # migrations
 mc: # $(name)
 	docker compose run --rm ast-goose create $(name) sql
+	sudo chmod -R 777 migrations/
 
 m:
 	docker compose run --rm ast-goose up

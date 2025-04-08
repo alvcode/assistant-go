@@ -2,27 +2,16 @@ package handler
 
 import (
 	"assistant-go/internal/layer/dto"
-	"assistant-go/internal/layer/repository"
 	"assistant-go/internal/locale"
 	"context"
 	"errors"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
-	"net"
 	"net/http"
 	"strings"
 	"time"
 )
 
-var userRepository repository.UserRepository
-var blockIpRepository repository.BlockIPRepository
-
 const UserContextKey = "user"
-
-func InitMiddleware(ctx context.Context, db *pgxpool.Pool) {
-	userRepository = repository.NewUserRepository(ctx, db)
-	blockIpRepository = repository.NewBlockIpRepository(ctx, db)
-}
 
 const (
 	LocaleMW  = "LocaleMW"
@@ -116,27 +105,9 @@ func BlockIPMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		langRequest := locale.GetLangFromContext(r.Context())
 
-		IPAddress := r.Header.Get("X-Real-Ip")
-		if IPAddress == "" {
-			IPAddress = r.Header.Get("X-Forwarded-For")
-		}
-		if IPAddress == "" {
-			IPAddress = r.RemoteAddr
-		}
-
-		if strings.Contains(IPAddress, ":") {
-			host, _, err := net.SplitHostPort(IPAddress)
-			if err == nil {
-				IPAddress = host
-			} else {
-				SendErrorResponse(w, "Error split host", http.StatusForbidden, 0)
-				return
-			}
-		}
-
-		dtoBlockIP := dto.BlockIP{IP: IPAddress}
-		if err := dtoBlockIP.Validate(langRequest); err != nil {
-			SendErrorResponse(w, locale.T(langRequest, "failed_to_determine_ip"), http.StatusForbidden, 0)
+		IPAddress, err := GetIpAddress(r)
+		if err != nil {
+			SendErrorResponse(w, BuildErrorMessageCommon(langRequest, ErrSplitHostIP), http.StatusForbidden, 0)
 			return
 		}
 
