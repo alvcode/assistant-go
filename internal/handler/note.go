@@ -28,23 +28,27 @@ func (h *NoteHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	authUser, err := GetAuthUser(r)
 	if err != nil {
+		BlockEventHandle(r, BlockEventUnauthorizedType)
 		SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
 		return
 	}
 
 	err = json.NewDecoder(r.Body).Decode(&createNoteDto)
 	if err != nil {
+		BlockEventHandle(r, BlockEventDecodeBodyType)
 		SendErrorResponse(w, locale.T(langRequest, "error_reading_request_body"), http.StatusBadRequest, 0)
 		return
 	}
 
 	if err = createNoteDto.Validate(langRequest); err != nil {
+		BlockEventHandle(r, BlockEventInputDataType)
 		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
 		return
 	}
 
 	note, err := h.useCase.Create(createNoteDto, authUser, langRequest)
 	if err != nil {
+		BlockEventHandle(r, BlockEventOtherType)
 		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
 		return
 	}
@@ -58,6 +62,7 @@ func (h *NoteHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 
 	authUser, err := GetAuthUser(r)
 	if err != nil {
+		BlockEventHandle(r, BlockEventUnauthorizedType)
 		SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
 		return
 	}
@@ -70,6 +75,7 @@ func (h *NoteHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 		catIDInt, err := strconv.Atoi(catIDStr)
 
 		if err != nil {
+			BlockEventHandle(r, BlockEventInputDataType)
 			SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
 			return
 		}
@@ -77,12 +83,14 @@ func (h *NoteHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := categoryID.Validate(langRequest); err != nil {
+		BlockEventHandle(r, BlockEventInputDataType)
 		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
 		return
 	}
 
 	notes, err := h.useCase.GetAll(categoryID, authUser, langRequest)
 	if err != nil {
+		BlockEventHandle(r, BlockEventOtherType)
 		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
 		return
 	}
@@ -96,23 +104,27 @@ func (h *NoteHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	authUser, err := GetAuthUser(r)
 	if err != nil {
+		BlockEventHandle(r, BlockEventUnauthorizedType)
 		SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
 		return
 	}
 
 	err = json.NewDecoder(r.Body).Decode(&updateNoteDto)
 	if err != nil {
+		BlockEventHandle(r, BlockEventDecodeBodyType)
 		SendErrorResponse(w, locale.T(langRequest, "error_reading_request_body"), http.StatusBadRequest, 0)
 		return
 	}
 
 	if err = updateNoteDto.Validate(langRequest); err != nil {
+		BlockEventHandle(r, BlockEventInputDataType)
 		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
 		return
 	}
 
 	note, err := h.useCase.Update(updateNoteDto, authUser, langRequest)
 	if err != nil {
+		BlockEventHandle(r, BlockEventOtherType)
 		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
 		return
 	}
@@ -126,6 +138,7 @@ func (h *NoteHandler) GetOne(w http.ResponseWriter, r *http.Request) {
 
 	authUser, err := GetAuthUser(r)
 	if err != nil {
+		BlockEventHandle(r, BlockEventUnauthorizedType)
 		SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
 		return
 	}
@@ -137,6 +150,7 @@ func (h *NoteHandler) GetOne(w http.ResponseWriter, r *http.Request) {
 		noteIDInt, err := strconv.Atoi(noteIDStr)
 
 		if err != nil {
+			BlockEventHandle(r, BlockEventInputDataType)
 			SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
 			return
 		}
@@ -144,12 +158,14 @@ func (h *NoteHandler) GetOne(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := noteID.Validate(langRequest); err != nil {
+		BlockEventHandle(r, BlockEventInputDataType)
 		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
 		return
 	}
 
 	note, err := h.useCase.GetOne(noteID, authUser, langRequest)
 	if err != nil {
+		BlockEventHandle(r, BlockEventOtherType)
 		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
 		return
 	}
@@ -162,6 +178,7 @@ func (h *NoteHandler) DeleteOne(w http.ResponseWriter, r *http.Request) {
 
 	authUser, err := GetAuthUser(r)
 	if err != nil {
+		BlockEventHandle(r, BlockEventUnauthorizedType)
 		SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
 		return
 	}
@@ -173,6 +190,7 @@ func (h *NoteHandler) DeleteOne(w http.ResponseWriter, r *http.Request) {
 		noteIDInt, err := strconv.Atoi(noteIDStr)
 
 		if err != nil {
+			BlockEventHandle(r, BlockEventInputDataType)
 			SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
 			return
 		}
@@ -180,12 +198,14 @@ func (h *NoteHandler) DeleteOne(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := noteID.Validate(langRequest); err != nil {
+		BlockEventHandle(r, BlockEventInputDataType)
 		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
 		return
 	}
 
 	err = h.useCase.DeleteOne(noteID, authUser, langRequest)
 	if err != nil {
+		BlockEventHandle(r, BlockEventOtherType)
 		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
 		return
 	}
@@ -198,6 +218,7 @@ func (h *NoteHandler) Pin(w http.ResponseWriter, r *http.Request) {
 
 	authUser, err := GetAuthUser(r)
 	if err != nil {
+		BlockEventHandle(r, BlockEventUnauthorizedType)
 		SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
 		return
 	}
@@ -209,6 +230,7 @@ func (h *NoteHandler) Pin(w http.ResponseWriter, r *http.Request) {
 		noteIDInt, err := strconv.Atoi(noteIDStr)
 
 		if err != nil {
+			BlockEventHandle(r, BlockEventInputDataType)
 			SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
 			return
 		}
@@ -216,12 +238,14 @@ func (h *NoteHandler) Pin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := noteID.Validate(langRequest); err != nil {
+		BlockEventHandle(r, BlockEventInputDataType)
 		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
 		return
 	}
 
 	err = h.useCase.Pin(noteID, authUser, langRequest)
 	if err != nil {
+		BlockEventHandle(r, BlockEventOtherType)
 		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
 		return
 	}
@@ -234,6 +258,7 @@ func (h *NoteHandler) UnPin(w http.ResponseWriter, r *http.Request) {
 
 	authUser, err := GetAuthUser(r)
 	if err != nil {
+		BlockEventHandle(r, BlockEventUnauthorizedType)
 		SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
 		return
 	}
@@ -245,6 +270,7 @@ func (h *NoteHandler) UnPin(w http.ResponseWriter, r *http.Request) {
 		noteIDInt, err := strconv.Atoi(noteIDStr)
 
 		if err != nil {
+			BlockEventHandle(r, BlockEventInputDataType)
 			SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
 			return
 		}
@@ -252,12 +278,14 @@ func (h *NoteHandler) UnPin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := noteID.Validate(langRequest); err != nil {
+		BlockEventHandle(r, BlockEventInputDataType)
 		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
 		return
 	}
 
 	err = h.useCase.UnPin(noteID, authUser, langRequest)
 	if err != nil {
+		BlockEventHandle(r, BlockEventOtherType)
 		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
 		return
 	}

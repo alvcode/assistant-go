@@ -27,16 +27,19 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&createUserDto)
 	if err != nil {
+		BlockEventHandle(r, BlockEventDecodeBodyType)
 		SendErrorResponse(w, locale.T(langRequest, "error_reading_request_body"), http.StatusBadRequest, 0)
 		return
 	}
 	if err := createUserDto.Validate(langRequest); err != nil {
+		BlockEventHandle(r, BlockEventInputDataType)
 		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
 		return
 	}
 
 	entity, err := h.useCase.Create(createUserDto, langRequest)
 	if err != nil {
+		BlockEventHandle(r, BlockEventOtherType)
 		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
 		return
 	}
@@ -61,7 +64,7 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 	entity, err := h.useCase.Login(loginUserDto, langRequest)
 	if err != nil {
-		BlockEventHandle(r, BlockEventOtherType)
+		BlockEventHandle(r, BlockEventErrorSignInType)
 		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
 		return
 	}
@@ -76,16 +79,19 @@ func (h *UserHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&refreshTokenDto)
 	if err != nil {
+		BlockEventHandle(r, BlockEventDecodeBodyType)
 		SendErrorResponse(w, locale.T(langRequest, "error_reading_request_body"), http.StatusBadRequest, 0)
 		return
 	}
 	if err := refreshTokenDto.Validate(langRequest); err != nil {
+		BlockEventHandle(r, BlockEventInputDataType)
 		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
 		return
 	}
 
 	entity, err := h.useCase.RefreshToken(refreshTokenDto, langRequest)
 	if err != nil {
+		BlockEventHandle(r, BlockEventRefreshTokenType)
 		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
 		return
 	}
@@ -98,12 +104,14 @@ func (h *UserHandler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	authUser, err := GetAuthUser(r)
 	if err != nil {
+		BlockEventHandle(r, BlockEventUnauthorizedType)
 		SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
 		return
 	}
 
 	err = h.useCase.Delete(authUser.ID, langRequest)
 	if err != nil {
+		BlockEventHandle(r, BlockEventOtherType)
 		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
 		return
 	}
@@ -117,23 +125,27 @@ func (h *UserHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 
 	authUser, err := GetAuthUser(r)
 	if err != nil {
+		BlockEventHandle(r, BlockEventUnauthorizedType)
 		SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
 		return
 	}
 
 	err = json.NewDecoder(r.Body).Decode(&userChangePasswordDto)
 	if err != nil {
+		BlockEventHandle(r, BlockEventDecodeBodyType)
 		SendErrorResponse(w, locale.T(langRequest, "error_reading_request_body"), http.StatusBadRequest, 0)
 		return
 	}
 
 	if err := userChangePasswordDto.Validate(langRequest); err != nil {
+		BlockEventHandle(r, BlockEventInputDataType)
 		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
 		return
 	}
 
 	err = h.useCase.ChangePassword(authUser.ID, userChangePasswordDto, langRequest)
 	if err != nil {
+		BlockEventHandle(r, BlockEventOtherType)
 		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
 		return
 	}

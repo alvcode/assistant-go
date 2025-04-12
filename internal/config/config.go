@@ -14,10 +14,11 @@ const (
 )
 
 type Config struct {
-	Env  string `env:"ENV" env-required:"true"`
-	HTTP HTTPServer
-	DB   Database
-	Cors Cors
+	Env              string `env:"ENV" env-required:"true"`
+	BlockingParanoia int    `env:"BLOCKING_PARANOIA" env-default:"2"`
+	HTTP             HTTPServer
+	DB               Database
+	Cors             Cors
 }
 
 type HTTPServer struct {

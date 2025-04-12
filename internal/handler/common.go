@@ -73,19 +73,6 @@ func GetAuthUser(r *http.Request) (*entity.User, error) {
 	return userEntity, nil
 }
 
-func BuildErrorMessageCommon(lang string, err error) string {
-	switch {
-	case errors.Is(err, postgres.ErrUnexpectedDBError):
-		return locale.T(lang, "unexpected_database_error")
-	case errors.Is(err, ErrSplitHostIP):
-		return locale.T(lang, "unexpected_error")
-	case errors.Is(err, ErrDetermineIP):
-		return locale.T(lang, "failed_to_determine_ip")
-	default:
-		return locale.T(lang, "unexpected_error")
-	}
-}
-
 var (
 	BlockEventInputDataType    = "validate_input_data"
 	BlockEventDecodeBodyType   = "decode_body"
@@ -104,6 +91,7 @@ func BlockEventHandle(r *http.Request, eventName string) {
 			return
 		}
 	}
+	fmt.Println(appConf.BlockingParanoia)
 }
 
 func GetIpAddress(r *http.Request) (string, error) {
@@ -129,4 +117,17 @@ func GetIpAddress(r *http.Request) (string, error) {
 		return "", ErrDetermineIP
 	}
 	return IPAddress, nil
+}
+
+func BuildErrorMessageCommon(lang string, err error) string {
+	switch {
+	case errors.Is(err, postgres.ErrUnexpectedDBError):
+		return locale.T(lang, "unexpected_database_error")
+	case errors.Is(err, ErrSplitHostIP):
+		return locale.T(lang, "unexpected_error")
+	case errors.Is(err, ErrDetermineIP):
+		return locale.T(lang, "failed_to_determine_ip")
+	default:
+		return locale.T(lang, "unexpected_error")
+	}
 }
