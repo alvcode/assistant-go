@@ -9,6 +9,7 @@ import (
 type BlockIPRepository interface {
 	FindBlocking(ip string, time time.Time) (bool, error)
 	RemoveByDateExpired(time time.Time) error
+	SetBlock(ip string, time time.Time) error
 }
 
 type blockIpRepository struct {
@@ -39,6 +40,18 @@ func (ur *blockIpRepository) RemoveByDateExpired(time time.Time) error {
 
 	_, err := ur.db.Exec(ur.ctx, query, time)
 	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (ur *blockIpRepository) SetBlock(ip string, unblockTime time.Time) error {
+	query := `INSERT INTO block_ip (ip, blocked_until) VALUES ($1, $2) RETURNING id`
+
+	row := ur.db.QueryRow(ur.ctx, query, ip, unblockTime)
+
+	var id int
+	if err := row.Scan(&id); err != nil {
 		return err
 	}
 	return nil

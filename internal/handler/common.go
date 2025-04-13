@@ -10,7 +10,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"net"
 	"net/http"
@@ -83,7 +82,10 @@ var (
 )
 
 func BlockEventHandle(r *http.Request, eventName string) {
-	fmt.Println("block event func")
+	if appConf.BlockingParanoia == 0 {
+		return
+	}
+
 	IPAddress, err := GetIpAddress(r)
 	if err == nil {
 		_, err := blockEventRepository.SetEvent(IPAddress, eventName, time.Now().UTC())
@@ -91,7 +93,55 @@ func BlockEventHandle(r *http.Request, eventName string) {
 			return
 		}
 	}
-	fmt.Println(appConf.BlockingParanoia)
+	checkTime := time.Now().Add(-30 * time.Minute).UTC()
+
+	blockEventStat, err := blockEventRepository.GetStat(IPAddress, checkTime)
+	if err != nil {
+		return
+	}
+	var blockMinute int
+	var allMaxCount int
+	var validateInputMaxCount int
+	var decodeBodyMaxCount int
+	var signInMaxCount int
+	var unauthorizedMaxCount int
+	var refreshTokenMaxCount int
+	switch appConf.BlockingParanoia {
+	case 1:
+		blockMinute = 30
+		allMaxCount = 300
+		validateInputMaxCount = 60
+		decodeBodyMaxCount = 30
+		signInMaxCount = 30
+		unauthorizedMaxCount = 50
+		refreshTokenMaxCount = 70
+	case 2:
+		blockMinute = 420 // 7 hour
+		allMaxCount = 150
+		validateInputMaxCount = 40
+		decodeBodyMaxCount = 20
+		signInMaxCount = 20
+		unauthorizedMaxCount = 30
+		refreshTokenMaxCount = 50
+	case 3:
+		blockMinute = 2880 // 2 day
+		allMaxCount = 70
+		validateInputMaxCount = 30
+		decodeBodyMaxCount = 10
+		signInMaxCount = 10
+		unauthorizedMaxCount = 20
+		refreshTokenMaxCount = 30
+	}
+
+	if blockEventStat.All >= allMaxCount ||
+		blockEventStat.ValidateInputData >= validateInputMaxCount ||
+		blockEventStat.DecodeBody >= decodeBodyMaxCount ||
+		blockEventStat.SignIn >= signInMaxCount ||
+		blockEventStat.Unauthorized >= unauthorizedMaxCount ||
+		blockEventStat.RefreshToken >= refreshTokenMaxCount {
+		unblockTime := time.Now().Add(time.Duration(blockMinute) * time.Minute).UTC()
+		_ = blockIpRepository.SetBlock(IPAddress, unblockTime)
+	}
 }
 
 func GetIpAddress(r *http.Request) (string, error) {

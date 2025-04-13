@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"assistant-go/internal/layer/dto"
 	"context"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"time"
@@ -8,6 +9,7 @@ import (
 
 type BlockEventRepository interface {
 	SetEvent(ip string, eventName string, time time.Time) (int, error)
+	GetStat(ip string, timeFrom time.Time) (*dto.BlockEventsStat, error)
 }
 
 type blockEventRepository struct {
@@ -32,4 +34,78 @@ func (ur *blockEventRepository) SetEvent(ip string, eventName string, time time.
 		return 0, err
 	}
 	return resID, nil
+}
+
+func (ur *blockEventRepository) GetStat(ip string, timeFrom time.Time) (*dto.BlockEventsStat, error) {
+	query := `
+		WITH error_counts AS (
+			SELECT 
+				event,
+				COUNT(*) AS event_count
+			FROM 
+				block_events
+			WHERE 
+				ip = $1
+				AND created_at >= $2
+			GROUP BY 
+				event
+		),
+		total_errors AS (
+			SELECT 
+				'all' as event,
+				COUNT(*) AS event_count
+			FROM 
+				block_events
+			WHERE 
+				ip = $1
+				AND created_at >= $2
+		)
+		SELECT 
+			ec.event,
+			ec.event_count
+		FROM 
+			error_counts ec
+		union 
+		SELECT 
+			te.event,
+			te.event_count
+		FROM 
+			total_errors te;
+	`
+
+	rows, err := ur.db.Query(ur.ctx, query, ip, timeFrom)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	stat := &dto.BlockEventsStat{}
+	for rows.Next() {
+		var event string
+		var count int
+
+		if err := rows.Scan(&event, &count); err != nil {
+			return nil, err
+		}
+
+		switch event {
+		case "all":
+			stat.All = count
+		case "validate_input_data":
+			stat.ValidateInputData = count
+		case "decode_body":
+			stat.DecodeBody = count
+		case "sign_in":
+			stat.SignIn = count
+		case "unauthorized":
+			stat.Unauthorized = count
+		case "refresh_token":
+			stat.RefreshToken = count
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return stat, nil
 }
