@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"assistant-go/internal/config"
 	"assistant-go/internal/handler"
 	"assistant-go/internal/layer/dto"
 	"assistant-go/internal/layer/entity"
@@ -36,6 +37,9 @@ func setupTest() (*mocks.MockUserRepository, *handler.UserHandler, context.Conte
 	repos := &repository.Repositories{
 		UserRepository: mockRepo,
 	}
+
+	cfg := &config.Config{BlockingParanoia: 0}
+	handler.InitHandler(repos, cfg)
 
 	userUseCase := ucase.NewUserUseCase(ctx, repos)
 	userHandler := handler.NewUserHandler(userUseCase)

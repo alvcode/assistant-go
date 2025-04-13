@@ -9,10 +9,8 @@ import (
 	"assistant-go/internal/layer/ucase"
 	"assistant-go/internal/locale"
 	"assistant-go/internal/storage/postgres"
-	"context"
 	"encoding/json"
 	"errors"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"net"
 	"net/http"
 	"strings"
@@ -24,10 +22,10 @@ var blockIpRepository repository.BlockIPRepository
 var blockEventRepository repository.BlockEventRepository
 var appConf *config.Config
 
-func InitHandler(ctx context.Context, db *pgxpool.Pool, cfg *config.Config) {
-	userRepository = repository.NewUserRepository(ctx, db)
-	blockIpRepository = repository.NewBlockIpRepository(ctx, db)
-	blockEventRepository = repository.NewBlockEventRepository(ctx, db)
+func InitHandler(repos *repository.Repositories, cfg *config.Config) {
+	userRepository = repos.UserRepository
+	blockIpRepository = repos.BlockIPRepository
+	blockEventRepository = repos.BlockEventRepository
 	appConf = cfg
 }
 

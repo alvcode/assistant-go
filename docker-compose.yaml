@@ -27,6 +27,17 @@ services:
     depends_on:
       - ast-db
 
+  ast-mockery:
+    build:
+      context: .
+      dockerfile: _docker/mockery/Dockerfile
+    volumes:
+      - ./:/app/
+    env_file:
+      - .env
+    networks:
+      - ast-network
+
 networks:
   ast-network:
     driver: bridge

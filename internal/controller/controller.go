@@ -5,7 +5,6 @@ import (
 	"assistant-go/internal/handler"
 	"assistant-go/internal/layer/repository"
 	"assistant-go/internal/layer/ucase"
-	"assistant-go/internal/logging"
 	"context"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/julienschmidt/httprouter"
@@ -27,9 +26,9 @@ func New(cfg *config.Config, db *pgxpool.Pool, router *httprouter.Router) *Init 
 }
 
 func (controller *Init) SetRoutes(ctx context.Context) error {
-	logging.GetLogger(ctx).Println("swagger init")
+	repos := repository.NewRepositories(ctx, controller.db)
 
-	handler.InitHandler(ctx, controller.db, controller.cfg)
+	handler.InitHandler(repos, controller.cfg)
 
 	//controller.router.Handler(http.MethodGet, "/swagger", http.RedirectHandler("/swagger/index.html", http.StatusMovedPermanently))
 	//controller.router.Handler(http.MethodGet, "/swagger/*any", httpSwagger.WrapHandler)
@@ -44,8 +43,6 @@ func (controller *Init) SetRoutes(ctx context.Context) error {
 		"/api/heartbeat",
 		handler.BuildHandler(heartbeatHandler.Heartbeat, handler.BlockIPMW),
 	)
-
-	repos := repository.NewRepositories(ctx, controller.db)
 
 	controller.setUserRoutes(ctx, repos)
 	controller.setNotesCategories(ctx, repos)

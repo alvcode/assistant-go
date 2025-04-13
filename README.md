@@ -9,8 +9,6 @@ frontend: <a href="https://github.com/alvcode/assistant-front" target="_blank">h
 - install packages
 
 ~~~
-go install github.com/vektra/mockery/v2@latest
-go install github.com/swaggo/swag/cmd/swag@latest
 go install github.com/spf13/cobra-cli@latest
 ~~~
 

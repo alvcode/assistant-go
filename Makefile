@@ -30,6 +30,8 @@ md: # down one last migration
 md-to: # $(timestamp) - откат конкретной миграции. пример: make md-to timestamp=20170506082527
 	docker compose run --rm ast-goose down-to $(timestamp)
 
+mockery:
+	docker compose run --rm ast-mockery
 
 # CLI
 cli-clean-db:
@@ -96,9 +98,6 @@ restore-db: # with param file=path/to/backup/dump.sql
 # =======================================================
 swag:
 	swag init -g ./cmd/main.go -o ./swagger
-
-mockery:
-	mockery
 
 test:
 	go test ./tests/...
