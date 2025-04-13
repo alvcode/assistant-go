@@ -4,7 +4,6 @@ import (
 	"assistant-go/internal/layer/dto"
 	"assistant-go/internal/layer/entity"
 	"assistant-go/internal/layer/repository"
-	"assistant-go/internal/locale"
 	"assistant-go/internal/logging"
 	"assistant-go/internal/storage/postgres"
 	"context"
@@ -19,15 +18,19 @@ import (
 const userTokenLifeHours = 4
 
 var (
-	ErrIncorrectUsernameOrPassword = errors.New("incorrect username or password")
+	ErrUserIncorrectUsernameOrPassword = errors.New("incorrect username or password")
+	ErrUserAlreadyExists               = errors.New("user already exists")
+	ErrRefreshTokenNotFound            = errors.New("refresh token not found")
+	ErrUserNotFound                    = errors.New("user not found")
+	ErrUserPasswordsAreNotIdentical    = errors.New("passwords are not identical")
 )
 
 type UserUseCase interface {
-	Create(in dto.UserLoginAndPassword, lang string) (*entity.User, error)
-	Login(in dto.UserLoginAndPassword, lang string) (*entity.UserToken, error)
-	RefreshToken(in dto.UserRefreshToken, lang string) (*entity.UserToken, error)
-	Delete(userID int, lang string) error
-	ChangePassword(userID int, in dto.UserChangePassword, lang string) error
+	Create(in dto.UserLoginAndPassword) (*entity.User, error)
+	Login(in dto.UserLoginAndPassword) (*entity.UserToken, error)
+	RefreshToken(in dto.UserRefreshToken) (*entity.UserToken, error)
+	Delete(userID int) error
+	ChangePassword(userID int, in dto.UserChangePassword) error
 	CleanOldTokens() error
 }
 
@@ -43,10 +46,10 @@ func NewUserUseCase(ctx context.Context, repositories *repository.Repositories) 
 	}
 }
 
-func (uc *userUseCase) Create(in dto.UserLoginAndPassword, lang string) (*entity.User, error) {
+func (uc *userUseCase) Create(in dto.UserLoginAndPassword) (*entity.User, error) {
 	existingUser, err := uc.repositories.UserRepository.Find(in.Login)
 	if err == nil && existingUser != nil {
-		return nil, errors.New(locale.T(lang, "user_already_exists"))
+		return nil, ErrUserAlreadyExists
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(in.Password), 11)
@@ -64,16 +67,16 @@ func (uc *userUseCase) Create(in dto.UserLoginAndPassword, lang string) (*entity
 	data, err := uc.repositories.UserRepository.Create(userEntity)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
-		return nil, errors.New(locale.T(lang, "unexpected_database_error"))
+		return nil, postgres.ErrUnexpectedDBError
 	}
 	return data, nil
 }
 
-func (uc *userUseCase) Login(in dto.UserLoginAndPassword, lang string) (*entity.UserToken, error) {
+func (uc *userUseCase) Login(in dto.UserLoginAndPassword) (*entity.UserToken, error) {
 	existingUser, err := uc.repositories.UserRepository.Find(in.Login)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrIncorrectUsernameOrPassword
+			return nil, ErrUserIncorrectUsernameOrPassword
 		}
 		logging.GetLogger(uc.ctx).Error(err)
 		return nil, postgres.ErrUnexpectedDBError
@@ -81,44 +84,44 @@ func (uc *userUseCase) Login(in dto.UserLoginAndPassword, lang string) (*entity.
 
 	err = bcrypt.CompareHashAndPassword([]byte(existingUser.Password), []byte(in.Password))
 	if err != nil {
-		return nil, errors.New(locale.T(lang, "incorrect_username_or_password"))
+		return nil, ErrUserIncorrectUsernameOrPassword
 	}
 
 	userTokenEntity, err := uc.generateTokenPair(existingUser.ID)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
-		return nil, errors.New(locale.T(lang, "unexpected_error"))
+		return nil, ErrUnexpectedError
 	}
 
 	data, err := uc.repositories.UserRepository.SetUserToken(*userTokenEntity)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
-		return nil, errors.New(locale.T(lang, "unexpected_database_error"))
+		return nil, postgres.ErrUnexpectedDBError
 	}
 	return data, nil
 }
 
-func (uc *userUseCase) RefreshToken(in dto.UserRefreshToken, lang string) (*entity.UserToken, error) {
+func (uc *userUseCase) RefreshToken(in dto.UserRefreshToken) (*entity.UserToken, error) {
 	existingToken, err := uc.repositories.UserRepository.FindUserToken(in.Token)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, errors.New(locale.T(lang, "refresh_token_not_found"))
+			return nil, ErrRefreshTokenNotFound
 		}
-		return nil, errors.New(locale.T(lang, "unexpected_database_error"))
+		return nil, postgres.ErrUnexpectedDBError
 	}
 	if existingToken.RefreshToken != in.RefreshToken {
-		return nil, errors.New(locale.T(lang, "refresh_token_not_found"))
+		return nil, ErrRefreshTokenNotFound
 	}
 
 	userTokenEntity, err := uc.generateTokenPair(int(existingToken.UserId))
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
-		return nil, errors.New(locale.T(lang, "unexpected_error"))
+		return nil, ErrUnexpectedError
 	}
 	data, err := uc.repositories.UserRepository.SetUserToken(*userTokenEntity)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
-		return nil, errors.New(locale.T(lang, "unexpected_database_error"))
+		return nil, postgres.ErrUnexpectedDBError
 	}
 	return data, nil
 }
@@ -160,42 +163,42 @@ func generateAPIToken() (string, error) {
 	return base64.URLEncoding.EncodeToString(bytes), nil
 }
 
-func (uc *userUseCase) Delete(userID int, lang string) error {
+func (uc *userUseCase) Delete(userID int) error {
 
 	err := uc.repositories.UserRepository.Delete(userID)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
-		return errors.New(locale.T(lang, "unexpected_database_error"))
+		return postgres.ErrUnexpectedDBError
 	}
 
 	err = uc.repositories.UserRepository.DeleteUserTokensByID(userID)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
-		return errors.New(locale.T(lang, "unexpected_database_error"))
+		return postgres.ErrUnexpectedDBError
 	}
 
 	err = uc.repositories.NoteCategoryRepository.DeleteByUserId(userID)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
-		return errors.New(locale.T(lang, "unexpected_database_error"))
+		return postgres.ErrUnexpectedDBError
 	}
 
 	return nil
 }
 
-func (uc *userUseCase) ChangePassword(userID int, in dto.UserChangePassword, lang string) error {
+func (uc *userUseCase) ChangePassword(userID int, in dto.UserChangePassword) error {
 	user, err := uc.repositories.UserRepository.FindById(userID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return errors.New(locale.T(lang, "user_not_found"))
+			return ErrUserNotFound
 		}
 		logging.GetLogger(uc.ctx).Error(err)
-		return errors.New(locale.T(lang, "unexpected_database_error"))
+		return postgres.ErrUnexpectedDBError
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(in.CurrentPassword))
 	if err != nil {
-		return errors.New(locale.T(lang, "passwords_are_not_identical"))
+		return ErrUserPasswordsAreNotIdentical
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(in.NewPassword), 11)
@@ -211,7 +214,7 @@ func (uc *userUseCase) ChangePassword(userID int, in dto.UserChangePassword, lan
 	err = uc.repositories.UserRepository.DeleteUserTokensByID(userID)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
-		return errors.New(locale.T(lang, "unexpected_database_error"))
+		return postgres.ErrUnexpectedDBError
 	}
 
 	return nil

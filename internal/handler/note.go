@@ -46,10 +46,10 @@ func (h *NoteHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	note, err := h.useCase.Create(createNoteDto, authUser, langRequest)
+	note, err := h.useCase.Create(createNoteDto, authUser)
 	if err != nil {
 		BlockEventHandle(r, BlockEventOtherType)
-		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
+		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
 		return
 	}
 
@@ -88,10 +88,10 @@ func (h *NoteHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	notes, err := h.useCase.GetAll(categoryID, authUser, langRequest)
+	notes, err := h.useCase.GetAll(categoryID, authUser)
 	if err != nil {
 		BlockEventHandle(r, BlockEventOtherType)
-		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
+		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
 		return
 	}
 	result := vmodel.NotesMinimalFromEntities(notes)
@@ -122,10 +122,10 @@ func (h *NoteHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	note, err := h.useCase.Update(updateNoteDto, authUser, langRequest)
+	note, err := h.useCase.Update(updateNoteDto, authUser)
 	if err != nil {
 		BlockEventHandle(r, BlockEventOtherType)
-		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
+		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
 		return
 	}
 
@@ -163,10 +163,10 @@ func (h *NoteHandler) GetOne(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	note, err := h.useCase.GetOne(noteID, authUser, langRequest)
+	note, err := h.useCase.GetOne(noteID, authUser)
 	if err != nil {
 		BlockEventHandle(r, BlockEventOtherType)
-		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
+		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
 		return
 	}
 	result := vmodel.NoteFromEnity(note)
@@ -203,10 +203,10 @@ func (h *NoteHandler) DeleteOne(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.useCase.DeleteOne(noteID, authUser, langRequest)
+	err = h.useCase.DeleteOne(noteID, authUser)
 	if err != nil {
 		BlockEventHandle(r, BlockEventOtherType)
-		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
+		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
 		return
 	}
 
@@ -243,10 +243,10 @@ func (h *NoteHandler) Pin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.useCase.Pin(noteID, authUser, langRequest)
+	err = h.useCase.Pin(noteID, authUser)
 	if err != nil {
 		BlockEventHandle(r, BlockEventOtherType)
-		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
+		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
 		return
 	}
 
@@ -283,10 +283,10 @@ func (h *NoteHandler) UnPin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.useCase.UnPin(noteID, authUser, langRequest)
+	err = h.useCase.UnPin(noteID, authUser)
 	if err != nil {
 		BlockEventHandle(r, BlockEventOtherType)
-		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
+		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
 		return
 	}
 

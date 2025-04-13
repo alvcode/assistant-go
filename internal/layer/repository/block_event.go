@@ -10,6 +10,7 @@ import (
 type BlockEventRepository interface {
 	SetEvent(ip string, eventName string, time time.Time) (int, error)
 	GetStat(ip string, timeFrom time.Time) (*dto.BlockEventsStat, error)
+	RemoveByDateExpired(time time.Time) error
 }
 
 type blockEventRepository struct {
@@ -108,4 +109,14 @@ func (ur *blockEventRepository) GetStat(ip string, timeFrom time.Time) (*dto.Blo
 	}
 
 	return stat, nil
+}
+
+func (ur *blockEventRepository) RemoveByDateExpired(time time.Time) error {
+	query := `DELETE FROM block_events WHERE created_at < $1`
+
+	_, err := ur.db.Exec(ur.ctx, query, time)
+	if err != nil {
+		return err
+	}
+	return nil
 }

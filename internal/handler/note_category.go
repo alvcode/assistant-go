@@ -46,10 +46,10 @@ func (h *NoteCategoryHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	entity, err := h.useCase.Create(createNoteCategoryDto, authUser, langRequest)
+	entity, err := h.useCase.Create(createNoteCategoryDto, authUser)
 	if err != nil {
 		BlockEventHandle(r, BlockEventOtherType)
-		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
+		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
 		return
 	}
 
@@ -67,10 +67,10 @@ func (h *NoteCategoryHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	entities, err := h.useCase.FindAll(authUser.ID, langRequest)
+	entities, err := h.useCase.FindAll(authUser.ID)
 	if err != nil {
 		BlockEventHandle(r, BlockEventOtherType)
-		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
+		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
 		return
 	}
 
@@ -108,10 +108,10 @@ func (h *NoteCategoryHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.useCase.Delete(authUser.ID, idDto.ID, langRequest)
+	err = h.useCase.Delete(authUser.ID, idDto.ID)
 	if err != nil {
 		BlockEventHandle(r, BlockEventOtherType)
-		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
+		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
 		return
 	}
 	SendResponse(w, http.StatusNoContent, nil)
@@ -153,10 +153,10 @@ func (h *NoteCategoryHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	entity, err := h.useCase.Update(updateNoteCategoryDto, authUser.ID, langRequest)
+	entity, err := h.useCase.Update(updateNoteCategoryDto, authUser.ID)
 	if err != nil {
 		BlockEventHandle(r, BlockEventOtherType)
-		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
+		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
 		return
 	}
 
@@ -188,10 +188,10 @@ func (h *NoteCategoryHandler) PositionUp(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	err = h.useCase.PositionUp(categoryIDDto, authUser.ID, langRequest)
+	err = h.useCase.PositionUp(categoryIDDto, authUser.ID)
 	if err != nil {
 		BlockEventHandle(r, BlockEventOtherType)
-		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
+		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
 		return
 	}
 

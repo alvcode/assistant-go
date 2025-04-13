@@ -6,7 +6,6 @@ import (
 	"assistant-go/internal/layer/vmodel"
 	"assistant-go/internal/locale"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 )
@@ -37,10 +36,10 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	entity, err := h.useCase.Create(createUserDto, langRequest)
+	entity, err := h.useCase.Create(createUserDto)
 	if err != nil {
 		BlockEventHandle(r, BlockEventOtherType)
-		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
+		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
 		return
 	}
 	userVM := vmodel.UserFromEnity(entity)
@@ -62,7 +61,7 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
 		return
 	}
-	entity, err := h.useCase.Login(loginUserDto, langRequest)
+	entity, err := h.useCase.Login(loginUserDto)
 	if err != nil {
 		BlockEventHandle(r, BlockEventErrorSignInType)
 		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
@@ -89,10 +88,10 @@ func (h *UserHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	entity, err := h.useCase.RefreshToken(refreshTokenDto, langRequest)
+	entity, err := h.useCase.RefreshToken(refreshTokenDto)
 	if err != nil {
 		BlockEventHandle(r, BlockEventRefreshTokenType)
-		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
+		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
 		return
 	}
 	userTokenVM := vmodel.UserTokenFromEnity(entity)
@@ -109,10 +108,10 @@ func (h *UserHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.useCase.Delete(authUser.ID, langRequest)
+	err = h.useCase.Delete(authUser.ID)
 	if err != nil {
 		BlockEventHandle(r, BlockEventOtherType)
-		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
+		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
 		return
 	}
 
@@ -143,21 +142,12 @@ func (h *UserHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.useCase.ChangePassword(authUser.ID, userChangePasswordDto, langRequest)
+	err = h.useCase.ChangePassword(authUser.ID, userChangePasswordDto)
 	if err != nil {
 		BlockEventHandle(r, BlockEventOtherType)
-		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
+		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
 		return
 	}
 
 	SendResponse(w, http.StatusNoContent, nil)
-}
-
-func buildErrorMessage(lang string, err error) string {
-	switch {
-	case errors.Is(err, ucase.ErrIncorrectUsernameOrPassword):
-		return locale.T(lang, "incorrect_username_or_password")
-	default:
-		return BuildErrorMessageCommon(lang, err)
-	}
 }

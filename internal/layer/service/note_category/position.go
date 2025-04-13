@@ -3,16 +3,21 @@ package service
 import (
 	"assistant-go/internal/layer/entity"
 	"assistant-go/internal/layer/repository"
-	"assistant-go/internal/locale"
 	"assistant-go/internal/logging"
+	"assistant-go/internal/storage/postgres"
 	"context"
 	"errors"
 	"sort"
 )
 
+var (
+	ErrCategoryNotFound             = errors.New("category not found")
+	ErrCategoryAlreadyFirstPosition = errors.New("category already first position")
+)
+
 type PositionService interface {
 	CalculateForNew(userID int, parentCatID *int) (int, error)
-	PositionUp(userID int, catID int, lang string) error
+	PositionUp(userID int, catID int) error
 }
 
 type positionService struct {
@@ -28,15 +33,15 @@ func (ps *positionService) CalculateForNew(userID int, parentCatID *int) (int, e
 	return maxPosition + 1, nil
 }
 
-func (ps *positionService) PositionUp(userID int, catID int, lang string) error {
+func (ps *positionService) PositionUp(userID int, catID int) error {
 	categories, err := ps.repositories.NoteCategoryRepository.FindAll(userID)
 	if err != nil {
 		logging.GetLogger(ps.ctx).Error(err)
-		return errors.New(locale.T(lang, "unexpected_database_error"))
+		return postgres.ErrUnexpectedDBError
 	}
 
 	if len(categories) == 0 {
-		return errors.New(locale.T(lang, "category_not_found"))
+		return ErrCategoryNotFound
 	}
 
 	sort.Slice(categories, func(i, j int) bool {
@@ -67,7 +72,7 @@ func (ps *positionService) PositionUp(userID int, catID int, lang string) error 
 	}
 
 	if grouped[needUpCategoryKey][0].ID == catID {
-		return errors.New(locale.T(lang, "category_already_in_1_position"))
+		return ErrCategoryAlreadyFirstPosition
 	}
 
 	// Поиск и обмен местами
@@ -88,7 +93,7 @@ func (ps *positionService) PositionUp(userID int, catID int, lang string) error 
 				err = ps.repositories.NoteCategoryRepository.UpdatePosition(grouped[key][i])
 				if err != nil {
 					logging.GetLogger(ps.ctx).Error(err)
-					return errors.New(locale.T(lang, "unexpected_database_error"))
+					return postgres.ErrUnexpectedDBError
 				}
 			}
 		}

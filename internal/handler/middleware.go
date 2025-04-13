@@ -54,11 +54,13 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 
 		header := r.Header.Get("Authorization")
 		if header == "" {
+			BlockEventHandle(r, BlockEventUnauthorizedType)
 			SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
 			return
 		}
 		const prefix = "Bearer "
 		if !strings.HasPrefix(header, prefix) {
+			BlockEventHandle(r, BlockEventUnauthorizedType)
 			SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
 			return
 		}
@@ -67,6 +69,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		dtoUserToken := dto.UserToken{Token: token}
 
 		if err := dtoUserToken.Validate(langRequest); err != nil {
+			BlockEventHandle(r, BlockEventUnauthorizedType)
 			SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
 			return
 		}
@@ -74,14 +77,17 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		userTokenEntity, err := userRepository.FindUserToken(dtoUserToken.Token)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
+				BlockEventHandle(r, BlockEventUnauthorizedType)
 				SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
 				return
 			}
+			BlockEventHandle(r, BlockEventUnauthorizedType)
 			SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
 			return
 		}
 
 		if userTokenEntity.ExpiredTo < int(time.Now().Unix()) {
+			BlockEventHandle(r, BlockEventUnauthorizedType)
 			SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
 			return
 		}
@@ -89,9 +95,11 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		userEntity, err := userRepository.FindById(userTokenEntity.UserId)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
+				BlockEventHandle(r, BlockEventUnauthorizedType)
 				SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
 				return
 			}
+			BlockEventHandle(r, BlockEventUnauthorizedType)
 			SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
 			return
 		}
@@ -107,7 +115,7 @@ func BlockIPMiddleware(next http.HandlerFunc) http.HandlerFunc {
 
 		IPAddress, err := GetIpAddress(r)
 		if err != nil {
-			SendErrorResponse(w, BuildErrorMessageCommon(langRequest, ErrSplitHostIP), http.StatusForbidden, 0)
+			SendErrorResponse(w, buildErrorMessage(langRequest, ErrSplitHostIP), http.StatusForbidden, 0)
 			return
 		}
 

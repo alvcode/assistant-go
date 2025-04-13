@@ -5,20 +5,26 @@ import (
 	"assistant-go/internal/layer/entity"
 	"assistant-go/internal/layer/repository"
 	service "assistant-go/internal/layer/service/note_category"
-	"assistant-go/internal/locale"
 	"assistant-go/internal/logging"
+	"assistant-go/internal/storage/postgres"
 	"context"
 	"errors"
 	"github.com/jackc/pgx/v5"
 	"reflect"
 )
 
+var (
+	ErrCategoryParentIdNotFound = errors.New("parent category not found")
+	ErrCategoryNotFound         = errors.New("category not found")
+	ErrCategoryHasNotes         = errors.New("category has notes")
+)
+
 type NoteCategoryUseCase interface {
-	Create(in dto.NoteCategoryCreate, userEntity *entity.User, lang string) (*entity.NoteCategory, error)
-	FindAll(userId int, lang string) ([]*entity.NoteCategory, error)
-	Delete(userId int, catId int, lang string) error
-	Update(in dto.NoteCategoryUpdate, userID int, lang string) (*entity.NoteCategory, error)
-	PositionUp(in dto.RequiredID, userID int, lang string) error
+	Create(in dto.NoteCategoryCreate, userEntity *entity.User) (*entity.NoteCategory, error)
+	FindAll(userId int) ([]*entity.NoteCategory, error)
+	Delete(userId int, catId int) error
+	Update(in dto.NoteCategoryUpdate, userID int) (*entity.NoteCategory, error)
+	PositionUp(in dto.RequiredID, userID int) error
 }
 
 type noteCategoryUseCase struct {
@@ -33,11 +39,7 @@ func NewNoteCategoryUseCase(ctx context.Context, repositories *repository.Reposi
 	}
 }
 
-func (uc *noteCategoryUseCase) Create(
-	in dto.NoteCategoryCreate,
-	userEntity *entity.User,
-	lang string,
-) (*entity.NoteCategory, error) {
+func (uc *noteCategoryUseCase) Create(in dto.NoteCategoryCreate, userEntity *entity.User) (*entity.NoteCategory, error) {
 	noteCategoryEntity := entity.NoteCategory{
 		UserId:   userEntity.ID,
 		Name:     in.Name,
@@ -48,10 +50,10 @@ func (uc *noteCategoryUseCase) Create(
 		_, err := uc.repositories.NoteCategoryRepository.FindByIDAndUser(userEntity.ID, *in.ParentId)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				return nil, errors.New(locale.T(lang, "parent_id_of_the_category_not_found"))
+				return nil, ErrCategoryParentIdNotFound
 			}
 			logging.GetLogger(uc.ctx).Error(err)
-			return nil, errors.New(locale.T(lang, "unexpected_database_error"))
+			return nil, postgres.ErrUnexpectedDBError
 		}
 	}
 
@@ -59,7 +61,7 @@ func (uc *noteCategoryUseCase) Create(
 	newPosition, err := positionService.CalculateForNew(userEntity.ID, in.ParentId)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
-		return nil, errors.New(locale.T(lang, "unexpected_database_error"))
+		return nil, postgres.ErrUnexpectedDBError
 	}
 
 	noteCategoryEntity.Position = newPosition
@@ -67,28 +69,28 @@ func (uc *noteCategoryUseCase) Create(
 	data, err := uc.repositories.NoteCategoryRepository.Create(noteCategoryEntity)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
-		return nil, errors.New(locale.T(lang, "unexpected_database_error"))
+		return nil, postgres.ErrUnexpectedDBError
 	}
 	return data, nil
 }
 
-func (uc *noteCategoryUseCase) FindAll(userId int, lang string) ([]*entity.NoteCategory, error) {
+func (uc *noteCategoryUseCase) FindAll(userId int) ([]*entity.NoteCategory, error) {
 	data, err := uc.repositories.NoteCategoryRepository.FindAll(userId)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
-		return nil, errors.New(locale.T(lang, "unexpected_database_error"))
+		return nil, postgres.ErrUnexpectedDBError
 	}
 	return data, nil
 }
 
-func (uc *noteCategoryUseCase) Delete(userId int, catId int, lang string) error {
+func (uc *noteCategoryUseCase) Delete(userId int, catId int) error {
 	categories, err := uc.repositories.NoteCategoryRepository.FindByIDAndUserWithChildren(userId, catId)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return errors.New(locale.T(lang, "category_not_found"))
+			return ErrCategoryNotFound
 		}
 		logging.GetLogger(uc.ctx).Error(err)
-		return errors.New(locale.T(lang, "unexpected_database_error"))
+		return postgres.ErrUnexpectedDBError
 	}
 
 	catIds := make([]int, 0)
@@ -96,29 +98,29 @@ func (uc *noteCategoryUseCase) Delete(userId int, catId int, lang string) error 
 		catIds = append(catIds, cat.ID)
 	}
 	if len(catIds) == 0 {
-		return errors.New(locale.T(lang, "category_not_found"))
+		return ErrCategoryNotFound
 	}
 
 	checkExists, err := uc.repositories.NoteRepository.CheckExistsByCategoryIDs(catIds)
 	if err != nil {
 		if !errors.Is(err, pgx.ErrNoRows) {
 			logging.GetLogger(uc.ctx).Error(err)
-			return errors.New(locale.T(lang, "unexpected_database_error"))
+			return postgres.ErrUnexpectedDBError
 		}
 	}
 	if checkExists == true {
-		return errors.New(locale.T(lang, "category_has_notes"))
+		return ErrCategoryHasNotes
 	}
 
 	err = uc.repositories.NoteCategoryRepository.DeleteByIds(catIds)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
-		return errors.New(locale.T(lang, "unexpected_database_error"))
+		return postgres.ErrUnexpectedDBError
 	}
 	return nil
 }
 
-func (uc *noteCategoryUseCase) Update(in dto.NoteCategoryUpdate, userID int, lang string) (*entity.NoteCategory, error) {
+func (uc *noteCategoryUseCase) Update(in dto.NoteCategoryUpdate, userID int) (*entity.NoteCategory, error) {
 	noteCategoryEntity := &entity.NoteCategory{
 		ID:       in.ID,
 		UserId:   userID,
@@ -129,10 +131,10 @@ func (uc *noteCategoryUseCase) Update(in dto.NoteCategoryUpdate, userID int, lan
 	currentCategory, err := uc.repositories.NoteCategoryRepository.FindByIDAndUser(userID, in.ID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, errors.New(locale.T(lang, "category_not_found"))
+			return nil, ErrCategoryNotFound
 		}
 		logging.GetLogger(uc.ctx).Error(err)
-		return nil, errors.New(locale.T(lang, "unexpected_database_error"))
+		return nil, postgres.ErrUnexpectedDBError
 	}
 	noteCategoryEntity.Position = currentCategory.Position
 
@@ -140,10 +142,10 @@ func (uc *noteCategoryUseCase) Update(in dto.NoteCategoryUpdate, userID int, lan
 		_, err = uc.repositories.NoteCategoryRepository.FindByIDAndUser(userID, *in.ParentID)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				return nil, errors.New(locale.T(lang, "category_not_found"))
+				return nil, ErrCategoryNotFound
 			}
 			logging.GetLogger(uc.ctx).Error(err)
-			return nil, errors.New(locale.T(lang, "unexpected_database_error"))
+			return nil, postgres.ErrUnexpectedDBError
 		}
 	}
 
@@ -152,7 +154,7 @@ func (uc *noteCategoryUseCase) Update(in dto.NoteCategoryUpdate, userID int, lan
 		newPosition, err := positionService.CalculateForNew(userID, in.ParentID)
 		if err != nil {
 			logging.GetLogger(uc.ctx).Error(err)
-			return nil, errors.New(locale.T(lang, "unexpected_database_error"))
+			return nil, postgres.ErrUnexpectedDBError
 		}
 		noteCategoryEntity.Position = newPosition
 	}
@@ -160,23 +162,23 @@ func (uc *noteCategoryUseCase) Update(in dto.NoteCategoryUpdate, userID int, lan
 	err = uc.repositories.NoteCategoryRepository.Update(noteCategoryEntity)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
-		return nil, errors.New(locale.T(lang, "unexpected_database_error"))
+		return nil, postgres.ErrUnexpectedDBError
 	}
 	return noteCategoryEntity, nil
 }
 
-func (uc *noteCategoryUseCase) PositionUp(in dto.RequiredID, userID int, lang string) error {
+func (uc *noteCategoryUseCase) PositionUp(in dto.RequiredID, userID int) error {
 	_, err := uc.repositories.NoteCategoryRepository.FindByIDAndUser(userID, in.ID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return errors.New(locale.T(lang, "category_not_found"))
+			return ErrCategoryNotFound
 		}
 		logging.GetLogger(uc.ctx).Error(err)
-		return errors.New(locale.T(lang, "unexpected_database_error"))
+		return postgres.ErrUnexpectedDBError
 	}
 
 	positionService := service.NewNoteCategory().PositionService(uc.ctx, uc.repositories)
-	err = positionService.PositionUp(userID, in.ID, lang)
+	err = positionService.PositionUp(userID, in.ID)
 	if err != nil {
 		return err
 	}

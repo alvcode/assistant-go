@@ -31,6 +31,14 @@ func CleanDBInit(ctx context.Context, cfg *config.Config, db *pgxpool.Pool) {
 		return
 	}
 
+	blockEventUseCase := ucase.NewBlockEventUseCase(ctx, repos)
+	err = blockEventUseCase.CleanOld()
+	if err != nil {
+		fmt.Printf("Error clean block events: %v", err)
+		logging.GetLogger(ctx).Errorf("Error clean block events: %v", err)
+		return
+	}
+
 	db.Close()
 	fmt.Println("successfully")
 	logging.GetLogger(ctx).Println("successfully")

@@ -5,6 +5,8 @@ import (
 	"assistant-go/internal/layer/dto"
 	"assistant-go/internal/layer/entity"
 	"assistant-go/internal/layer/repository"
+	service "assistant-go/internal/layer/service/note_category"
+	"assistant-go/internal/layer/ucase"
 	"assistant-go/internal/locale"
 	"assistant-go/internal/storage/postgres"
 	"context"
@@ -169,14 +171,38 @@ func GetIpAddress(r *http.Request) (string, error) {
 	return IPAddress, nil
 }
 
-func BuildErrorMessageCommon(lang string, err error) string {
+func buildErrorMessage(lang string, err error) string {
 	switch {
 	case errors.Is(err, postgres.ErrUnexpectedDBError):
 		return locale.T(lang, "unexpected_database_error")
 	case errors.Is(err, ErrSplitHostIP):
 		return locale.T(lang, "unexpected_error")
+	case errors.Is(err, ucase.ErrUnexpectedError):
+		return locale.T(lang, "unexpected_error")
 	case errors.Is(err, ErrDetermineIP):
 		return locale.T(lang, "failed_to_determine_ip")
+	case errors.Is(err, ucase.ErrUserIncorrectUsernameOrPassword):
+		return locale.T(lang, "incorrect_username_or_password")
+	case errors.Is(err, ucase.ErrUserAlreadyExists):
+		return locale.T(lang, "user_already_exists")
+	case errors.Is(err, ucase.ErrRefreshTokenNotFound):
+		return locale.T(lang, "refresh_token_not_found")
+	case errors.Is(err, ucase.ErrUserNotFound):
+		return locale.T(lang, "user_not_found")
+	case errors.Is(err, ucase.ErrUserPasswordsAreNotIdentical):
+		return locale.T(lang, "passwords_are_not_identical")
+	case errors.Is(err, ucase.ErrCategoryParentIdNotFound):
+		return locale.T(lang, "parent_id_of_the_category_not_found")
+	case errors.Is(err, ucase.ErrCategoryNotFound):
+		return locale.T(lang, "category_not_found")
+	case errors.Is(err, service.ErrCategoryNotFound):
+		return locale.T(lang, "category_not_found")
+	case errors.Is(err, ucase.ErrCategoryHasNotes):
+		return locale.T(lang, "category_has_notes")
+	case errors.Is(err, service.ErrCategoryAlreadyFirstPosition):
+		return locale.T(lang, "category_already_in_1_position")
+	case errors.Is(err, ucase.ErrNoteNotFound):
+		return locale.T(lang, "note_not_found")
 	default:
 		return locale.T(lang, "unexpected_error")
 	}
