@@ -74,12 +74,19 @@ func GetAuthUser(r *http.Request) (*entity.User, error) {
 	return userEntity, nil
 }
 
+func PageNotFoundHandler(w http.ResponseWriter, r *http.Request) {
+	BlockEventHandle(r, BlockEventPageNotFoundType)
+	SendErrorResponse(w, "Not Found", http.StatusNotFound, 0)
+	return
+}
+
 var (
 	BlockEventInputDataType    = "validate_input_data"
 	BlockEventDecodeBodyType   = "decode_body"
 	BlockEventErrorSignInType  = "sign_in"
 	BlockEventUnauthorizedType = "unauthorized"
 	BlockEventRefreshTokenType = "refresh_token"
+	BlockEventPageNotFoundType = "page_not_found"
 	BlockEventOtherType        = "other"
 )
 
@@ -108,6 +115,7 @@ func BlockEventHandle(r *http.Request, eventName string) {
 	var signInMaxCount int
 	var unauthorizedMaxCount int
 	var refreshTokenMaxCount int
+	var pageNotFoundMaxCount int
 	switch appConf.BlockingParanoia {
 	case 1:
 		blockMinute = 30
@@ -117,6 +125,7 @@ func BlockEventHandle(r *http.Request, eventName string) {
 		signInMaxCount = 30
 		unauthorizedMaxCount = 50
 		refreshTokenMaxCount = 70
+		pageNotFoundMaxCount = 50
 	case 2:
 		blockMinute = 420 // 7 hour
 		allMaxCount = 150
@@ -125,6 +134,7 @@ func BlockEventHandle(r *http.Request, eventName string) {
 		signInMaxCount = 20
 		unauthorizedMaxCount = 30
 		refreshTokenMaxCount = 50
+		pageNotFoundMaxCount = 10
 	case 3:
 		blockMinute = 2880 // 2 day
 		allMaxCount = 70
@@ -133,6 +143,7 @@ func BlockEventHandle(r *http.Request, eventName string) {
 		signInMaxCount = 10
 		unauthorizedMaxCount = 20
 		refreshTokenMaxCount = 30
+		pageNotFoundMaxCount = 5
 	}
 
 	if blockEventStat.All >= allMaxCount ||
@@ -140,7 +151,8 @@ func BlockEventHandle(r *http.Request, eventName string) {
 		blockEventStat.DecodeBody >= decodeBodyMaxCount ||
 		blockEventStat.SignIn >= signInMaxCount ||
 		blockEventStat.Unauthorized >= unauthorizedMaxCount ||
-		blockEventStat.RefreshToken >= refreshTokenMaxCount {
+		blockEventStat.RefreshToken >= refreshTokenMaxCount ||
+		blockEventStat.PageNotFound >= pageNotFoundMaxCount {
 		unblockTime := time.Now().Add(time.Duration(blockMinute) * time.Minute).UTC()
 		_ = blockIpRepository.SetBlock(IPAddress, unblockTime)
 	}

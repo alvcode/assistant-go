@@ -9,7 +9,6 @@ import (
 	"context"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/julienschmidt/httprouter"
-	httpSwagger "github.com/swaggo/http-swagger"
 	"net/http"
 )
 
@@ -32,11 +31,19 @@ func (controller *Init) SetRoutes(ctx context.Context) error {
 
 	handler.InitHandler(ctx, controller.db, controller.cfg)
 
-	controller.router.Handler(http.MethodGet, "/swagger", http.RedirectHandler("/swagger/index.html", http.StatusMovedPermanently))
-	controller.router.Handler(http.MethodGet, "/swagger/*any", httpSwagger.WrapHandler)
+	//controller.router.Handler(http.MethodGet, "/swagger", http.RedirectHandler("/swagger/index.html", http.StatusMovedPermanently))
+	//controller.router.Handler(http.MethodGet, "/swagger/*any", httpSwagger.WrapHandler)
+
+	controller.router.NotFound = http.HandlerFunc(handler.PageNotFoundHandler)
+	controller.router.MethodNotAllowed = http.HandlerFunc(handler.PageNotFoundHandler)
 
 	heartbeatHandler := handler.NewHeartbeatHandler()
-	controller.router.HandlerFunc(http.MethodGet, "/api/heartbeat", heartbeatHandler.Heartbeat)
+
+	controller.router.Handler(
+		http.MethodGet,
+		"/api/heartbeat",
+		handler.BuildHandler(heartbeatHandler.Heartbeat, handler.BlockIPMW),
+	)
 
 	repos := repository.NewRepositories(ctx, controller.db)
 

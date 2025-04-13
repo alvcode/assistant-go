@@ -7,4 +7,5 @@ type BlockEventsStat struct {
 	SignIn            int `db:"sign_in"`
 	Unauthorized      int `db:"unauthorized"`
 	RefreshToken      int `db:"refresh_token"`
+	PageNotFound      int `db:"page_not_found"`
 }

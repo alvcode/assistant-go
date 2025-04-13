@@ -102,6 +102,8 @@ func (ur *blockEventRepository) GetStat(ip string, timeFrom time.Time) (*dto.Blo
 			stat.Unauthorized = count
 		case "refresh_token":
 			stat.RefreshToken = count
+		case "page_not_found":
+			stat.PageNotFound = count
 		}
 	}
 	if err := rows.Err(); err != nil {
