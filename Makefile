@@ -91,7 +91,7 @@ backup-db:
 db-remove-old-backups: # Удаляет бэкапы БД, которые были созданы более 5 дней назад
 	find $(DB_LOCAL_BACKUP_PATH) -type f -mtime +5 -exec rm -rf {} +
 
-restore-db: # with param file=path/to/backup/dump.sql
+restore-db: # with param file=path/to/backup/dump.sql.gz
 	gunzip -c $(file) | docker exec -i ast-db psql -U $(DB_USERNAME) -d $(DB_DATABASE)
 	echo "Database restored successfully"
 

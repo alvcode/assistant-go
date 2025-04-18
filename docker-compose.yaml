@@ -11,6 +11,8 @@ services:
       - "5489:5432"
     volumes:
       - /var/lib/ast-pg:/var/lib/postgresql/data:rw
+      - ./_docker/postgres/custom-postgresql.conf:/etc/postgresql/postgresql.conf
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
     networks:
       - ast-network
 
