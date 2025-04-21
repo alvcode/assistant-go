@@ -47,6 +47,7 @@ func (controller *Init) SetRoutes(ctx context.Context) error {
 	controller.setUserRoutes(ctx, repos)
 	controller.setNotesCategories(ctx, repos)
 	controller.setNotes(ctx, repos)
+	controller.setFiles(ctx, repos)
 
 	return nil
 }
@@ -151,5 +152,16 @@ func (controller *Init) setNotes(ctx context.Context, repositories *repository.R
 		http.MethodPost,
 		"/api/notes/:id/unpin",
 		handler.BuildHandler(noteHandler.UnPin, handler.LocaleMW, handler.AuthMW),
+	)
+}
+
+func (controller *Init) setFiles(ctx context.Context, repositories *repository.Repositories) {
+	fileUseCase := ucase.NewFileUseCase(ctx, repositories)
+	fileHandler := handler.NewFileHandler(fileUseCase)
+
+	controller.router.Handler(
+		http.MethodPost,
+		"/api/files",
+		handler.BuildHandler(fileHandler.Upload, handler.BlockIPMW, handler.LocaleMW, handler.AuthMW),
 	)
 }
