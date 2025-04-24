@@ -1,13 +1,15 @@
 package handler
 
 import (
-	"assistant-go/internal/layer/dto"
 	"assistant-go/internal/layer/ucase"
-	"assistant-go/internal/layer/vmodel"
-	"assistant-go/internal/locale"
-	"encoding/json"
 	"fmt"
+	"io"
+	"mime/multipart"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
 )
 
 type FileHandler struct {
@@ -117,37 +119,141 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 
 */
 
+const maxUploadSize = 5 << 20
+
 func (h *FileHandler) Upload(w http.ResponseWriter, r *http.Request) {
-	langRequest := locale.GetLangFromContext(r.Context())
-	var createNoteCategoryDto dto.NoteCategoryCreate
+	//langRequest := locale.GetLangFromContext(r.Context())
 
-	authUser, err := GetAuthUser(r)
+	var allowedMimeTypes = map[string]string{
+		"image/jpeg":      ".jpeg",
+		"image/png":       ".png",
+		"image/gif":       ".gif",
+		"application/pdf": ".pdf",
+		"application/zip": ".zip",
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, maxUploadSize)
+	if err := r.ParseMultipartForm(maxUploadSize); err != nil {
+		http.Error(w, "File too large", http.StatusBadRequest)
+		return
+	}
+
+	file, header, err := r.FormFile("file")
 	if err != nil {
-		BlockEventHandle(r, BlockEventUnauthorizedType)
-		SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
+		http.Error(w, "Invalid file", http.StatusBadRequest)
 		return
 	}
+	defer func(file multipart.File) {
+		err := file.Close()
+		if err != nil {
+			http.Error(w, "failed to close uploaded file", http.StatusInternalServerError)
+			return
+		}
+	}(file)
 
-	err = json.NewDecoder(r.Body).Decode(&createNoteCategoryDto)
+	buffer := make([]byte, 512)
+	_, err = file.Read(buffer)
 	if err != nil {
-		BlockEventHandle(r, BlockEventDecodeBodyType)
-		SendErrorResponse(w, locale.T(langRequest, "error_reading_request_body"), http.StatusBadRequest, 0)
+		http.Error(w, "Error reading file", http.StatusInternalServerError)
 		return
 	}
 
-	if err := createNoteCategoryDto.Validate(langRequest); err != nil {
-		BlockEventHandle(r, BlockEventInputDataType)
-		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
+	//_, err = file.Seek(0, 0)
+	//if err != nil {
+	//	http.Error(w, "Error seeking file", http.StatusInternalServerError)
+	//	return
+	//}
+
+	mimeType := http.DetectContentType(buffer)
+	ext, allowed := allowedMimeTypes[mimeType]
+	if !allowed {
+		http.Error(w, "Invalid file type", http.StatusBadRequest)
 		return
 	}
 
-	entity, err := h.useCase.Create(createNoteCategoryDto, authUser)
+	if seeker, ok := file.(io.Seeker); ok {
+		_, err := seeker.Seek(0, io.SeekStart)
+		if err != nil {
+			http.Error(w, "Error resetting file pointer", http.StatusInternalServerError)
+			return
+		}
+	} else {
+		http.Error(w, "Unable to seek file", http.StatusInternalServerError)
+		return
+	}
+
+	fileExt := strings.ToLower(filepath.Ext(header.Filename))
+	if fileExt != ext {
+		http.Error(w, "File extension doesn't match content type", http.StatusBadRequest)
+		return
+	}
+
+	safeName := filepath.Base(header.Filename)
+	if strings.Contains(safeName, "..") {
+		http.Error(w, "Invalid filename", http.StatusBadRequest)
+		return
+	}
+
+	uploadPath := "./uploads"
+	if _, err := os.Stat(uploadPath); os.IsNotExist(err) {
+		err := os.Mkdir(uploadPath, 0755)
+		if err != nil {
+			http.Error(w, "Error create directory", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	newFilename := fmt.Sprintf("file-%d%s", time.Now().UnixNano(), ext)
+	filePath := filepath.Join(uploadPath, newFilename)
+
+	out, err := os.Create(filePath)
 	if err != nil {
-		BlockEventHandle(r, BlockEventOtherType)
-		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
+		http.Error(w, "Unable to save file", http.StatusInternalServerError)
+		return
+	}
+	defer func(out *os.File) {
+		err := out.Close()
+		if err != nil {
+			http.Error(w, "failed to close output file", http.StatusInternalServerError)
+			return
+		}
+	}(out)
+
+	_, err = io.Copy(out, file)
+	if err != nil {
+		http.Error(w, "Error saving file", http.StatusInternalServerError)
 		return
 	}
 
-	result := vmodel.NoteCategoryFromEnity(entity)
-	SendResponse(w, http.StatusCreated, result)
+	//var createNoteCategoryDto dto.NoteCategoryCreate
+	//
+	//authUser, err := GetAuthUser(r)
+	//if err != nil {
+	//	BlockEventHandle(r, BlockEventUnauthorizedType)
+	//	SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
+	//	return
+	//}
+	//
+	//err = json.NewDecoder(r.Body).Decode(&createNoteCategoryDto)
+	//if err != nil {
+	//	BlockEventHandle(r, BlockEventDecodeBodyType)
+	//	SendErrorResponse(w, locale.T(langRequest, "error_reading_request_body"), http.StatusBadRequest, 0)
+	//	return
+	//}
+	//
+	//if err := createNoteCategoryDto.Validate(langRequest); err != nil {
+	//	BlockEventHandle(r, BlockEventInputDataType)
+	//	SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
+	//	return
+	//}
+	//
+	//entity, err := h.useCase.Create(createNoteCategoryDto, authUser)
+	//if err != nil {
+	//	BlockEventHandle(r, BlockEventOtherType)
+	//	SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
+	//	return
+	//}
+	//
+	//result := vmodel.NoteCategoryFromEnity(entity)
+	//SendResponse(w, http.StatusCreated, result)
 }

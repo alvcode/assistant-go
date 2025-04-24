@@ -2,6 +2,7 @@
 .tmp
 *.log
 /cmd/build
+uploads
 .DS_Store
 
 .env
