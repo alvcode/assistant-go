@@ -20,12 +20,14 @@ import (
 var userRepository repository.UserRepository
 var blockIpRepository repository.BlockIPRepository
 var blockEventRepository repository.BlockEventRepository
+var rateLimiterRepository repository.RateLimiterRepository
 var appConf *config.Config
 
 func InitHandler(repos *repository.Repositories, cfg *config.Config) {
 	userRepository = repos.UserRepository
 	blockIpRepository = repos.BlockIPRepository
 	blockEventRepository = repos.BlockEventRepository
+	rateLimiterRepository = repos.RateLimiterRepository
 	appConf = cfg
 }
 
@@ -86,6 +88,7 @@ var (
 	BlockEventRefreshTokenType = "refresh_token"
 	BlockEventPageNotFoundType = "page_not_found"
 	BlockEventOtherType        = "other"
+	BlockEventTooManyRequests  = "too_many_requests"
 )
 
 func BlockEventHandle(r *http.Request, eventName string) {
@@ -114,6 +117,7 @@ func BlockEventHandle(r *http.Request, eventName string) {
 	var unauthorizedMaxCount int
 	var refreshTokenMaxCount int
 	var pageNotFoundMaxCount int
+	var tooManyRequestsMaxCount int
 	switch appConf.BlockingParanoia {
 	case 1:
 		blockMinute = 30
@@ -124,6 +128,7 @@ func BlockEventHandle(r *http.Request, eventName string) {
 		unauthorizedMaxCount = 50
 		refreshTokenMaxCount = 70
 		pageNotFoundMaxCount = 50
+		tooManyRequestsMaxCount = 30
 	case 2:
 		blockMinute = 420 // 7 hour
 		allMaxCount = 150
@@ -133,6 +138,7 @@ func BlockEventHandle(r *http.Request, eventName string) {
 		unauthorizedMaxCount = 30
 		refreshTokenMaxCount = 50
 		pageNotFoundMaxCount = 10
+		tooManyRequestsMaxCount = 7
 	case 3:
 		blockMinute = 2880 // 2 day
 		allMaxCount = 70
@@ -142,6 +148,7 @@ func BlockEventHandle(r *http.Request, eventName string) {
 		unauthorizedMaxCount = 20
 		refreshTokenMaxCount = 30
 		pageNotFoundMaxCount = 5
+		tooManyRequestsMaxCount = 3
 	}
 
 	if blockEventStat.All >= allMaxCount ||
@@ -150,9 +157,11 @@ func BlockEventHandle(r *http.Request, eventName string) {
 		blockEventStat.SignIn >= signInMaxCount ||
 		blockEventStat.Unauthorized >= unauthorizedMaxCount ||
 		blockEventStat.RefreshToken >= refreshTokenMaxCount ||
+		blockEventStat.TooManyRequests <= tooManyRequestsMaxCount ||
 		blockEventStat.PageNotFound >= pageNotFoundMaxCount {
 		unblockTime := time.Now().Add(time.Duration(blockMinute) * time.Minute).UTC()
 		_ = blockIpRepository.SetBlock(IPAddress, unblockTime)
+
 	}
 }
 

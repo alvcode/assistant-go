@@ -11,6 +11,7 @@ type Repositories struct {
 	NoteCategoryRepository NoteCategoryRepository
 	BlockIPRepository      BlockIPRepository
 	BlockEventRepository   BlockEventRepository
+	RateLimiterRepository  RateLimiterRepository
 }
 
 func NewRepositories(ctx context.Context, db *pgxpool.Pool) *Repositories {
@@ -20,5 +21,6 @@ func NewRepositories(ctx context.Context, db *pgxpool.Pool) *Repositories {
 		NoteCategoryRepository: NewNoteCategoryRepository(ctx, db),
 		BlockIPRepository:      NewBlockIpRepository(ctx, db),
 		BlockEventRepository:   NewBlockEventRepository(ctx, db),
+		RateLimiterRepository:  NewRateLimiterRepository(ctx, db),
 	}
 }

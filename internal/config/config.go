@@ -19,6 +19,7 @@ type Config struct {
 	HTTP             HTTPServer
 	DB               Database
 	Cors             Cors
+	RateLimiter      RateLimiter
 }
 
 type HTTPServer struct {
@@ -47,6 +48,11 @@ type Cors struct {
 	OptionsPassthrough bool   `env:"CORS_OPTIONS_PASSTHROUGH" env-required:"true"`
 	ExposedHeaders     string `env:"CORS_EXPOSED_HEADERS" env-required:"true"`
 	Debug              bool   `env:"CORS_DEBUG" env-default:"false"`
+}
+
+type RateLimiter struct {
+	AllowanceRequests int `env:"RATE_LIMITER_ALLOWANCE_REQUESTS" env-default:"150"`
+	TimeDurationMin   int `env:"RATE_LIMITER_TIME_DURATION_MINUTES" env-default:"3"`
 }
 
 const configFilePath = ".env"
