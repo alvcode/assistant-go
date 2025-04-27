@@ -19,6 +19,7 @@ type Config struct {
 	HTTP             HTTPServer
 	DB               Database
 	Cors             Cors
+	File             File
 }
 
 type HTTPServer struct {
@@ -47,6 +48,10 @@ type Cors struct {
 	OptionsPassthrough bool   `env:"CORS_OPTIONS_PASSTHROUGH" env-required:"true"`
 	ExposedHeaders     string `env:"CORS_EXPOSED_HEADERS" env-required:"true"`
 	Debug              bool   `env:"CORS_DEBUG" env-default:"false"`
+}
+
+type File struct {
+	UploadMaxSize int64 `env:"FILE_UPLOAD_MAX_SIZE" env-required:"true"`
 }
 
 const configFilePath = ".env"

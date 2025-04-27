@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"assistant-go/internal/layer/dto"
 	"assistant-go/internal/layer/ucase"
+	"assistant-go/internal/locale"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -24,117 +26,62 @@ func NewFileHandler(useCase ucase.FileUseCase) *FileHandler {
 
 /*
 
-// Допустимые MIME-типы и соответствующие расширения
-var allowedMimeTypes = map[string]string{
-	"image/jpeg": ".jpeg",
-	"image/png":  ".png",
-	"image/gif":  ".gif",
-	"application/pdf": ".pdf",
+use case
+
+type UploadFileInput struct {
+	File multipart.File
+	OriginalFilename string
+	MaxSize int64
+	AllowedMimeTypes map[string]string
 }
 
-// Максимальный размер файла (5MB)
-const maxUploadSize = 5 << 20
+type UploadFileOutput struct {
+	NewFilename string
+	Path        string
+	Size        int64
+}
 
-func uploadHandler(w http.ResponseWriter, r *http.Request) {
-	// 1. Проверка метода запроса
-	if r.Method != "POST" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
+func (u *FileUploader) Upload(input UploadFileInput) (UploadFileOutput, error) {
+	// validate mime, extension, etc
+	// create directory if needed
+	// save file
+	// return output
+}
+
+
+handler
+
+func (h *FileHandler) Upload(w http.ResponseWriter, r *http.Request) {
+	// чтение файла через r.FormFile
+
+	in := UploadFileInput{
+		File: file,
+		OriginalFilename: header.Filename,
+		MaxSize: appConf.File.UploadMaxSize << 20,
+		AllowedMimeTypes: map[string]string{...},
 	}
 
-	// 2. Ограничение размера файла
-	r.Body = http.MaxBytesReader(w, r.Body, maxUploadSize)
-	if err := r.ParseMultipartForm(maxUploadSize); err != nil {
-		http.Error(w, "File too large", http.StatusBadRequest)
-		return
-	}
-
-	// 3. Получение файла из формы
-	file, header, err := r.FormFile("file")
+	out, err := h.fileUploader.Upload(in)
 	if err != nil {
-		http.Error(w, "Invalid file", http.StatusBadRequest)
-		return
-	}
-	defer file.Close()
-
-	// 4. Проверка MIME-типа
-	buffer := make([]byte, 512)
-	_, err = file.Read(buffer)
-	if err != nil {
-		http.Error(w, "Error reading file", http.StatusInternalServerError)
+		SendErrorResponse(w, err.Error(), http.StatusBadRequest, 0)
 		return
 	}
 
-	// Возвращаем указатель чтения в начало файла
-	_, err = file.Seek(0, 0)
-	if err != nil {
-		http.Error(w, "Error seeking file", http.StatusInternalServerError)
-		return
-	}
-
-	mimeType := http.DetectContentType(buffer)
-	ext, allowed := allowedMimeTypes[mimeType]
-	if !allowed {
-		http.Error(w, "Invalid file type", http.StatusBadRequest)
-		return
-	}
-
-	// 5. Проверка расширения файла
-	fileExt := strings.ToLower(filepath.Ext(header.Filename))
-	if fileExt != ext {
-		http.Error(w, "File extension doesn't match content type", http.StatusBadRequest)
-		return
-	}
-
-	// 6. Создание папки для загрузок, если её нет
-	uploadPath := "./uploads"
-	if _, err := os.Stat(uploadPath); os.IsNotExist(err) {
-		os.Mkdir(uploadPath, 0755)
-	}
-
-	// 7. Генерация безопасного имени файла
-	// В реальном приложении лучше использовать UUID или хеш
-	newFilename := fmt.Sprintf("file-%d%s", time.Now().UnixNano(), ext)
-	filePath := filepath.Join(uploadPath, newFilename)
-
-	// 8. Сохранение файла
-	out, err := os.Create(filePath)
-	if err != nil {
-		http.Error(w, "Unable to save file", http.StatusInternalServerError)
-		return
-	}
-	defer out.Close()
-
-	_, err = io.Copy(out, file)
-	if err != nil {
-		http.Error(w, "Error saving file", http.StatusInternalServerError)
-		return
-	}
-
-	// 9. Ответ об успешной загрузке
-	w.WriteHeader(http.StatusCreated)
-	fmt.Fprintf(w, "File uploaded successfully: %s", newFilename)
+	// например, вернуть путь или имя файла
+	json.NewEncoder(w).Encode(out)
 }
 
 
 */
 
-const maxUploadSize = 5 << 20
-
 func (h *FileHandler) Upload(w http.ResponseWriter, r *http.Request) {
-	//langRequest := locale.GetLangFromContext(r.Context())
+	langRequest := locale.GetLangFromContext(r.Context())
+	//var uploadFileDto dto.UploadFile
 
-	var allowedMimeTypes = map[string]string{
-		"image/jpeg":      ".jpeg",
-		"image/png":       ".png",
-		"image/gif":       ".gif",
-		"application/pdf": ".pdf",
-		"application/zip": ".zip",
-	}
-
-	r.Body = http.MaxBytesReader(w, r.Body, maxUploadSize)
-	if err := r.ParseMultipartForm(maxUploadSize); err != nil {
-		http.Error(w, "File too large", http.StatusBadRequest)
+	authUser, err := GetAuthUser(r)
+	if err != nil {
+		BlockEventHandle(r, BlockEventUnauthorizedType)
+		SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
 		return
 	}
 
@@ -151,18 +98,39 @@ func (h *FileHandler) Upload(w http.ResponseWriter, r *http.Request) {
 		}
 	}(file)
 
+	uploadFileDto := dto.UploadFile{
+		File:             file,
+		OriginalFilename: header.Filename,
+		MaxSizeBytes:     appConf.File.UploadMaxSize << 20,
+	}
+
+	upload, err := h.useCase.Upload(uploadFileDto, authUser)
+	if err != nil {
+		return
+	}
+
+	maxUploadSize := appConf.File.UploadMaxSize << 20
+
+	var allowedMimeTypes = map[string]string{
+		"image/jpeg":      ".jpeg",
+		"image/png":       ".png",
+		"image/gif":       ".gif",
+		"application/pdf": ".pdf",
+		"application/zip": ".zip",
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, maxUploadSize)
+	if err := r.ParseMultipartForm(maxUploadSize); err != nil {
+		http.Error(w, "File too large", http.StatusBadRequest)
+		return
+	}
+
 	buffer := make([]byte, 512)
 	_, err = file.Read(buffer)
 	if err != nil {
 		http.Error(w, "Error reading file", http.StatusInternalServerError)
 		return
 	}
-
-	//_, err = file.Seek(0, 0)
-	//if err != nil {
-	//	http.Error(w, "Error seeking file", http.StatusInternalServerError)
-	//	return
-	//}
 
 	mimeType := http.DetectContentType(buffer)
 	ext, allowed := allowedMimeTypes[mimeType]
