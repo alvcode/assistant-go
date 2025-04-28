@@ -7,8 +7,9 @@ import (
 
 type UploadFile struct {
 	File             multipart.File
-	OriginalFilename string `validate:"min=1,max=150"`
+	OriginalFilename string `validate:"min=1,max=200"`
 	MaxSizeBytes     int64
+	SavePath         string
 }
 
 func (dto *UploadFile) Validate(lang string) error {

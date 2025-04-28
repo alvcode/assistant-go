@@ -51,7 +51,8 @@ type Cors struct {
 }
 
 type File struct {
-	UploadMaxSize int64 `env:"FILE_UPLOAD_MAX_SIZE" env-required:"true"`
+	UploadMaxSize int64  `env:"FILE_UPLOAD_MAX_SIZE" env-required:"true"`
+	SavePath      string `env:"FILE_SAVE_PATH" env-default:"./uploads/user_files"`
 }
 
 const configFilePath = ".env"

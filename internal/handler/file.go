@@ -102,27 +102,34 @@ func (h *FileHandler) Upload(w http.ResponseWriter, r *http.Request) {
 		File:             file,
 		OriginalFilename: header.Filename,
 		MaxSizeBytes:     appConf.File.UploadMaxSize << 20,
+		SavePath:         appConf.File.SavePath,
 	}
 
 	upload, err := h.useCase.Upload(uploadFileDto, authUser)
 	if err != nil {
+		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
 		return
 	}
 
-	maxUploadSize := appConf.File.UploadMaxSize << 20
+	SendResponse(w, http.StatusCreated, upload)
+	return
 
-	var allowedMimeTypes = map[string]string{
-		"image/jpeg":      ".jpeg",
-		"image/png":       ".png",
-		"image/gif":       ".gif",
-		"application/pdf": ".pdf",
-		"application/zip": ".zip",
-	}
+	//maxUploadSize := appConf.File.UploadMaxSize << 20
 
-	r.Body = http.MaxBytesReader(w, r.Body, maxUploadSize)
-	if err := r.ParseMultipartForm(maxUploadSize); err != nil {
-		http.Error(w, "File too large", http.StatusBadRequest)
-		return
+	//var allowedMimeTypes = map[string]string{
+	//	"image/jpeg":      ".jpeg",
+	//	"image/png":       ".png",
+	//	"image/gif":       ".gif",
+	//	"application/pdf": ".pdf",
+	//	"application/zip": ".zip",
+	//}
+
+	var allowedMimeTypes = map[string][]string{
+		"image/jpeg":      {".jpeg", ".jpg"},
+		"image/png":       {".png"},
+		"image/gif":       {".gif"},
+		"application/pdf": {".pdf"},
+		"application/zip": {".zip"},
 	}
 
 	buffer := make([]byte, 512)
@@ -162,14 +169,14 @@ func (h *FileHandler) Upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	uploadPath := "./uploads"
-	if _, err := os.Stat(uploadPath); os.IsNotExist(err) {
-		err := os.Mkdir(uploadPath, 0755)
-		if err != nil {
-			http.Error(w, "Error create directory", http.StatusInternalServerError)
-			return
-		}
-	}
+	//uploadPath := "./uploads"
+	//if _, err := os.Stat(uploadPath); os.IsNotExist(err) {
+	//	err := os.Mkdir(uploadPath, 0755)
+	//	if err != nil {
+	//		http.Error(w, "Error create directory", http.StatusInternalServerError)
+	//		return
+	//	}
+	//}
 
 	newFilename := fmt.Sprintf("file-%d%s", time.Now().UnixNano(), ext)
 	filePath := filepath.Join(uploadPath, newFilename)
