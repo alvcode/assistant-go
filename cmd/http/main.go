@@ -8,6 +8,7 @@ import (
 	"assistant-go/pkg/vld"
 	"context"
 	"fmt"
+	"github.com/minio/minio-go/v7"
 	"os"
 )
 
@@ -22,8 +23,10 @@ func main() {
 
 	logging.GetLogger(ctx).Infoln("Starting application")
 
+	minio.New()
+
 	if _, err := os.Stat(cfg.File.SavePath); os.IsNotExist(err) {
-		err := os.Mkdir(cfg.File.SavePath, 0755)
+		err := os.MkdirAll(cfg.File.SavePath, 0755)
 		if err != nil {
 			logging.GetLogger(ctx).Fatalln(fmt.Errorf("could not create file save path: %s", err))
 		}

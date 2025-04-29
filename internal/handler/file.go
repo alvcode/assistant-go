@@ -4,14 +4,8 @@ import (
 	"assistant-go/internal/layer/dto"
 	"assistant-go/internal/layer/ucase"
 	"assistant-go/internal/locale"
-	"fmt"
-	"io"
 	"mime/multipart"
 	"net/http"
-	"os"
-	"path/filepath"
-	"strings"
-	"time"
 )
 
 type FileHandler struct {
@@ -87,13 +81,13 @@ func (h *FileHandler) Upload(w http.ResponseWriter, r *http.Request) {
 
 	file, header, err := r.FormFile("file")
 	if err != nil {
-		http.Error(w, "Invalid file", http.StatusBadRequest)
+		SendErrorResponse(w, "Invalid file", http.StatusUnauthorized, 0)
 		return
 	}
 	defer func(file multipart.File) {
 		err := file.Close()
 		if err != nil {
-			http.Error(w, "failed to close uploaded file", http.StatusInternalServerError)
+			SendErrorResponse(w, "failed to close uploaded file", http.StatusUnauthorized, 0)
 			return
 		}
 	}(file)
@@ -107,98 +101,13 @@ func (h *FileHandler) Upload(w http.ResponseWriter, r *http.Request) {
 
 	upload, err := h.useCase.Upload(uploadFileDto, authUser)
 	if err != nil {
-		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
+		//SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
+		SendErrorResponse(w, err.Error(), http.StatusUnprocessableEntity, 0)
 		return
 	}
 
 	SendResponse(w, http.StatusCreated, upload)
 	return
-
-	//maxUploadSize := appConf.File.UploadMaxSize << 20
-
-	//var allowedMimeTypes = map[string]string{
-	//	"image/jpeg":      ".jpeg",
-	//	"image/png":       ".png",
-	//	"image/gif":       ".gif",
-	//	"application/pdf": ".pdf",
-	//	"application/zip": ".zip",
-	//}
-
-	var allowedMimeTypes = map[string][]string{
-		"image/jpeg":      {".jpeg", ".jpg"},
-		"image/png":       {".png"},
-		"image/gif":       {".gif"},
-		"application/pdf": {".pdf"},
-		"application/zip": {".zip"},
-	}
-
-	buffer := make([]byte, 512)
-	_, err = file.Read(buffer)
-	if err != nil {
-		http.Error(w, "Error reading file", http.StatusInternalServerError)
-		return
-	}
-
-	mimeType := http.DetectContentType(buffer)
-	ext, allowed := allowedMimeTypes[mimeType]
-	if !allowed {
-		http.Error(w, "Invalid file type", http.StatusBadRequest)
-		return
-	}
-
-	if seeker, ok := file.(io.Seeker); ok {
-		_, err := seeker.Seek(0, io.SeekStart)
-		if err != nil {
-			http.Error(w, "Error resetting file pointer", http.StatusInternalServerError)
-			return
-		}
-	} else {
-		http.Error(w, "Unable to seek file", http.StatusInternalServerError)
-		return
-	}
-
-	fileExt := strings.ToLower(filepath.Ext(header.Filename))
-	if fileExt != ext {
-		http.Error(w, "File extension doesn't match content type", http.StatusBadRequest)
-		return
-	}
-
-	safeName := filepath.Base(header.Filename)
-	if strings.Contains(safeName, "..") {
-		http.Error(w, "Invalid filename", http.StatusBadRequest)
-		return
-	}
-
-	//uploadPath := "./uploads"
-	//if _, err := os.Stat(uploadPath); os.IsNotExist(err) {
-	//	err := os.Mkdir(uploadPath, 0755)
-	//	if err != nil {
-	//		http.Error(w, "Error create directory", http.StatusInternalServerError)
-	//		return
-	//	}
-	//}
-
-	newFilename := fmt.Sprintf("file-%d%s", time.Now().UnixNano(), ext)
-	filePath := filepath.Join(uploadPath, newFilename)
-
-	out, err := os.Create(filePath)
-	if err != nil {
-		http.Error(w, "Unable to save file", http.StatusInternalServerError)
-		return
-	}
-	defer func(out *os.File) {
-		err := out.Close()
-		if err != nil {
-			http.Error(w, "failed to close output file", http.StatusInternalServerError)
-			return
-		}
-	}(out)
-
-	_, err = io.Copy(out, file)
-	if err != nil {
-		http.Error(w, "Error saving file", http.StatusInternalServerError)
-		return
-	}
 
 	//var createNoteCategoryDto dto.NoteCategoryCreate
 	//

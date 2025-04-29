@@ -4,13 +4,12 @@ import (
 	"assistant-go/internal/layer/dto"
 	"assistant-go/internal/layer/entity"
 	"assistant-go/internal/layer/repository"
-	service "assistant-go/internal/layer/service/note_category"
 	"assistant-go/internal/logging"
 	"assistant-go/internal/storage/postgres"
+	"assistant-go/pkg/utils"
 	"context"
 	"errors"
 	"fmt"
-	"github.com/jackc/pgx/v5"
 	"io"
 	"net/http"
 	"os"
@@ -27,6 +26,8 @@ var (
 	ErrFileUnableToSeek          = errors.New("error unable to seek")
 	ErrFileExtensionDoesNotMatch = errors.New("file extension does not match")
 	ErrFileNotSafeFilename       = errors.New("file not safe filename")
+	ErrFileUnableToSave          = errors.New("unable to save file")
+	ErrFileSave                  = errors.New("unable to save file")
 )
 
 type FileUseCase interface {
@@ -65,6 +66,15 @@ func (uc *fileUseCase) Upload(in dto.UploadFile, userEntity *entity.User) (*enti
 		return nil, ErrFileTooLarge
 	}
 
+	if seeker, ok := in.File.(io.Seeker); ok {
+		_, err := seeker.Seek(0, io.SeekStart)
+		if err != nil {
+			return nil, ErrFileResettingPointer
+		}
+	} else {
+		return nil, ErrFileUnableToSeek
+	}
+
 	buffer := make([]byte, 512)
 	_, err = in.File.Read(buffer)
 	if err != nil {
@@ -75,15 +85,6 @@ func (uc *fileUseCase) Upload(in dto.UploadFile, userEntity *entity.User) (*enti
 	extAllowed, allowed := allowedMimeTypes[mimeType]
 	if !allowed {
 		return nil, ErrFileInvalidType
-	}
-
-	if seeker, ok := in.File.(io.Seeker); ok {
-		_, err := seeker.Seek(0, io.SeekStart)
-		if err != nil {
-			return nil, ErrFileResettingPointer
-		}
-	} else {
-		return nil, ErrFileUnableToSeek
 	}
 
 	fileExt := strings.ToLower(filepath.Ext(in.OriginalFilename))
@@ -102,58 +103,51 @@ func (uc *fileUseCase) Upload(in dto.UploadFile, userEntity *entity.User) (*enti
 		return nil, ErrFileNotSafeFilename
 	}
 
-	newFilename := fmt.Sprintf("%d%s", time.Now().UnixNano(), fileExt)
-	filePath := filepath.Join(uploadPath, newFilename)
+	stringUtils := utils.NewStringUtils()
+	hashForNewName, err := stringUtils.GenerateRandomString(10)
+	if err != nil {
+		return nil, err
+	}
+
+	newFilename := fmt.Sprintf("%d_%s%s", time.Now().UnixNano(), hashForNewName, fileExt)
+	filePath := filepath.Join(in.SavePath, newFilename)
 
 	out, err := os.Create(filePath)
 	if err != nil {
-		http.Error(w, "Unable to save file", http.StatusInternalServerError)
-		return
+		return nil, ErrFileUnableToSave
 	}
 	defer func(out *os.File) {
 		err := out.Close()
 		if err != nil {
-			http.Error(w, "failed to close output file", http.StatusInternalServerError)
-			return
+			logging.GetLogger(uc.ctx).Errorf("error closing file: %v", err)
 		}
 	}(out)
 
-	_, err = io.Copy(out, file)
+	_, err = io.Copy(out, in.File)
 	if err != nil {
-		http.Error(w, "Error saving file", http.StatusInternalServerError)
-		return
+		return nil, ErrFileSave
 	}
 
-	//noteCategoryEntity := entity.NoteCategory{
-	//	UserId:   userEntity.ID,
-	//	Name:     in.Name,
-	//	ParentId: in.ParentId,
-	//}
-	//
-	//if in.ParentId != nil {
-	//	_, err := uc.repositories.NoteCategoryRepository.FindByIDAndUser(userEntity.ID, *in.ParentId)
-	//	if err != nil {
-	//		if errors.Is(err, pgx.ErrNoRows) {
-	//			return nil, ErrCategoryParentIdNotFound
-	//		}
-	//		logging.GetLogger(uc.ctx).Error(err)
-	//		return nil, postgres.ErrUnexpectedDBError
-	//	}
-	//}
-	//
-	//positionService := service.NewNoteCategory().PositionService(uc.ctx, uc.repositories)
-	//newPosition, err := positionService.CalculateForNew(userEntity.ID, in.ParentId)
-	//if err != nil {
-	//	logging.GetLogger(uc.ctx).Error(err)
-	//	return nil, postgres.ErrUnexpectedDBError
-	//}
-	//
-	//noteCategoryEntity.Position = newPosition
-	//
-	//data, err := uc.repositories.NoteCategoryRepository.Create(noteCategoryEntity)
-	//if err != nil {
-	//	logging.GetLogger(uc.ctx).Error(err)
-	//	return nil, postgres.ErrUnexpectedDBError
-	//}
-	//return data, nil
+	fileHash, err := stringUtils.GenerateRandomString(100)
+	if err != nil {
+		return nil, err
+	}
+
+	fileEntity := &entity.File{
+		UserID:           userEntity.ID,
+		OriginalFilename: in.OriginalFilename,
+		Filename:         newFilename,
+		Ext:              fileExt,
+		Size:             len(data),
+		Hash:             fileHash,
+		CreatedAt:        time.Now().UTC(),
+	}
+
+	_, err = uc.repositories.FileRepository.Create(fileEntity)
+	if err != nil {
+		logging.GetLogger(uc.ctx).Error(err)
+		return nil, postgres.ErrUnexpectedDBError
+	}
+
+	return fileEntity, nil
 }
