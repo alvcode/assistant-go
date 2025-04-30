@@ -7,12 +7,12 @@ import (
 	"assistant-go/internal/logging"
 	"assistant-go/internal/storage/postgres"
 	"assistant-go/pkg/utils"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -112,21 +112,32 @@ func (uc *fileUseCase) Upload(in dto.UploadFile, userEntity *entity.User) (*enti
 	newFilename := fmt.Sprintf("%d_%s%s", time.Now().UnixNano(), hashForNewName, fileExt)
 	filePath := filepath.Join(in.SavePath, newFilename)
 
-	out, err := os.Create(filePath)
-	if err != nil {
-		return nil, ErrFileUnableToSave
+	saveDto := &dto.SaveFile{
+		File:      bytes.NewReader(data),
+		SavePath:  filePath,
+		SizeBytes: int64(len(data)),
 	}
-	defer func(out *os.File) {
-		err := out.Close()
-		if err != nil {
-			logging.GetLogger(uc.ctx).Errorf("error closing file: %v", err)
-		}
-	}(out)
 
-	_, err = io.Copy(out, in.File)
-	if err != nil {
+	saveErr := uc.repositories.StorageRepository.Save(saveDto)
+	if saveErr != nil {
 		return nil, ErrFileSave
 	}
+
+	//out, err := os.Create(filePath)
+	//if err != nil {
+	//	return nil, ErrFileUnableToSave
+	//}
+	//defer func(out *os.File) {
+	//	err := out.Close()
+	//	if err != nil {
+	//		logging.GetLogger(uc.ctx).Errorf("error closing file: %v", err)
+	//	}
+	//}(out)
+	//
+	//_, err = io.Copy(out, in.File)
+	//if err != nil {
+	//	return nil, ErrFileSave
+	//}
 
 	fileHash, err := stringUtils.GenerateRandomString(100)
 	if err != nil {

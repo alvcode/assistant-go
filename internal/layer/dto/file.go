@@ -2,6 +2,7 @@ package dto
 
 import (
 	"assistant-go/pkg/vld"
+	"io"
 	"mime/multipart"
 )
 
@@ -18,4 +19,10 @@ func (dto *UploadFile) Validate(lang string) error {
 		return vld.TextFromFirstError(err, lang)
 	}
 	return nil
+}
+
+type SaveFile struct {
+	File      io.Reader
+	SavePath  string
+	SizeBytes int64
 }

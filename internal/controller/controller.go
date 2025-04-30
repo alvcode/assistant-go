@@ -8,25 +8,28 @@ import (
 	"context"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/julienschmidt/httprouter"
+	"github.com/minio/minio-go/v7"
 	"net/http"
 )
 
 type Init struct {
 	cfg    *config.Config
 	db     *pgxpool.Pool
+	minio  *minio.Client
 	router *httprouter.Router
 }
 
-func New(cfg *config.Config, db *pgxpool.Pool, router *httprouter.Router) *Init {
+func New(cfg *config.Config, db *pgxpool.Pool, minio *minio.Client, router *httprouter.Router) *Init {
 	return &Init{
 		cfg:    cfg,
 		db:     db,
+		minio:  minio,
 		router: router,
 	}
 }
 
 func (controller *Init) SetRoutes(ctx context.Context) error {
-	repos := repository.NewRepositories(ctx, controller.db)
+	repos := repository.NewRepositories(ctx, controller.cfg, controller.db, controller.minio)
 
 	handler.InitHandler(repos, controller.cfg)
 

@@ -2,11 +2,13 @@ package utils
 
 import (
 	"crypto/rand"
-	"encoding/hex"
 	"fmt"
+	"math/big"
 	"regexp"
 	"strings"
 )
+
+const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 type StringUtils struct {
 }
@@ -35,14 +37,18 @@ func (su *StringUtils) Trim(input string) string {
 }
 
 func (su *StringUtils) GenerateRandomString(n int) (string, error) {
-	if n%2 != 0 {
-		return "", fmt.Errorf("length must be even to form valid hex string")
+	if n <= 0 {
+		return "", fmt.Errorf("length must be positive")
 	}
 
-	bytes := make([]byte, n/2)
-	if _, err := rand.Read(bytes); err != nil {
-		return "", fmt.Errorf("failed to generate random bytes: %w", err)
+	b := make([]byte, n)
+	for i := 0; i < n; i++ {
+		num, err := rand.Int(rand.Reader, big.NewInt(int64(len(letterBytes))))
+		if err != nil {
+			return "", err
+		}
+		b[i] = letterBytes[num.Int64()]
 	}
 
-	return hex.EncodeToString(bytes), nil
+	return string(b), nil
 }

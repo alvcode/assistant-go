@@ -8,9 +8,10 @@ import (
 )
 
 const (
-	EnvDev  = "dev"
-	EnvTest = "test"
-	EnvProd = "prod"
+	EnvDev            = "dev"
+	EnvTest           = "test"
+	EnvProd           = "prod"
+	FileUploadS3Place = "s3"
 )
 
 type Config struct {
@@ -20,6 +21,7 @@ type Config struct {
 	DB               Database
 	Cors             Cors
 	File             File
+	S3               S3
 }
 
 type HTTPServer struct {
@@ -53,6 +55,16 @@ type Cors struct {
 type File struct {
 	UploadMaxSize int64  `env:"FILE_UPLOAD_MAX_SIZE" env-required:"true"`
 	SavePath      string `env:"FILE_SAVE_PATH" env-default:"./uploads/user_files"`
+	UploadPlace   string `env:"FILE_UPLOAD_PLACE" env-required:"true"`
+}
+
+type S3 struct {
+	Endpoint        string `env:"S3_ENDPOINT" env-default:""`
+	AccessKey       string `env:"S3_ACCESS_KEY" env-default:""`
+	SecretAccessKey string `env:"S3_SECRET_ACCESS_KEY" env-default:""`
+	UseSSL          bool   `env:"S3_USE_SSL" env-default:"false"`
+	BucketName      string `env:"S3_BUCKET_NAME" env-default:""`
+	Location        string `env:"S3_LOCATION" env-default:""`
 }
 
 const configFilePath = ".env"

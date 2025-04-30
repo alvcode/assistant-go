@@ -8,7 +8,6 @@ import (
 	"assistant-go/pkg/vld"
 	"context"
 	"fmt"
-	"github.com/minio/minio-go/v7"
 	"os"
 )
 
@@ -22,8 +21,6 @@ func main() {
 	ctx = logging.ContextWithLogger(ctx, logger)
 
 	logging.GetLogger(ctx).Infoln("Starting application")
-
-	minio.New()
 
 	if _, err := os.Stat(cfg.File.SavePath); os.IsNotExist(err) {
 		err := os.MkdirAll(cfg.File.SavePath, 0755)
