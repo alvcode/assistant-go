@@ -8,6 +8,7 @@ import (
 
 type FileRepository interface {
 	Create(in *entity.File) (*entity.File, error)
+	GetLastId() (int, error)
 }
 
 type fileRepository struct {
@@ -44,4 +45,15 @@ func (ur *fileRepository) Create(in *entity.File) (*entity.File, error) {
 		return nil, err
 	}
 	return in, nil
+}
+
+func (ur *fileRepository) GetLastId() (int, error) {
+	query := `SELECT coalesce(max(id), 0) FROM files`
+
+	var result int
+	err := ur.db.QueryRow(ur.ctx, query).Scan(&result)
+	if err != nil {
+		return 0, err
+	}
+	return result, nil
 }

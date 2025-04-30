@@ -110,11 +110,26 @@ func (uc *fileUseCase) Upload(in dto.UploadFile, userEntity *entity.User) (*enti
 	}
 
 	newFilename := fmt.Sprintf("%d_%s%s", time.Now().UnixNano(), hashForNewName, fileExt)
-	filePath := filepath.Join(in.SavePath, newFilename)
+	/*
+		middle path
+		1
+	*/
+	maxFileId, err := uc.repositories.FileRepository.GetLastId()
+	if err != nil {
+		logging.GetLogger(uc.ctx).Error(err)
+		return nil, postgres.ErrUnexpectedDBError
+	}
+	directoryLevel1 := maxFileId / 1000
+	directoryLevel2 := maxFileId % 1000
+	/**
+	  работает неверно
+	*/
+	middleFilePath := filepath.Join(fmt.Sprintf("%d/%d/", directoryLevel1+1, directoryLevel2+1), newFilename)
+	fullFilePath := filepath.Join(in.SavePath, middleFilePath)
 
 	saveDto := &dto.SaveFile{
 		File:      bytes.NewReader(data),
-		SavePath:  filePath,
+		SavePath:  fullFilePath,
 		SizeBytes: int64(len(data)),
 	}
 
@@ -122,22 +137,6 @@ func (uc *fileUseCase) Upload(in dto.UploadFile, userEntity *entity.User) (*enti
 	if saveErr != nil {
 		return nil, ErrFileSave
 	}
-
-	//out, err := os.Create(filePath)
-	//if err != nil {
-	//	return nil, ErrFileUnableToSave
-	//}
-	//defer func(out *os.File) {
-	//	err := out.Close()
-	//	if err != nil {
-	//		logging.GetLogger(uc.ctx).Errorf("error closing file: %v", err)
-	//	}
-	//}(out)
-	//
-	//_, err = io.Copy(out, in.File)
-	//if err != nil {
-	//	return nil, ErrFileSave
-	//}
 
 	fileHash, err := stringUtils.GenerateRandomString(100)
 	if err != nil {
@@ -147,7 +146,7 @@ func (uc *fileUseCase) Upload(in dto.UploadFile, userEntity *entity.User) (*enti
 	fileEntity := &entity.File{
 		UserID:           userEntity.ID,
 		OriginalFilename: in.OriginalFilename,
-		Filename:         newFilename,
+		Filename:         middleFilePath,
 		Ext:              fileExt,
 		Size:             len(data),
 		Hash:             fileHash,
