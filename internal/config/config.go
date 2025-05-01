@@ -15,13 +15,14 @@ const (
 )
 
 type Config struct {
-	Env              string `env:"ENV" env-required:"true"`
-	BlockingParanoia int    `env:"BLOCKING_PARANOIA" env-default:"2"`
-	HTTP             HTTPServer
-	DB               Database
-	Cors             Cors
-	File             File
-	S3               S3
+	Env               string `env:"ENV" env-required:"true"`
+	BlockingParanoia  int    `env:"BLOCKING_PARANOIA" env-default:"2"`
+	ThisServiceDomain string `env:"THIS_SERVICE_DOMAIN" env-required:"true"`
+	HTTP              HTTPServer
+	DB                Database
+	Cors              Cors
+	File              File
+	S3                S3
 }
 
 type HTTPServer struct {

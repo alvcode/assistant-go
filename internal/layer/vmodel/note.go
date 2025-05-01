@@ -44,7 +44,7 @@ type Note struct {
 	Pinned     bool            `json:"pinned"`
 }
 
-func NoteFromEnity(entity *entity.Note) *Note {
+func NoteFromEntity(entity *entity.Note) *Note {
 	return &Note{
 		ID:         entity.ID,
 		Title:      entity.Title,

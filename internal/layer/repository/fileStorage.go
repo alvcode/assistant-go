@@ -5,19 +5,18 @@ import (
 	"assistant-go/internal/logging"
 	"context"
 	"errors"
-	"fmt"
 	"github.com/minio/minio-go/v7"
 	"io"
 	"os"
 )
 
 var (
-	ErrFileUnableToSave = errors.New("unable to save file")
-	ErrFileSave         = errors.New("unable to save file")
+	ErrFileSave = errors.New("unable to save file")
 )
 
 type FileStorageRepository interface {
 	Save(in *dto.SaveFile) error
+	GetFile(filePath string) (io.Reader, error)
 }
 
 type localStorageRepository struct {
@@ -42,38 +41,61 @@ func NewS3StorageRepository(ctx context.Context, minio *minio.Client, bucketName
 	}
 }
 
-func (ur *localStorageRepository) Save(in *dto.SaveFile) error {
+func (r *localStorageRepository) Save(in *dto.SaveFile) error {
 	out, err := os.Create(in.SavePath)
 	if err != nil {
-		return ErrFileUnableToSave
+		return ErrFileSave
 	}
 	defer func(out *os.File) {
 		err := out.Close()
 		if err != nil {
-			logging.GetLogger(ur.ctx).Errorf("error closing file: %v", err)
+			logging.GetLogger(r.ctx).Errorf("error closing file: %v", err)
 		}
 	}(out)
 
 	_, err = io.Copy(out, in.File)
 	if err != nil {
+		logging.GetLogger(r.ctx).Error(err)
 		return ErrFileSave
 	}
 	return nil
 }
 
-func (ur *s3StorageRepository) Save(in *dto.SaveFile) error {
-	uploadInfo, err := ur.minio.PutObject(
-		ur.ctx,
-		ur.bucketName,
+func (r *localStorageRepository) GetFile(filePath string) (io.Reader, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+			logging.GetLogger(r.ctx).Error(err)
+		}
+	}(file)
+	return file, nil
+}
+
+func (r *s3StorageRepository) Save(in *dto.SaveFile) error {
+	_, err := r.minio.PutObject(
+		r.ctx,
+		r.bucketName,
 		in.SavePath,
 		in.File,
 		in.SizeBytes,
 		minio.PutObjectOptions{ContentType: "application/octet-stream"},
 	)
 	if err != nil {
-		fmt.Println(err)
+		logging.GetLogger(r.ctx).Error(err)
 		return err
 	}
-	fmt.Println(uploadInfo)
 	return nil
+}
+
+func (r *s3StorageRepository) GetFile(filePath string) (io.Reader, error) {
+	object, err := r.minio.GetObject(r.ctx, r.bucketName, filePath, minio.GetObjectOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	return object, nil
 }

@@ -53,7 +53,7 @@ func (h *NoteHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	noteVModel := vmodel.NoteFromEnity(note)
+	noteVModel := vmodel.NoteFromEntity(note)
 	SendResponse(w, http.StatusCreated, noteVModel)
 }
 
@@ -129,7 +129,7 @@ func (h *NoteHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	noteVModel := vmodel.NoteFromEnity(note)
+	noteVModel := vmodel.NoteFromEntity(note)
 	SendResponse(w, http.StatusCreated, noteVModel)
 }
 
@@ -169,7 +169,7 @@ func (h *NoteHandler) GetOne(w http.ResponseWriter, r *http.Request) {
 		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
 		return
 	}
-	result := vmodel.NoteFromEnity(note)
+	result := vmodel.NoteFromEntity(note)
 	SendResponse(w, http.StatusOK, result)
 }
 

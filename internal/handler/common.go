@@ -213,6 +213,26 @@ func buildErrorMessage(lang string, err error) string {
 		return locale.T(lang, "category_already_in_1_position")
 	case errors.Is(err, ucase.ErrNoteNotFound):
 		return locale.T(lang, "note_not_found")
+	case errors.Is(err, ucase.ErrFileTooLarge):
+		return locale.T(lang, "file_too_large")
+	case errors.Is(err, ucase.ErrFileReading):
+		return locale.T(lang, "file_error_reading")
+	case errors.Is(err, ucase.ErrFileInvalidType):
+		return locale.T(lang, "file_invalid_type")
+	case errors.Is(err, ucase.ErrFileResettingPointer):
+		return locale.T(lang, "file_error_resetting_pointer")
+	case errors.Is(err, ucase.ErrFileUnableToSeek):
+		return locale.T(lang, "file_unable_to_seek")
+	case errors.Is(err, ucase.ErrFileExtensionDoesNotMatch):
+		return locale.T(lang, "file_extension_does_not_match")
+	case errors.Is(err, ucase.ErrFileNotSafeFilename):
+		return locale.T(lang, "file_not_safe_filename")
+	case errors.Is(err, ucase.ErrFileSave):
+		return locale.T(lang, "file_error_save")
+	case errors.Is(err, repository.ErrFileSave):
+		return locale.T(lang, "file_error_save")
+	case errors.Is(err, ErrFileInvalidReadForm):
+		return locale.T(lang, "file_error_reading")
 	default:
 		return locale.T(lang, "unexpected_error")
 	}

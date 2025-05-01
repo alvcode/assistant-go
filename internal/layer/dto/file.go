@@ -26,3 +26,21 @@ type SaveFile struct {
 	SavePath  string
 	SizeBytes int64
 }
+
+type GetFileByHash struct {
+	Hash     string `validate:"required,min=80,max=80"`
+	SavePath string
+}
+
+func (dto *GetFileByHash) Validate(lang string) error {
+	err := vld.Validate.Struct(dto)
+	if err != nil {
+		return vld.TextFromFirstError(err, lang)
+	}
+	return nil
+}
+
+type FileResponse struct {
+	File             io.Reader
+	OriginalFilename string
+}

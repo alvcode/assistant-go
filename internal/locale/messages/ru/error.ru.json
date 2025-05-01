@@ -15,5 +15,13 @@
   "category_has_notes": "У категории существуют заметки. Необходимо сначала переместить их в другую категорию или удалить",
   "access_denied": "Доступ к ресурсу запрещен",
   "failed_to_determine_ip": "Не удалось определить IP-адрес",
-  "category_already_in_1_position": "Категория уже находится на 1 позиции"
+  "category_already_in_1_position": "Категория уже находится на 1 позиции",
+  "file_too_large": "Файл слишком большой",
+  "file_error_reading": "Ошибка чтения файла",
+  "file_invalid_type": "Загружаемый формат файла не поддерживается",
+  "file_error_resetting_pointer": "Ошибка сброса указателя",
+  "file_unable_to_seek": "Файл не поддерживает перемещение указателя чтения",
+  "file_extension_does_not_match": "Расширение файла не поддерживается",
+  "file_not_safe_filename": "Небезопасное имя файла",
+  "file_error_save": "Непредвиденная ошибка сохранения файла"
 }

@@ -3,9 +3,19 @@ package handler
 import (
 	"assistant-go/internal/layer/dto"
 	"assistant-go/internal/layer/ucase"
+	"assistant-go/internal/layer/vmodel"
 	"assistant-go/internal/locale"
+	"assistant-go/internal/logging"
+	"errors"
+	"fmt"
+	"github.com/julienschmidt/httprouter"
+	"io"
 	"mime/multipart"
 	"net/http"
+)
+
+var (
+	ErrFileInvalidReadForm = errors.New("invalid read form")
 )
 
 type FileHandler struct {
@@ -18,59 +28,8 @@ func NewFileHandler(useCase ucase.FileUseCase) *FileHandler {
 	}
 }
 
-/*
-
-use case
-
-type UploadFileInput struct {
-	File multipart.File
-	OriginalFilename string
-	MaxSize int64
-	AllowedMimeTypes map[string]string
-}
-
-type UploadFileOutput struct {
-	NewFilename string
-	Path        string
-	Size        int64
-}
-
-func (u *FileUploader) Upload(input UploadFileInput) (UploadFileOutput, error) {
-	// validate mime, extension, etc
-	// create directory if needed
-	// save file
-	// return output
-}
-
-
-handler
-
-func (h *FileHandler) Upload(w http.ResponseWriter, r *http.Request) {
-	// чтение файла через r.FormFile
-
-	in := UploadFileInput{
-		File: file,
-		OriginalFilename: header.Filename,
-		MaxSize: appConf.File.UploadMaxSize << 20,
-		AllowedMimeTypes: map[string]string{...},
-	}
-
-	out, err := h.fileUploader.Upload(in)
-	if err != nil {
-		SendErrorResponse(w, err.Error(), http.StatusBadRequest, 0)
-		return
-	}
-
-	// например, вернуть путь или имя файла
-	json.NewEncoder(w).Encode(out)
-}
-
-
-*/
-
 func (h *FileHandler) Upload(w http.ResponseWriter, r *http.Request) {
 	langRequest := locale.GetLangFromContext(r.Context())
-	//var uploadFileDto dto.UploadFile
 
 	authUser, err := GetAuthUser(r)
 	if err != nil {
@@ -81,13 +40,15 @@ func (h *FileHandler) Upload(w http.ResponseWriter, r *http.Request) {
 
 	file, header, err := r.FormFile("file")
 	if err != nil {
-		SendErrorResponse(w, "Invalid file", http.StatusUnauthorized, 0)
+		logging.GetLogger(r.Context()).Error(err)
+		BlockEventHandle(r, BlockEventDecodeBodyType)
+		SendErrorResponse(w, buildErrorMessage(langRequest, ErrFileInvalidReadForm), http.StatusUnprocessableEntity, 0)
 		return
 	}
 	defer func(file multipart.File) {
 		err := file.Close()
 		if err != nil {
-			SendErrorResponse(w, "failed to close uploaded file", http.StatusUnauthorized, 0)
+			SendErrorResponse(w, "failed to close uploaded file", http.StatusUnprocessableEntity, 0)
 			return
 		}
 	}(file)
@@ -101,43 +62,63 @@ func (h *FileHandler) Upload(w http.ResponseWriter, r *http.Request) {
 
 	upload, err := h.useCase.Upload(uploadFileDto, authUser)
 	if err != nil {
-		//SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
-		SendErrorResponse(w, err.Error(), http.StatusUnprocessableEntity, 0)
+		switch {
+		case errors.Is(err, ucase.ErrFileTooLarge),
+			errors.Is(err, ucase.ErrFileInvalidType),
+			errors.Is(err, ucase.ErrFileExtensionDoesNotMatch),
+			errors.Is(err, ucase.ErrFileNotSafeFilename):
+			BlockEventHandle(r, BlockEventInputDataType)
+		default:
+			BlockEventHandle(r, BlockEventOtherType)
+		}
+		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
 		return
 	}
 
-	SendResponse(w, http.StatusCreated, upload)
-	return
+	uploadUrl := appConf.ThisServiceDomain + "/api/files/hash/" + upload.Hash
 
-	//var createNoteCategoryDto dto.NoteCategoryCreate
-	//
-	//authUser, err := GetAuthUser(r)
-	//if err != nil {
-	//	BlockEventHandle(r, BlockEventUnauthorizedType)
-	//	SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
-	//	return
-	//}
-	//
-	//err = json.NewDecoder(r.Body).Decode(&createNoteCategoryDto)
-	//if err != nil {
-	//	BlockEventHandle(r, BlockEventDecodeBodyType)
-	//	SendErrorResponse(w, locale.T(langRequest, "error_reading_request_body"), http.StatusBadRequest, 0)
-	//	return
-	//}
-	//
-	//if err := createNoteCategoryDto.Validate(langRequest); err != nil {
-	//	BlockEventHandle(r, BlockEventInputDataType)
-	//	SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
-	//	return
-	//}
-	//
-	//entity, err := h.useCase.Create(createNoteCategoryDto, authUser)
-	//if err != nil {
-	//	BlockEventHandle(r, BlockEventOtherType)
-	//	SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
-	//	return
-	//}
-	//
-	//result := vmodel.NoteCategoryFromEnity(entity)
-	//SendResponse(w, http.StatusCreated, result)
+	result := vmodel.FileFromEntity(upload, uploadUrl)
+	SendResponse(w, http.StatusCreated, result)
+	return
+}
+
+func (h *FileHandler) GetByHash(w http.ResponseWriter, r *http.Request) {
+	langRequest := locale.GetLangFromContext(r.Context())
+	var fileHashDto dto.GetFileByHash
+
+	params := httprouter.ParamsFromContext(r.Context())
+	fileHashDto.Hash = params.ByName("hash")
+
+	if err := fileHashDto.Validate(langRequest); err != nil {
+		BlockEventHandle(r, BlockEventInputDataType)
+		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
+		return
+	}
+
+	fileHashDto.SavePath = appConf.File.SavePath
+	fileDto, err := h.useCase.GetFileByHash(fileHashDto)
+	if err != nil {
+		SendErrorResponse(w, err.Error(), http.StatusUnprocessableEntity, 0)
+		return
+	}
+	defer func() {
+		if closer, ok := fileDto.File.(io.Closer); ok {
+			_ = closer.Close()
+		}
+	}()
+
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", fileDto.OriginalFilename))
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.WriteHeader(http.StatusOK)
+
+	// Копируем содержимое файла в ответ
+	_, err = io.Copy(w, fileDto.File)
+	if err != nil {
+		fmt.Println(err)
+		http.Error(w, "Failed to send file", http.StatusInternalServerError)
+	}
+	return
+	fmt.Println(fileHashDto)
+	SendErrorResponse(w, "stop", http.StatusBadRequest, 0)
+	return
 }

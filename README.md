@@ -39,6 +39,9 @@ server {
 
         server_name api.<domain>.<com>;
 
+        # sync this parameter with .env FILE_UPLOAD_MAX_SIZE
+        client_max_body_size 10m;
+        
         #add_header X-Frame-Options "SAMEORIGIN";
         #add_header X-Content-Type-Options "nosniff";
 

@@ -167,4 +167,9 @@ func (controller *Init) setFiles(ctx context.Context, repositories *repository.R
 		"/api/files",
 		handler.BuildHandler(fileHandler.Upload, handler.BlockIPMW, handler.LocaleMW, handler.AuthMW),
 	)
+	controller.router.Handler(
+		http.MethodGet,
+		"/api/files/hash/:hash",
+		handler.BuildHandler(fileHandler.GetByHash, handler.BlockIPMW, handler.LocaleMW),
+	)
 }

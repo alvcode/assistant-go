@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"github.com/jackc/pgx/v5"
 	"io"
 	"net/http"
 	"path/filepath"
@@ -26,10 +27,12 @@ var (
 	ErrFileExtensionDoesNotMatch = errors.New("file extension does not match")
 	ErrFileNotSafeFilename       = errors.New("file not safe filename")
 	ErrFileSave                  = errors.New("unable to save file")
+	ErrFileNotFound              = errors.New("file not found")
 )
 
 type FileUseCase interface {
 	Upload(in dto.UploadFile, userEntity *entity.User) (*entity.File, error)
+	GetFileByHash(in dto.GetFileByHash) (*dto.FileResponse, error)
 }
 
 type fileUseCase struct {
@@ -150,4 +153,28 @@ func (uc *fileUseCase) Upload(in dto.UploadFile, userEntity *entity.User) (*enti
 	}
 
 	return fileEntity, nil
+}
+
+func (uc *fileUseCase) GetFileByHash(in dto.GetFileByHash) (*dto.FileResponse, error) {
+	fileEntity, err := uc.repositories.FileRepository.GetByHash(in.Hash)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrFileNotFound
+		}
+		logging.GetLogger(uc.ctx).Error(err)
+		return nil, postgres.ErrUnexpectedDBError
+	}
+
+	fullPath := filepath.Join(in.SavePath, fileEntity.FilePath)
+	fileReader, err := uc.repositories.StorageRepository.GetFile(fullPath)
+	if err != nil {
+		logging.GetLogger(uc.ctx).Error(err)
+		return nil, err
+	}
+
+	fileResponse := &dto.FileResponse{
+		File:             fileReader,
+		OriginalFilename: fileEntity.OriginalFilename,
+	}
+	return fileResponse, nil
 }
