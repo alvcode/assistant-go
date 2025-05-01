@@ -25,7 +25,7 @@ func NewFileRepository(ctx context.Context, db *pgxpool.Pool) FileRepository {
 
 func (ur *fileRepository) Create(in *entity.File) (*entity.File, error) {
 	query := `
-		INSERT INTO files (user_id, original_filename, filename, ext, size, hash, created_at) 
+		INSERT INTO files (user_id, original_filename, file_path, ext, size, hash, created_at) 
 		VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id
 	`
 
@@ -34,7 +34,7 @@ func (ur *fileRepository) Create(in *entity.File) (*entity.File, error) {
 		query,
 		in.UserID,
 		in.OriginalFilename,
-		in.Filename,
+		in.FilePath,
 		in.Ext,
 		in.Size,
 		in.Hash,

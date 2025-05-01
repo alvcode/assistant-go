@@ -4,13 +4,12 @@ import (
 	"assistant-go/internal/layer/dto"
 	"assistant-go/internal/layer/entity"
 	"assistant-go/internal/layer/repository"
+	service "assistant-go/internal/layer/service/file"
 	"assistant-go/internal/logging"
 	"assistant-go/internal/storage/postgres"
-	"assistant-go/pkg/utils"
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"path/filepath"
@@ -26,7 +25,6 @@ var (
 	ErrFileUnableToSeek          = errors.New("error unable to seek")
 	ErrFileExtensionDoesNotMatch = errors.New("file extension does not match")
 	ErrFileNotSafeFilename       = errors.New("file not safe filename")
-	ErrFileUnableToSave          = errors.New("unable to save file")
 	ErrFileSave                  = errors.New("unable to save file")
 )
 
@@ -47,6 +45,8 @@ func NewFileUseCase(ctx context.Context, repositories *repository.Repositories) 
 }
 
 func (uc *fileUseCase) Upload(in dto.UploadFile, userEntity *entity.User) (*entity.File, error) {
+	fileService := service.NewFile().FileService()
+
 	var allowedMimeTypes = map[string][]string{
 		"image/jpeg":      {".jpeg", ".jpg"},
 		"image/png":       {".png"},
@@ -103,28 +103,18 @@ func (uc *fileUseCase) Upload(in dto.UploadFile, userEntity *entity.User) (*enti
 		return nil, ErrFileNotSafeFilename
 	}
 
-	stringUtils := utils.NewStringUtils()
-	hashForNewName, err := stringUtils.GenerateRandomString(10)
+	newFilename, err := fileService.GenerateNewFileName(fileExt)
 	if err != nil {
 		return nil, err
 	}
 
-	newFilename := fmt.Sprintf("%d_%s%s", time.Now().UnixNano(), hashForNewName, fileExt)
-	/*
-		middle path
-		1
-	*/
 	maxFileId, err := uc.repositories.FileRepository.GetLastId()
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
 		return nil, postgres.ErrUnexpectedDBError
 	}
-	directoryLevel1 := maxFileId / 1000
-	directoryLevel2 := maxFileId % 1000
-	/**
-	  работает неверно
-	*/
-	middleFilePath := filepath.Join(fmt.Sprintf("%d/%d/", directoryLevel1+1, directoryLevel2+1), newFilename)
+
+	middleFilePath := filepath.Join(fileService.GetMiddlePathByFileId(maxFileId+1), newFilename)
 	fullFilePath := filepath.Join(in.SavePath, middleFilePath)
 
 	saveDto := &dto.SaveFile{
@@ -138,7 +128,7 @@ func (uc *fileUseCase) Upload(in dto.UploadFile, userEntity *entity.User) (*enti
 		return nil, ErrFileSave
 	}
 
-	fileHash, err := stringUtils.GenerateRandomString(100)
+	fileHash, err := fileService.GenerateFileHash()
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +136,7 @@ func (uc *fileUseCase) Upload(in dto.UploadFile, userEntity *entity.User) (*enti
 	fileEntity := &entity.File{
 		UserID:           userEntity.ID,
 		OriginalFilename: in.OriginalFilename,
-		Filename:         middleFilePath,
+		FilePath:         middleFilePath,
 		Ext:              fileExt,
 		Size:             len(data),
 		Hash:             fileHash,
