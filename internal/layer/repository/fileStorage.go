@@ -8,15 +8,18 @@ import (
 	"github.com/minio/minio-go/v7"
 	"io"
 	"os"
+	"path/filepath"
 )
 
 var (
-	ErrFileSave = errors.New("unable to save file")
+	ErrFileSave                 = errors.New("unable to save file")
+	ErrFileNotFoundInFilesystem = errors.New("file not found in filesystem")
 )
 
 type FileStorageRepository interface {
 	Save(in *dto.SaveFile) error
 	GetFile(filePath string) (io.Reader, error)
+	Delete(filePath string) error
 }
 
 type localStorageRepository struct {
@@ -42,8 +45,16 @@ func NewS3StorageRepository(ctx context.Context, minio *minio.Client, bucketName
 }
 
 func (r *localStorageRepository) Save(in *dto.SaveFile) error {
+	dir := filepath.Dir(in.SavePath)
+	err := os.MkdirAll(dir, 0755)
+	if err != nil {
+		logging.GetLogger(r.ctx).Errorf("failed to create directories: %v", err)
+		return ErrFileSave
+	}
+
 	out, err := os.Create(in.SavePath)
 	if err != nil {
+		logging.GetLogger(r.ctx).Error(err)
 		return ErrFileSave
 	}
 	defer func(out *os.File) {
@@ -64,15 +75,27 @@ func (r *localStorageRepository) Save(in *dto.SaveFile) error {
 func (r *localStorageRepository) GetFile(filePath string) (io.Reader, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, ErrFileNotFoundInFilesystem
+		}
 		return nil, err
 	}
-	defer func(file *os.File) {
-		err := file.Close()
-		if err != nil {
-			logging.GetLogger(r.ctx).Error(err)
-		}
-	}(file)
 	return file, nil
+}
+
+func (r *localStorageRepository) Delete(filePath string) error {
+	_, err := os.Stat(filePath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return ErrFileNotFoundInFilesystem
+		}
+		return err
+	}
+	err = os.Remove(filePath)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (r *s3StorageRepository) Save(in *dto.SaveFile) error {
@@ -97,5 +120,21 @@ func (r *s3StorageRepository) GetFile(filePath string) (io.Reader, error) {
 		return nil, err
 	}
 
+	_, err = object.Stat()
+	if err != nil {
+		if minio.ToErrorResponse(err).Code == "NoSuchKey" {
+			return nil, ErrFileNotFoundInFilesystem
+		}
+		return nil, err
+	}
+
 	return object, nil
+}
+
+func (r *s3StorageRepository) Delete(filePath string) error {
+	err := r.minio.RemoveObject(r.ctx, r.bucketName, filePath, minio.RemoveObjectOptions{})
+	if err != nil {
+		return err
+	}
+	return nil
 }

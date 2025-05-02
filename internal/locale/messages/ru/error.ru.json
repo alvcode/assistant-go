@@ -23,5 +23,9 @@
   "file_unable_to_seek": "Файл не поддерживает перемещение указателя чтения",
   "file_extension_does_not_match": "Расширение файла не поддерживается",
   "file_not_safe_filename": "Небезопасное имя файла",
-  "file_error_save": "Непредвиденная ошибка сохранения файла"
+  "file_error_save": "Непредвиденная ошибка сохранения файла",
+  "file_not_found": "Файл не найден",
+  "file_not_found_in_filesystem": "Файл не найден в файловой системе",
+  "file_failed_to_send": "Ошибка отправки файла",
+  "file_system_is_full": "Файловая система переполнена"
 }

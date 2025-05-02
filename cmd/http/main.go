@@ -7,8 +7,6 @@ import (
 	"assistant-go/internal/logging"
 	"assistant-go/pkg/vld"
 	"context"
-	"fmt"
-	"os"
 )
 
 func main() {
@@ -21,13 +19,6 @@ func main() {
 	ctx = logging.ContextWithLogger(ctx, logger)
 
 	logging.GetLogger(ctx).Infoln("Starting application")
-
-	if _, err := os.Stat(cfg.File.SavePath); os.IsNotExist(err) {
-		err := os.MkdirAll(cfg.File.SavePath, 0755)
-		if err != nil {
-			logging.GetLogger(ctx).Fatalln(fmt.Errorf("could not create file save path: %s", err))
-		}
-	}
 
 	locale.InitLocales(ctx)
 	vld.InitValidator(ctx)

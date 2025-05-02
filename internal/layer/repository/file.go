@@ -8,8 +8,10 @@ import (
 
 type FileRepository interface {
 	Create(in *entity.File) (*entity.File, error)
-	GetLastId() (int, error)
+	GetLastID() (int, error)
+	GetAllFilesSize() (int64, error)
 	GetByHash(hash string) (*entity.File, error)
+	GetByID(fileID int) (*entity.File, error)
 }
 
 type fileRepository struct {
@@ -48,7 +50,7 @@ func (r *fileRepository) Create(in *entity.File) (*entity.File, error) {
 	return in, nil
 }
 
-func (r *fileRepository) GetLastId() (int, error) {
+func (r *fileRepository) GetLastID() (int, error) {
 	query := `SELECT coalesce(max(id), 0) FROM files`
 
 	var result int
@@ -59,9 +61,39 @@ func (r *fileRepository) GetLastId() (int, error) {
 	return result, nil
 }
 
+func (r *fileRepository) GetAllFilesSize() (int64, error) {
+	query := `SELECT coalesce(sum(size), 0) FROM files`
+
+	var result int64
+	err := r.db.QueryRow(r.ctx, query).Scan(&result)
+	if err != nil {
+		return 0, err
+	}
+	return result, nil
+}
+
 func (r *fileRepository) GetByHash(hash string) (*entity.File, error) {
 	query := `select * from files where hash = $1`
 	row := r.db.QueryRow(r.ctx, query, hash)
+	var file entity.File
+	if err := row.Scan(
+		&file.ID,
+		&file.UserID,
+		&file.OriginalFilename,
+		&file.FilePath,
+		&file.Ext,
+		&file.Size,
+		&file.Hash,
+		&file.CreatedAt,
+	); err != nil {
+		return nil, err
+	}
+	return &file, nil
+}
+
+func (r *fileRepository) GetByID(fileID int) (*entity.File, error) {
+	query := `select * from files where id = $1`
+	row := r.db.QueryRow(r.ctx, query, fileID)
 	var file entity.File
 	if err := row.Scan(
 		&file.ID,

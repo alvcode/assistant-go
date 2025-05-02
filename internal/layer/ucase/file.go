@@ -28,11 +28,13 @@ var (
 	ErrFileNotSafeFilename       = errors.New("file not safe filename")
 	ErrFileSave                  = errors.New("unable to save file")
 	ErrFileNotFound              = errors.New("file not found")
+	ErrFileSystemIsFull          = errors.New("file system is full")
 )
 
 type FileUseCase interface {
 	Upload(in dto.UploadFile, userEntity *entity.User) (*entity.File, error)
 	GetFileByHash(in dto.GetFileByHash) (*dto.FileResponse, error)
+	DeleteByID(fileID int, generalPath string) error
 }
 
 type fileUseCase struct {
@@ -69,6 +71,16 @@ func (uc *fileUseCase) Upload(in dto.UploadFile, userEntity *entity.User) (*enti
 		return nil, ErrFileTooLarge
 	}
 
+	allFilesSize, err := uc.repositories.FileRepository.GetAllFilesSize()
+	if err != nil {
+		logging.GetLogger(uc.ctx).Error(err)
+		return nil, postgres.ErrUnexpectedDBError
+	}
+
+	if (allFilesSize + int64(len(data))) > in.StorageMaxSize {
+		return nil, ErrFileSystemIsFull
+	}
+
 	if seeker, ok := in.File.(io.Seeker); ok {
 		_, err := seeker.Seek(0, io.SeekStart)
 		if err != nil {
@@ -100,6 +112,7 @@ func (uc *fileUseCase) Upload(in dto.UploadFile, userEntity *entity.User) (*enti
 	if !extExists {
 		return nil, ErrFileExtensionDoesNotMatch
 	}
+	fileExt = strings.TrimPrefix(fileExt, ".")
 
 	safeName := filepath.Base(in.OriginalFilename)
 	if strings.Contains(safeName, "..") {
@@ -111,13 +124,13 @@ func (uc *fileUseCase) Upload(in dto.UploadFile, userEntity *entity.User) (*enti
 		return nil, err
 	}
 
-	maxFileId, err := uc.repositories.FileRepository.GetLastId()
+	maxFileID, err := uc.repositories.FileRepository.GetLastID()
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
 		return nil, postgres.ErrUnexpectedDBError
 	}
 
-	middleFilePath := filepath.Join(fileService.GetMiddlePathByFileId(maxFileId+1), newFilename)
+	middleFilePath := filepath.Join(fileService.GetMiddlePathByFileId(maxFileID+1), newFilename)
 	fullFilePath := filepath.Join(in.SavePath, middleFilePath)
 
 	saveDto := &dto.SaveFile{
@@ -177,4 +190,23 @@ func (uc *fileUseCase) GetFileByHash(in dto.GetFileByHash) (*dto.FileResponse, e
 		OriginalFilename: fileEntity.OriginalFilename,
 	}
 	return fileResponse, nil
+}
+
+func (uc *fileUseCase) DeleteByID(fileID int, generalPath string) error {
+	fileEntity, err := uc.repositories.FileRepository.GetByID(fileID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrFileNotFound
+		}
+		logging.GetLogger(uc.ctx).Error(err)
+		return postgres.ErrUnexpectedDBError
+	}
+
+	fullPath := filepath.Join(generalPath, fileEntity.FilePath)
+	err = uc.repositories.StorageRepository.Delete(fullPath)
+	if err != nil {
+		logging.GetLogger(uc.ctx).Error(err)
+		return err
+	}
+	return nil
 }

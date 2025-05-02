@@ -23,5 +23,9 @@
   "file_unable_to_seek": "The file does not support moving the read pointer",
   "file_extension_does_not_match": "File extension not supported",
   "file_not_safe_filename": "Unsafe file name",
-  "file_error_save": "Unexpected error saving file"
+  "file_error_save": "Unexpected error saving file",
+  "file_not_found": "File not found",
+  "file_not_found_in_filesystem": "File not found in file system",
+  "file_failed_to_send": "Error sending file",
+  "file_system_is_full": "File system is full"
 }

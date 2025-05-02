@@ -12,6 +12,7 @@ CREATE TABLE files (
 );
 CREATE INDEX idx_files_user_id ON files (user_id);
 CREATE UNIQUE INDEX idx_files_hash ON files (hash);
+CREATE INDEX idx_files_size ON files (size);
 -- +goose StatementEnd
 
 -- +goose Down

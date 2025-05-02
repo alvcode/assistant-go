@@ -54,9 +54,10 @@ type Cors struct {
 }
 
 type File struct {
-	UploadMaxSize int64  `env:"FILE_UPLOAD_MAX_SIZE" env-required:"true"`
-	SavePath      string `env:"FILE_SAVE_PATH" env-default:"./uploads/user_files"`
-	UploadPlace   string `env:"FILE_UPLOAD_PLACE" env-required:"true"`
+	UploadMaxSize    int64  `env:"FILE_UPLOAD_MAX_SIZE" env-required:"true"`
+	LimitFileStorage int64  `env:"FILE_LIMIT_FILE_STORAGE" env-required:"true"`
+	SavePath         string `env:"FILE_SAVE_PATH" env-default:"./uploads/user_files"`
+	UploadPlace      string `env:"FILE_UPLOAD_PLACE" env-required:"true"`
 }
 
 type S3 struct {

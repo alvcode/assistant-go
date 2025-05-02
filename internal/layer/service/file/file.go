@@ -26,7 +26,7 @@ func (s *fileService) GenerateNewFileName(fileExt string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("%d_%s%s", time.Now().UnixNano(), hashForNewName, fileExt), nil
+	return fmt.Sprintf("%d_%s.%s", time.Now().UnixNano(), hashForNewName, fileExt), nil
 }
 
 func (s *fileService) GenerateFileHash() (string, error) {

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"assistant-go/internal/layer/dto"
+	"assistant-go/internal/layer/repository"
 	"assistant-go/internal/layer/ucase"
 	"assistant-go/internal/layer/vmodel"
 	"assistant-go/internal/locale"
@@ -57,6 +58,7 @@ func (h *FileHandler) Upload(w http.ResponseWriter, r *http.Request) {
 		File:             file,
 		OriginalFilename: header.Filename,
 		MaxSizeBytes:     appConf.File.UploadMaxSize << 20,
+		StorageMaxSize:   appConf.File.LimitFileStorage << 20,
 		SavePath:         appConf.File.SavePath,
 	}
 
@@ -98,7 +100,16 @@ func (h *FileHandler) GetByHash(w http.ResponseWriter, r *http.Request) {
 	fileHashDto.SavePath = appConf.File.SavePath
 	fileDto, err := h.useCase.GetFileByHash(fileHashDto)
 	if err != nil {
-		SendErrorResponse(w, err.Error(), http.StatusUnprocessableEntity, 0)
+		var responseStatus int
+		if errors.Is(err, ucase.ErrFileNotFound) {
+			responseStatus = http.StatusNotFound
+			BlockEventHandle(r, BlockEventFileNotFoundType)
+		} else if errors.Is(err, repository.ErrFileNotFoundInFilesystem) {
+			responseStatus = http.StatusNotFound
+		} else {
+			responseStatus = http.StatusUnprocessableEntity
+		}
+		SendErrorResponse(w, buildErrorMessage(langRequest, err), responseStatus, 0)
 		return
 	}
 	defer func() {
@@ -111,14 +122,15 @@ func (h *FileHandler) GetByHash(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.WriteHeader(http.StatusOK)
 
-	// Копируем содержимое файла в ответ
 	_, err = io.Copy(w, fileDto.File)
 	if err != nil {
-		fmt.Println(err)
-		http.Error(w, "Failed to send file", http.StatusInternalServerError)
+		SendErrorResponse(
+			w,
+			fmt.Sprintf("%s: %v", locale.T(langRequest, "file_failed_to_send"), err),
+			http.StatusInternalServerError,
+			0,
+		)
+		return
 	}
-	return
-	fmt.Println(fileHashDto)
-	SendErrorResponse(w, "stop", http.StatusBadRequest, 0)
 	return
 }

@@ -85,6 +85,7 @@ var (
 	BlockEventUnauthorizedType = "unauthorized"
 	BlockEventRefreshTokenType = "refresh_token"
 	BlockEventPageNotFoundType = "page_not_found"
+	BlockEventFileNotFoundType = "file_not_found"
 	BlockEventOtherType        = "other"
 )
 
@@ -114,6 +115,7 @@ func BlockEventHandle(r *http.Request, eventName string) {
 	var unauthorizedMaxCount int
 	var refreshTokenMaxCount int
 	var pageNotFoundMaxCount int
+	var fileNotFoundMaxCount int
 	switch appConf.BlockingParanoia {
 	case 1:
 		blockMinute = 30
@@ -124,6 +126,7 @@ func BlockEventHandle(r *http.Request, eventName string) {
 		unauthorizedMaxCount = 50
 		refreshTokenMaxCount = 70
 		pageNotFoundMaxCount = 50
+		fileNotFoundMaxCount = 40
 	case 2:
 		blockMinute = 420 // 7 hour
 		allMaxCount = 150
@@ -133,6 +136,7 @@ func BlockEventHandle(r *http.Request, eventName string) {
 		unauthorizedMaxCount = 30
 		refreshTokenMaxCount = 50
 		pageNotFoundMaxCount = 10
+		fileNotFoundMaxCount = 20
 	case 3:
 		blockMinute = 2880 // 2 day
 		allMaxCount = 70
@@ -142,6 +146,7 @@ func BlockEventHandle(r *http.Request, eventName string) {
 		unauthorizedMaxCount = 20
 		refreshTokenMaxCount = 30
 		pageNotFoundMaxCount = 5
+		fileNotFoundMaxCount = 10
 	}
 
 	if blockEventStat.All >= allMaxCount ||
@@ -150,7 +155,8 @@ func BlockEventHandle(r *http.Request, eventName string) {
 		blockEventStat.SignIn >= signInMaxCount ||
 		blockEventStat.Unauthorized >= unauthorizedMaxCount ||
 		blockEventStat.RefreshToken >= refreshTokenMaxCount ||
-		blockEventStat.PageNotFound >= pageNotFoundMaxCount {
+		blockEventStat.PageNotFound >= pageNotFoundMaxCount ||
+		blockEventStat.FileNotFound >= fileNotFoundMaxCount {
 		unblockTime := time.Now().Add(time.Duration(blockMinute) * time.Minute).UTC()
 		_ = blockIpRepository.SetBlock(IPAddress, unblockTime)
 	}
@@ -233,6 +239,12 @@ func buildErrorMessage(lang string, err error) string {
 		return locale.T(lang, "file_error_save")
 	case errors.Is(err, ErrFileInvalidReadForm):
 		return locale.T(lang, "file_error_reading")
+	case errors.Is(err, ucase.ErrFileNotFound):
+		return locale.T(lang, "file_not_found")
+	case errors.Is(err, repository.ErrFileNotFoundInFilesystem):
+		return locale.T(lang, "file_not_found_in_filesystem")
+	case errors.Is(err, ucase.ErrFileSystemIsFull):
+		return locale.T(lang, "file_system_is_full")
 	default:
 		return locale.T(lang, "unexpected_error")
 	}

@@ -10,6 +10,7 @@ type UploadFile struct {
 	File             multipart.File
 	OriginalFilename string `validate:"min=1,max=200"`
 	MaxSizeBytes     int64
+	StorageMaxSize   int64
 	SavePath         string
 }
 
