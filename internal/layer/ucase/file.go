@@ -35,6 +35,7 @@ type FileUseCase interface {
 	Upload(in dto.UploadFile, userEntity *entity.User) (*entity.File, error)
 	GetFileByHash(in dto.GetFileByHash) (*dto.FileResponse, error)
 	DeleteByID(fileID int, generalPath string) error
+	CleanUnused(generalPath string) error
 }
 
 type fileUseCase struct {
@@ -207,6 +208,31 @@ func (uc *fileUseCase) DeleteByID(fileID int, generalPath string) error {
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
 		return err
+	}
+
+	err = uc.repositories.FileRepository.DeleteByID(fileID)
+	if err != nil {
+		logging.GetLogger(uc.ctx).Error(err)
+		return err
+	}
+
+	return nil
+}
+
+func (uc *fileUseCase) CleanUnused(generalPath string) error {
+	ctx, cancel := context.WithCancel(uc.ctx)
+	defer cancel()
+
+	ch, err := uc.repositories.FileRepository.GetUnusedFileIDs(ctx)
+	if err != nil {
+		return err
+	}
+
+	for id := range ch {
+		err := uc.DeleteByID(id, generalPath)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

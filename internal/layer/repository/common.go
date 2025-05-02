@@ -3,9 +3,17 @@ package repository
 import (
 	"assistant-go/internal/config"
 	"context"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/minio/minio-go/v7"
 )
+
+type DBExecutor interface {
+	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+}
 
 type Repositories struct {
 	UserRepository         UserRepository
@@ -15,6 +23,8 @@ type Repositories struct {
 	BlockEventRepository   BlockEventRepository
 	FileRepository         FileRepository
 	StorageRepository      FileStorageRepository
+	FileNoteLinkRepository FileNoteLinkRepository
+	TransactionRepository  TransactionRepository
 }
 
 func NewRepositories(ctx context.Context, cfg *config.Config, db *pgxpool.Pool, minio *minio.Client) *Repositories {
@@ -32,5 +42,24 @@ func NewRepositories(ctx context.Context, cfg *config.Config, db *pgxpool.Pool, 
 		BlockEventRepository:   NewBlockEventRepository(ctx, db),
 		FileRepository:         NewFileRepository(ctx, db),
 		StorageRepository:      storageInterface,
+		FileNoteLinkRepository: NewFileNoteLinkRepository(ctx, db),
+		TransactionRepository:  &transactionRepository{ctx: ctx, db: db},
 	}
+}
+
+type TransactionRepository interface {
+	GetTransaction() (pgx.Tx, error)
+}
+
+type transactionRepository struct {
+	ctx context.Context
+	db  *pgxpool.Pool
+}
+
+func (r *transactionRepository) GetTransaction() (pgx.Tx, error) {
+	tx, err := r.db.BeginTx(r.ctx, pgx.TxOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return tx, nil
 }

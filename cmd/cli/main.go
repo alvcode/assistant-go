@@ -7,6 +7,8 @@ import (
 	"assistant-go/internal/storage/postgres"
 	"context"
 	"fmt"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/spf13/cobra"
 	"os"
 	"time"
@@ -27,13 +29,24 @@ func main() {
 		logging.GetLogger(ctx).Fatalln(err)
 	}
 
+	var minioClient *minio.Client
+	if cfg.File.UploadPlace == config.FileUploadS3Place && cfg.S3.SecretAccessKey != "" {
+		minioClient, err = minio.New(cfg.S3.Endpoint, &minio.Options{
+			Creds:  credentials.NewStaticV4(cfg.S3.AccessKey, cfg.S3.SecretAccessKey, ""),
+			Secure: cfg.S3.UseSSL,
+		})
+		if err != nil {
+			logging.GetLogger(ctx).Fatalln(err)
+		}
+	}
+
 	rootCmd := &cobra.Command{
 		Use:   "ast",
 		Short: "CLI commands",
 	}
 
 	// Добавляем команды
-	clicontroller.InitCliCommands(rootCmd, ctx, cfg, pgClient)
+	clicontroller.InitCliCommands(rootCmd, ctx, cfg, pgClient, minioClient)
 
 	// Запуск приложения
 	if err := rootCmd.Execute(); err != nil {
