@@ -73,6 +73,13 @@ func (uc *noteUseCase) Create(in dto.NoteCreate, userEntity *entity.User) (*enti
 		logging.GetLogger(uc.ctx).Error(err)
 		return nil, postgres.ErrUnexpectedDBError
 	}
+
+	fileIDs, _ := getFileIDsByBlocks(string(in.NoteBlocks))
+	err = uc.repositories.FileNoteLinkRepository.Upsert(data.ID, fileIDs)
+	if err != nil {
+		return nil, err
+	}
+
 	return data, nil
 }
 
@@ -154,7 +161,37 @@ func (uc *noteUseCase) Update(in dto.NoteUpdate, userEntity *entity.User) (*enti
 		logging.GetLogger(uc.ctx).Error(err)
 		return nil, postgres.ErrUnexpectedDBError
 	}
+
+	fileIDs, _ := getFileIDsByBlocks(string(in.NoteBlocks))
+	err = uc.repositories.FileNoteLinkRepository.Upsert(currentNote.ID, fileIDs)
+	if err != nil {
+		return nil, err
+	}
+
 	return currentNote, nil
+}
+
+func getFileIDsByBlocks(blocks string) ([]int, error) {
+	var result []int
+	attaches := gjson.Get(blocks, `#(type="attaches")#.data.file.id`)
+	images := gjson.Get(blocks, `#(type="image")#.data.file.id`)
+
+	collect := func(values gjson.Result) {
+		if values.IsArray() {
+			for _, id := range values.Array() {
+				if id.Type == gjson.Number {
+					result = append(result, int(id.Int()))
+				}
+			}
+		} else if values.Type == gjson.Number {
+			result = append(result, int(values.Int()))
+		}
+	}
+
+	collect(attaches)
+	collect(images)
+
+	return result, nil
 }
 
 func (uc *noteUseCase) GetOne(noteIdStruct dto.RequiredID, userEntity *entity.User) (*entity.Note, error) {
@@ -205,6 +242,12 @@ func (uc *noteUseCase) DeleteOne(noteIdStruct dto.RequiredID, userEntity *entity
 		logging.GetLogger(uc.ctx).Error(err)
 		return postgres.ErrUnexpectedDBError
 	}
+
+	err = uc.repositories.FileNoteLinkRepository.DeleteByNoteID(currentNote.ID)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

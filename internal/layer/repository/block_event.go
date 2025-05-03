@@ -106,6 +106,8 @@ func (ur *blockEventRepository) GetStat(ip string, timeFrom time.Time) (*dto.Blo
 			stat.PageNotFound = count
 		case "too_many_requests":
 			stat.TooManyRequests = count
+		case "file_not_found":
+			stat.FileNotFound = count
 		}
 	}
 	if err := rows.Err(); err != nil {

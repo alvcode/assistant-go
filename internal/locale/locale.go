@@ -4,6 +4,7 @@ import (
 	"assistant-go/internal/logging"
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"sync"
@@ -52,6 +53,7 @@ func loadTranslations() {
 }
 
 func T(lang string, messageID string, args ...interface{}) string {
+	fmt.Println(messageID, args)
 	if localizers == nil {
 		log.Printf("Localizers not initialized, returning messageID: %s", messageID)
 		return messageID
@@ -61,10 +63,17 @@ func T(lang string, messageID string, args ...interface{}) string {
 		localizer = localizers["en"]
 	}
 
-	result, err := localizer.Localize(&i18n.LocalizeConfig{
-		MessageID:    messageID,
-		TemplateData: args,
-	})
+	config := &i18n.LocalizeConfig{
+		MessageID: messageID,
+	}
+
+	if len(args) > 0 {
+		if templateData, ok := args[0].(map[string]interface{}); ok {
+			config.TemplateData = templateData
+		}
+	}
+
+	result, err := localizer.Localize(config)
 	if err != nil {
 		log.Printf("Translation not found: %s (%s)", messageID, lang)
 		return messageID

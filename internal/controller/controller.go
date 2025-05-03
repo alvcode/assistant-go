@@ -8,25 +8,28 @@ import (
 	"context"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/julienschmidt/httprouter"
+	"github.com/minio/minio-go/v7"
 	"net/http"
 )
 
 type Init struct {
 	cfg    *config.Config
 	db     *pgxpool.Pool
+	minio  *minio.Client
 	router *httprouter.Router
 }
 
-func New(cfg *config.Config, db *pgxpool.Pool, router *httprouter.Router) *Init {
+func New(cfg *config.Config, db *pgxpool.Pool, minio *minio.Client, router *httprouter.Router) *Init {
 	return &Init{
 		cfg:    cfg,
 		db:     db,
+		minio:  minio,
 		router: router,
 	}
 }
 
 func (controller *Init) SetRoutes(ctx context.Context) error {
-	repos := repository.NewRepositories(ctx, controller.db)
+	repos := repository.NewRepositories(ctx, controller.cfg, controller.db, controller.minio)
 
 	handler.InitHandler(repos, controller.cfg)
 
@@ -47,6 +50,7 @@ func (controller *Init) SetRoutes(ctx context.Context) error {
 	controller.setUserRoutes(ctx, repos)
 	controller.setNotesCategories(ctx, repos)
 	controller.setNotes(ctx, repos)
+	controller.setFiles(ctx, repos)
 
 	return nil
 }
@@ -151,5 +155,21 @@ func (controller *Init) setNotes(ctx context.Context, repositories *repository.R
 		http.MethodPost,
 		"/api/notes/:id/unpin",
 		handler.BuildHandler(noteHandler.UnPin, handler.AuthMW),
+	)
+}
+
+func (controller *Init) setFiles(ctx context.Context, repositories *repository.Repositories) {
+	fileUseCase := ucase.NewFileUseCase(ctx, repositories)
+	fileHandler := handler.NewFileHandler(fileUseCase)
+
+	controller.router.Handler(
+		http.MethodPost,
+		"/api/files",
+		handler.BuildHandler(fileHandler.Upload, handler.BlockIPMW, handler.LocaleMW, handler.AuthMW),
+	)
+	controller.router.Handler(
+		http.MethodGet,
+		"/api/files/hash/:hash",
+		handler.BuildHandler(fileHandler.GetByHash, handler.BlockIPMW, handler.LocaleMW),
 	)
 }

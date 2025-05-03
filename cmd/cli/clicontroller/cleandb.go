@@ -8,12 +8,13 @@ import (
 	"context"
 	"fmt"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/minio/minio-go/v7"
 )
 
-func CleanDBInit(ctx context.Context, cfg *config.Config, db *pgxpool.Pool) {
+func CleanDBInit(ctx context.Context, cfg *config.Config, db *pgxpool.Pool, minio *minio.Client) {
 	fmt.Println("start clean-db cli command")
 	logging.GetLogger(ctx).Println("start clean-db cli command")
-	repos := repository.NewRepositories(ctx, db)
+	repos := repository.NewRepositories(ctx, cfg, db, minio)
 
 	blockIpUseCase := ucase.NewBlockIpUseCase(ctx, repos)
 	err := blockIpUseCase.CleanOld()
@@ -36,6 +37,14 @@ func CleanDBInit(ctx context.Context, cfg *config.Config, db *pgxpool.Pool) {
 	if err != nil {
 		fmt.Printf("Error clean block events: %v", err)
 		logging.GetLogger(ctx).Errorf("Error clean block events: %v", err)
+		return
+	}
+
+	fileUseCase := ucase.NewFileUseCase(ctx, repos)
+	err = fileUseCase.CleanUnused(cfg.File.SavePath)
+	if err != nil {
+		fmt.Printf("Error clean unused files: %v", err)
+		logging.GetLogger(ctx).Errorf("Error clean unused files: %v", err)
 		return
 	}
 

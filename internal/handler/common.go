@@ -87,6 +87,7 @@ var (
 	BlockEventUnauthorizedType = "unauthorized"
 	BlockEventRefreshTokenType = "refresh_token"
 	BlockEventPageNotFoundType = "page_not_found"
+	BlockEventFileNotFoundType = "file_not_found"
 	BlockEventOtherType        = "other"
 	BlockEventTooManyRequests  = "too_many_requests"
 )
@@ -118,6 +119,7 @@ func BlockEventHandle(r *http.Request, eventName string) {
 	var refreshTokenMaxCount int
 	var pageNotFoundMaxCount int
 	var tooManyRequestsMaxCount int
+	var fileNotFoundMaxCount int
 	switch appConf.BlockingParanoia {
 	case 1:
 		blockMinute = 30
@@ -128,6 +130,7 @@ func BlockEventHandle(r *http.Request, eventName string) {
 		unauthorizedMaxCount = 50
 		refreshTokenMaxCount = 70
 		pageNotFoundMaxCount = 50
+		fileNotFoundMaxCount = 40
 		tooManyRequestsMaxCount = 30
 	case 2:
 		blockMinute = 420 // 7 hour
@@ -138,6 +141,7 @@ func BlockEventHandle(r *http.Request, eventName string) {
 		unauthorizedMaxCount = 30
 		refreshTokenMaxCount = 50
 		pageNotFoundMaxCount = 10
+		fileNotFoundMaxCount = 20
 		tooManyRequestsMaxCount = 7
 	case 3:
 		blockMinute = 2880 // 2 day
@@ -148,6 +152,7 @@ func BlockEventHandle(r *http.Request, eventName string) {
 		unauthorizedMaxCount = 20
 		refreshTokenMaxCount = 30
 		pageNotFoundMaxCount = 5
+		fileNotFoundMaxCount = 10
 		tooManyRequestsMaxCount = 3
 	}
 
@@ -157,6 +162,8 @@ func BlockEventHandle(r *http.Request, eventName string) {
 		blockEventStat.SignIn >= signInMaxCount ||
 		blockEventStat.Unauthorized >= unauthorizedMaxCount ||
 		blockEventStat.RefreshToken >= refreshTokenMaxCount ||
+		blockEventStat.PageNotFound >= pageNotFoundMaxCount ||
+		blockEventStat.FileNotFound >= fileNotFoundMaxCount {
 		blockEventStat.TooManyRequests <= tooManyRequestsMaxCount ||
 		blockEventStat.PageNotFound >= pageNotFoundMaxCount {
 		unblockTime := time.Now().Add(time.Duration(blockMinute) * time.Minute).UTC()
@@ -222,6 +229,32 @@ func buildErrorMessage(lang string, err error) string {
 		return locale.T(lang, "category_already_in_1_position")
 	case errors.Is(err, ucase.ErrNoteNotFound):
 		return locale.T(lang, "note_not_found")
+	case errors.Is(err, ucase.ErrFileTooLarge):
+		return locale.T(lang, "file_too_large")
+	case errors.Is(err, ucase.ErrFileReading):
+		return locale.T(lang, "file_error_reading")
+	case errors.Is(err, ucase.ErrFileInvalidType):
+		return locale.T(lang, "file_invalid_type")
+	case errors.Is(err, ucase.ErrFileResettingPointer):
+		return locale.T(lang, "file_error_resetting_pointer")
+	case errors.Is(err, ucase.ErrFileUnableToSeek):
+		return locale.T(lang, "file_unable_to_seek")
+	case errors.Is(err, ucase.ErrFileExtensionDoesNotMatch):
+		return locale.T(lang, "file_extension_does_not_match")
+	case errors.Is(err, ucase.ErrFileNotSafeFilename):
+		return locale.T(lang, "file_not_safe_filename")
+	case errors.Is(err, ucase.ErrFileSave):
+		return locale.T(lang, "file_error_save")
+	case errors.Is(err, repository.ErrFileSave):
+		return locale.T(lang, "file_error_save")
+	case errors.Is(err, ErrFileInvalidReadForm):
+		return locale.T(lang, "file_error_reading")
+	case errors.Is(err, ucase.ErrFileNotFound):
+		return locale.T(lang, "file_not_found")
+	case errors.Is(err, repository.ErrFileNotFoundInFilesystem):
+		return locale.T(lang, "file_not_found_in_filesystem")
+	case errors.Is(err, ucase.ErrFileSystemIsFull):
+		return locale.T(lang, "file_system_is_full")
 	default:
 		return locale.T(lang, "unexpected_error")
 	}

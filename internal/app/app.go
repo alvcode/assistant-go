@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/julienschmidt/httprouter"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/rs/cors"
 	"golang.org/x/sync/errgroup"
 	"net"
@@ -25,6 +27,7 @@ type App struct {
 	router     *httprouter.Router
 	httpServer *http.Server
 	pgxPool    *pgxpool.Pool
+	minio      *minio.Client
 }
 
 func NewApp(ctx context.Context, cfg *config.Config) (App, error) {
@@ -37,10 +40,23 @@ func NewApp(ctx context.Context, cfg *config.Config) (App, error) {
 		logging.GetLogger(ctx).Fatalln(err)
 	}
 
+	var minioClient *minio.Client
+	if cfg.File.UploadPlace == config.FileUploadS3Place && cfg.S3.SecretAccessKey != "" {
+		minioClient, err = minio.New(cfg.S3.Endpoint, &minio.Options{
+			Creds:  credentials.NewStaticV4(cfg.S3.AccessKey, cfg.S3.SecretAccessKey, ""),
+			Secure: cfg.S3.UseSSL,
+		})
+		if err != nil {
+			logging.GetLogger(ctx).Fatalln(err)
+		}
+		logging.GetLogger(ctx).Println("created minio S3 client")
+	}
+
 	return App{
 		cfg:     cfg,
 		router:  router,
 		pgxPool: pgClient,
+		minio:   minioClient,
 	}, nil
 }
 
@@ -55,7 +71,7 @@ func (a *App) Run(ctx context.Context) error {
 }
 
 func (a *App) startHTTP(ctx context.Context) error {
-	controllerInit := controller.New(a.cfg, a.pgxPool, a.router)
+	controllerInit := controller.New(a.cfg, a.pgxPool, a.minio, a.router)
 	errRoute := controllerInit.SetRoutes(ctx)
 	if errRoute != nil {
 		logging.GetLogger(ctx).WithError(errRoute).Fatal("failed to init routes")

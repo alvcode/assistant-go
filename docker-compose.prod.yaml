@@ -10,6 +10,7 @@ services:
       - "8075:8083"
     volumes:
       - ./logs:/app/logs
+      - ./uploads:/app/uploads
     env_file:
       - .env
     networks:

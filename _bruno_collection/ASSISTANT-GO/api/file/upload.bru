@@ -1,0 +1,17 @@
+meta {
+  name: upload
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{domain}}/api/files
+  body: multipartForm
+  auth: inherit
+}
+
+body:multipart-form {
+  file: @file(C:\Users\alvco\Pictures\Фото_Видео\2024\6\IMG_20240619_110430.jpg)
+  ~file: @file(C:\Users\alvco\Downloads\plug.pdf)
+  ~file: @file(C:\Users\alvco\Downloads\15589648.zip)
+}
