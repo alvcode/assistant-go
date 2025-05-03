@@ -36,6 +36,8 @@ type FileUseCase interface {
 	GetFileByHash(in dto.GetFileByHash) (*dto.FileResponse, error)
 	DeleteByID(fileID int, generalPath string) error
 	CleanUnused(generalPath string) error
+	GetAllowedMimeTypes() map[string][]string
+	GetAllowedExtensions() []string
 }
 
 type fileUseCase struct {
@@ -50,16 +52,37 @@ func NewFileUseCase(ctx context.Context, repositories *repository.Repositories) 
 	}
 }
 
+func (uc *fileUseCase) GetAllowedMimeTypes() map[string][]string {
+	return map[string][]string{
+		"image/jpeg":         {".jpeg", ".jpg"},
+		"image/png":          {".png"},
+		"image/gif":          {".gif"},
+		"application/pdf":    {".pdf"},
+		"application/zip":    {".zip", ".xlsx", ".docx"},
+		"application/msword": {".doc"},
+		"application/vnd.openxmlformats-officedocument.wordprocessingml.document": {".docx"},
+		"application/vnd.ms-excel": {".xls"},
+		"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {".xlsx"},
+		"application/octet-stream": {".doc", ".docx", ".xls", ".xlsx"},
+	}
+}
+
+func (uc *fileUseCase) GetAllowedExtensions() []string {
+	seen := make(map[string]struct{})
+	var result []string
+	for _, extSlice := range uc.GetAllowedMimeTypes() {
+		for _, extension := range extSlice {
+			if _, ok := seen[extension]; !ok {
+				seen[extension] = struct{}{}
+				result = append(result, extension)
+			}
+		}
+	}
+	return result
+}
+
 func (uc *fileUseCase) Upload(in dto.UploadFile, userEntity *entity.User) (*entity.File, error) {
 	fileService := service.NewFile().FileService()
-
-	var allowedMimeTypes = map[string][]string{
-		"image/jpeg":      {".jpeg", ".jpg"},
-		"image/png":       {".png"},
-		"image/gif":       {".gif"},
-		"application/pdf": {".pdf"},
-		"application/zip": {".zip"},
-	}
 
 	limitedReader := io.LimitReader(in.File, in.MaxSizeBytes+1)
 
@@ -98,7 +121,7 @@ func (uc *fileUseCase) Upload(in dto.UploadFile, userEntity *entity.User) (*enti
 	}
 
 	mimeType := http.DetectContentType(buffer)
-	extAllowed, allowed := allowedMimeTypes[mimeType]
+	extAllowed, allowed := uc.GetAllowedMimeTypes()[mimeType]
 	if !allowed {
 		return nil, ErrFileInvalidType
 	}

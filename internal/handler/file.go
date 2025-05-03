@@ -13,6 +13,7 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"strings"
 )
 
 var (
@@ -73,7 +74,18 @@ func (h *FileHandler) Upload(w http.ResponseWriter, r *http.Request) {
 		default:
 			BlockEventHandle(r, BlockEventOtherType)
 		}
-		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
+
+		var errorMsg string
+		if errors.Is(err, ucase.ErrFileInvalidType) || errors.Is(err, ucase.ErrFileExtensionDoesNotMatch) {
+			errorMsg = locale.T(
+				langRequest,
+				"file_invalid_type",
+				map[string]interface{}{"Formats": strings.Join(h.useCase.GetAllowedExtensions(), ", ")},
+			)
+		} else {
+			errorMsg = buildErrorMessage(langRequest, err)
+		}
+		SendErrorResponse(w, errorMsg, http.StatusUnprocessableEntity, 0)
 		return
 	}
 
