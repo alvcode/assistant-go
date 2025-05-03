@@ -23,7 +23,7 @@ type Config struct {
 	Cors              Cors
 	File              File
 	S3                S3
-	RateLimiter      RateLimiter
+	RateLimiter       RateLimiter
 }
 
 type HTTPServer struct {
@@ -56,7 +56,7 @@ type Cors struct {
 
 type RateLimiter struct {
 	AllowanceRequests int `env:"RATE_LIMITER_ALLOWANCE_REQUESTS" env-default:"150"`
-	TimeDurationMin   int `env:"RATE_LIMITER_TIME_DURATION_MINUTES" env-default:"3"`
+	TimeDurationSec   int `env:"RATE_LIMITER_TIME_DURATION_SECONDS" env-default:"180"`
 }
 
 type File struct {

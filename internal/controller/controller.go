@@ -44,7 +44,7 @@ func (controller *Init) SetRoutes(ctx context.Context) error {
 	controller.router.Handler(
 		http.MethodGet,
 		"/api/heartbeat",
-		handler.BuildHandler(heartbeatHandler.Heartbeat, handler.BlockIPMW),
+		handler.BuildHandler(heartbeatHandler.Heartbeat),
 	)
 
 	controller.setUserRoutes(ctx, repos)
@@ -165,11 +165,11 @@ func (controller *Init) setFiles(ctx context.Context, repositories *repository.R
 	controller.router.Handler(
 		http.MethodPost,
 		"/api/files",
-		handler.BuildHandler(fileHandler.Upload, handler.BlockIPMW, handler.LocaleMW, handler.AuthMW),
+		handler.BuildHandler(fileHandler.Upload, handler.AuthMW),
 	)
 	controller.router.Handler(
 		http.MethodGet,
 		"/api/files/hash/:hash",
-		handler.BuildHandler(fileHandler.GetByHash, handler.BlockIPMW, handler.LocaleMW),
+		handler.BuildHandler(fileHandler.GetByHash),
 	)
 }

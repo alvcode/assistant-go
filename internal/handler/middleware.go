@@ -4,9 +4,10 @@ import (
 	"assistant-go/internal/layer/dto"
 	"assistant-go/internal/layer/entity"
 	"assistant-go/internal/locale"
+	"assistant-go/internal/logging"
+	"assistant-go/internal/storage/postgres"
 	"context"
 	"errors"
-	"fmt"
 	"github.com/jackc/pgx/v5"
 	"net/http"
 	"strconv"
@@ -40,18 +41,10 @@ func ApplyMiddleware(h http.HandlerFunc, middlewares ...Middleware) http.Handler
 }
 
 func BuildHandler(h http.HandlerFunc, middlewares ...string) http.HandlerFunc {
-	var stack []Middleware
-
-	defaultMiddleware := []string{
-		BlockIPMW,
-		RateLimiterMW,
-		LocaleMW,
-	}
-
-	for _, dmw := range defaultMiddleware {
-		if mwFunc, exists := MapMiddleware[dmw]; exists {
-			stack = append(stack, mwFunc)
-		}
+	stack := []Middleware{
+		MapMiddleware[BlockIPMW],
+		MapMiddleware[RateLimiterMW],
+		MapMiddleware[LocaleMW],
 	}
 
 	for _, mw := range middlewares {
@@ -159,7 +152,7 @@ func RateLimiterMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		langRequest := locale.GetLangFromContext(r.Context())
 
 		allowRequests := appConf.RateLimiter.AllowanceRequests
-		timeDuration := appConf.RateLimiter.TimeDurationMin * 60
+		timeDuration := appConf.RateLimiter.TimeDurationSec
 
 		IPAddress, err := GetIpAddress(r)
 		if err != nil {
@@ -167,56 +160,73 @@ func RateLimiterMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		exists, err := rateLimiterRepository.CheckExists(IPAddress)
+		exists := true
+		foundIP, err := rateLimiterRepository.FindIP(IPAddress)
 		if err != nil {
-			SendErrorResponse(w, buildErrorMessage(langRequest, ErrSplitHostIP), http.StatusUnprocessableEntity, 0)
-			return
+			if errors.Is(err, pgx.ErrNoRows) {
+				exists = false
+			} else {
+				logging.GetLogger(r.Context()).Error(err)
+				SendErrorResponse(w, buildErrorMessage(langRequest, postgres.ErrUnexpectedDBError), http.StatusUnprocessableEntity, 0)
+				return
+			}
 		}
 
-		limiter := entity.RateLimiter{
+		limiter := &entity.RateLimiter{
 			IP:                IPAddress,
 			AllowanceRequests: allowRequests,
-			Timestamp:         int(time.Now().Unix()),
+			Timestamp:         time.Now().Unix(),
 		}
 
+		// записи нет, создаем
 		if exists == false {
-			_, err := rateLimiterRepository.UpsertIP(limiter)
+			err := rateLimiterRepository.UpsertIP(limiter)
 			if err != nil {
-				SendErrorResponse(w, buildErrorMessage(langRequest, ErrSplitHostIP), http.StatusUnprocessableEntity, 0)
+				logging.GetLogger(r.Context()).Error(err)
+				SendErrorResponse(w, buildErrorMessage(langRequest, postgres.ErrUnexpectedDBError), http.StatusUnprocessableEntity, 0)
 				return
 			}
 		}
 
-		foundIP, err := rateLimiterRepository.FoundIP(IPAddress)
-		if err != nil {
-			if !errors.Is(err, pgx.ErrNoRows) {
-				SendErrorResponse(w, buildErrorMessage(langRequest, ErrSplitHostIP), http.StatusUnprocessableEntity, 0)
+		// диапазон проверки протух. сброс !до настроечных!
+		limiterExpired := false
+		if exists && (time.Now().Unix()-foundIP.Timestamp > int64(timeDuration)) {
+			limiterExpired = true
+			err := rateLimiterRepository.UpsertIP(limiter)
+			if err != nil {
+				logging.GetLogger(r.Context()).Error(err)
+				SendErrorResponse(w, buildErrorMessage(langRequest, postgres.ErrUnexpectedDBError), http.StatusUnprocessableEntity, 0)
 				return
 			}
 		}
 
-		if int(time.Now().Unix())-foundIP.Timestamp > timeDuration {
-			_, err := rateLimiterRepository.UpsertIP(limiter)
-			if err != nil {
-				SendErrorResponse(w, buildErrorMessage(langRequest, ErrSplitHostIP), http.StatusUnprocessableEntity, 0)
-				return
+		var updateEntity *entity.RateLimiter
+		if !exists || (exists && limiterExpired) {
+			updateEntity = &entity.RateLimiter{
+				IP:                limiter.IP,
+				AllowanceRequests: limiter.AllowanceRequests,
+				Timestamp:         limiter.Timestamp,
+			}
+		} else if exists && !limiterExpired {
+			updateEntity = &entity.RateLimiter{
+				IP:                foundIP.IP,
+				AllowanceRequests: foundIP.AllowanceRequests,
+				Timestamp:         foundIP.Timestamp,
 			}
 		}
 
-		if foundIP.AllowanceRequests > 1 {
-			limiter.AllowanceRequests = foundIP.AllowanceRequests
-
-			updateIP, err := rateLimiterRepository.UpdateIP(limiter)
+		if updateEntity.AllowanceRequests > 0 {
+			updateEntity, err = rateLimiterRepository.UpdateIP(updateEntity)
 			if err != nil {
-				fmt.Println(err)
-				SendErrorResponse(w, buildErrorMessage(langRequest, ErrSplitHostIP), http.StatusUnprocessableEntity, 0)
+				logging.GetLogger(r.Context()).Error(err)
+				SendErrorResponse(w, buildErrorMessage(langRequest, postgres.ErrUnexpectedDBError), http.StatusUnprocessableEntity, 0)
 				return
 			}
 			w.Header().Set("X-Rate-Limit-Limit", strconv.Itoa(allowRequests))
-			w.Header().Set("X-Rate-Limit-Remaining", strconv.Itoa(updateIP.AllowanceRequests))
+			w.Header().Set("X-Rate-Limit-Remaining", strconv.Itoa(updateEntity.AllowanceRequests))
 		}
 
-		if foundIP.AllowanceRequests <= 0 {
+		if updateEntity.AllowanceRequests <= 0 {
 			BlockEventHandle(r, BlockEventTooManyRequests)
 			SendErrorResponse(w, "Too Many Requests", http.StatusTooManyRequests, 0)
 			return

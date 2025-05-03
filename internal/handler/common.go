@@ -131,7 +131,7 @@ func BlockEventHandle(r *http.Request, eventName string) {
 		refreshTokenMaxCount = 70
 		pageNotFoundMaxCount = 50
 		fileNotFoundMaxCount = 40
-		tooManyRequestsMaxCount = 30
+		tooManyRequestsMaxCount = 60
 	case 2:
 		blockMinute = 420 // 7 hour
 		allMaxCount = 150
@@ -142,7 +142,7 @@ func BlockEventHandle(r *http.Request, eventName string) {
 		refreshTokenMaxCount = 50
 		pageNotFoundMaxCount = 10
 		fileNotFoundMaxCount = 20
-		tooManyRequestsMaxCount = 7
+		tooManyRequestsMaxCount = 30
 	case 3:
 		blockMinute = 2880 // 2 day
 		allMaxCount = 70
@@ -153,7 +153,7 @@ func BlockEventHandle(r *http.Request, eventName string) {
 		refreshTokenMaxCount = 30
 		pageNotFoundMaxCount = 5
 		fileNotFoundMaxCount = 10
-		tooManyRequestsMaxCount = 3
+		tooManyRequestsMaxCount = 15
 	}
 
 	if blockEventStat.All >= allMaxCount ||
@@ -163,12 +163,10 @@ func BlockEventHandle(r *http.Request, eventName string) {
 		blockEventStat.Unauthorized >= unauthorizedMaxCount ||
 		blockEventStat.RefreshToken >= refreshTokenMaxCount ||
 		blockEventStat.PageNotFound >= pageNotFoundMaxCount ||
-		blockEventStat.FileNotFound >= fileNotFoundMaxCount {
-		blockEventStat.TooManyRequests <= tooManyRequestsMaxCount ||
-		blockEventStat.PageNotFound >= pageNotFoundMaxCount {
+		blockEventStat.FileNotFound >= fileNotFoundMaxCount ||
+		blockEventStat.TooManyRequests >= tooManyRequestsMaxCount {
 		unblockTime := time.Now().Add(time.Duration(blockMinute) * time.Minute).UTC()
 		_ = blockIpRepository.SetBlock(IPAddress, unblockTime)
-
 	}
 }
 
