@@ -36,8 +36,8 @@ func (controller *Init) SetRoutes(ctx context.Context) error {
 	//controller.router.Handler(http.MethodGet, "/swagger", http.RedirectHandler("/swagger/index.html", http.StatusMovedPermanently))
 	//controller.router.Handler(http.MethodGet, "/swagger/*any", httpSwagger.WrapHandler)
 
-	controller.router.NotFound = http.HandlerFunc(handler.PageNotFoundHandler)
-	controller.router.MethodNotAllowed = http.HandlerFunc(handler.PageNotFoundHandler)
+	controller.router.NotFound = handler.BuildHandler(handler.PageNotFoundHandler)
+	controller.router.MethodNotAllowed = handler.BuildHandler(handler.PageNotFoundHandler)
 
 	heartbeatHandler := handler.NewHeartbeatHandler()
 

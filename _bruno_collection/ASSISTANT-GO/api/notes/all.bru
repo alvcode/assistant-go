@@ -5,11 +5,15 @@ meta {
 }
 
 get {
-  url: {{domain}}/api/notes/?categoryId=1
+  url: {{domain}}/api/notes/?categoryId=2
   body: none
   auth: inherit
 }
 
 params:query {
-  categoryId: 1
+  categoryId: 2
+}
+
+headers {
+  ~locale: ru
 }
