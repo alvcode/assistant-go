@@ -12,6 +12,7 @@ type RateLimiterRepository interface {
 	UpsertIP(limiter *entity.RateLimiter) error
 	FindIP(ip string) (*entity.RateLimiter, error)
 	UpdateIP(limiter *entity.RateLimiter) (*entity.RateLimiter, error)
+	Clean() error
 }
 
 type rateLimiterRepository struct {
@@ -73,4 +74,13 @@ func (ur *rateLimiterRepository) UpdateIP(limiter *entity.RateLimiter) (*entity.
 		return nil, err
 	}
 	return limiter, nil
+}
+
+func (ur *rateLimiterRepository) Clean() error {
+	query := `TRUNCATE TABLE rate_limiter`
+	_, err := ur.db.Exec(ur.ctx, query)
+	if err != nil {
+		return err
+	}
+	return nil
 }

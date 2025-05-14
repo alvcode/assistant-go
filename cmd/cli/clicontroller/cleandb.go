@@ -48,6 +48,14 @@ func CleanDBInit(ctx context.Context, cfg *config.Config, db *pgxpool.Pool, mini
 		return
 	}
 
+	rateLimiterUseCase := ucase.NewRateLimiterUseCase(ctx, repos)
+	err = rateLimiterUseCase.Clean()
+	if err != nil {
+		fmt.Printf("Error clean rate limiters: %v", err)
+		logging.GetLogger(ctx).Errorf("Error clean rate limiters: %v", err)
+		return
+	}
+
 	db.Close()
 	fmt.Println("successfully")
 	logging.GetLogger(ctx).Println("successfully")
