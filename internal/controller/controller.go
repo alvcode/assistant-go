@@ -51,6 +51,7 @@ func (controller *Init) SetRoutes(ctx context.Context) error {
 	controller.setNotesCategories(ctx, repos)
 	controller.setNotes(ctx, repos)
 	controller.setFiles(ctx, repos)
+	controller.setDrive(ctx, repos)
 
 	return nil
 }
@@ -171,5 +172,16 @@ func (controller *Init) setFiles(ctx context.Context, repositories *repository.R
 		http.MethodGet,
 		"/api/files/hash/:hash",
 		handler.BuildHandler(fileHandler.GetByHash),
+	)
+}
+
+func (controller *Init) setDrive(ctx context.Context, repositories *repository.Repositories) {
+	driveUseCase := ucase.NewDriveUseCase(ctx, repositories)
+	driveHandler := handler.NewDriveHandler(driveUseCase)
+
+	controller.router.Handler(
+		http.MethodPost,
+		"/api/drive/directories",
+		handler.BuildHandler(driveHandler.CreateDirectory, handler.AuthMW),
 	)
 }

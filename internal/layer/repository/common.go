@@ -26,6 +26,7 @@ type Repositories struct {
 	StorageRepository      FileStorageRepository
 	FileNoteLinkRepository FileNoteLinkRepository
 	TransactionRepository  TransactionRepository
+	DriveStructRepository  DriveStructRepository
 }
 
 func NewRepositories(ctx context.Context, cfg *config.Config, db *pgxpool.Pool, minio *minio.Client) *Repositories {
@@ -46,6 +47,7 @@ func NewRepositories(ctx context.Context, cfg *config.Config, db *pgxpool.Pool, 
 		StorageRepository:      storageInterface,
 		FileNoteLinkRepository: NewFileNoteLinkRepository(ctx, db),
 		TransactionRepository:  &transactionRepository{ctx: ctx, db: db},
+		DriveStructRepository:  NewDriveStructRepository(ctx, db),
 	}
 }
 

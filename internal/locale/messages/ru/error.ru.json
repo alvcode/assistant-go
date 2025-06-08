@@ -27,5 +27,6 @@
   "file_not_found": "Файл не найден",
   "file_not_found_in_filesystem": "Файл не найден в файловой системе",
   "file_failed_to_send": "Ошибка отправки файла",
-  "file_system_is_full": "Файловая система переполнена"
+  "file_system_is_full": "Файловая система переполнена",
+  "drive_dir_exists": "Директория уже существует"
 }

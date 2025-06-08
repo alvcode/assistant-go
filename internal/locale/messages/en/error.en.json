@@ -27,5 +27,6 @@
   "file_not_found": "File not found",
   "file_not_found_in_filesystem": "File not found in file system",
   "file_failed_to_send": "Error sending file",
-  "file_system_is_full": "File system is full"
+  "file_system_is_full": "File system is full",
+  "drive_dir_exists": "The directory already exists"
 }

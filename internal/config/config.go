@@ -66,6 +66,11 @@ type File struct {
 	UploadPlace      string `env:"FILE_UPLOAD_PLACE" env-required:"true"`
 }
 
+type Drive struct {
+	UploadMaxSize int64 `env:"DRIVE_UPLOAD_MAX_SIZE"`
+	LimitPerUser  int64 `env:"DRIVE_LIMIT_STORAGE_PER_USER"`
+}
+
 type S3 struct {
 	Endpoint        string `env:"S3_ENDPOINT" env-default:""`
 	AccessKey       string `env:"S3_ACCESS_KEY" env-default:""`
