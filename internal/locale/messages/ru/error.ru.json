@@ -28,5 +28,6 @@
   "file_not_found_in_filesystem": "Файл не найден в файловой системе",
   "file_failed_to_send": "Ошибка отправки файла",
   "file_system_is_full": "Файловая система переполнена",
-  "drive_dir_exists": "Директория уже существует"
+  "drive_dir_exists": "Директория уже существует",
+  "drive_parent_id_not_found": "Родительская директория не найдена"
 }

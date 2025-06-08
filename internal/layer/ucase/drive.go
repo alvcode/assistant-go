@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/jackc/pgx/v5"
 	"time"
 )
 
@@ -16,7 +17,8 @@ const (
 )
 
 var (
-	ErrDriveDirectoryExists = errors.New("directory exists")
+	ErrDriveDirectoryExists  = errors.New("directory exists")
+	ErrDriveParentIdNotFound = errors.New("drive parent id does not exist")
 )
 
 type DriveUseCase interface {
@@ -36,9 +38,15 @@ func NewDriveUseCase(ctx context.Context, repositories *repository.Repositories)
 }
 
 func (uc *driveUseCase) CreateDirectory(dto *dto.DriveCreateDirectory, user *entity.User) error {
-	// нужно проверить существует ли parent_id в принципе
-
-	_, err := uc.repositories.DriveStructRepository.FindRow(user.ID, dto.Name, typeDirectory, dto.ParentId)
+	if dto.ParentID != nil {
+		_, err := uc.repositories.DriveStructRepository.FindByID(*dto.ParentID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return ErrDriveParentIdNotFound
+			}
+		}
+	}
+	_, err := uc.repositories.DriveStructRepository.FindRow(user.ID, dto.Name, typeDirectory, dto.ParentID)
 	fmt.Println(err)
 	if err == nil {
 		return ErrDriveDirectoryExists
@@ -47,7 +55,7 @@ func (uc *driveUseCase) CreateDirectory(dto *dto.DriveCreateDirectory, user *ent
 		UserID:    user.ID,
 		Name:      dto.Name,
 		Type:      typeDirectory,
-		ParentID:  dto.ParentId,
+		ParentID:  dto.ParentID,
 		CreatedAt: time.Now().UTC(),
 		UpdatedAt: time.Now().UTC(),
 	}

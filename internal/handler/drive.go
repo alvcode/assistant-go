@@ -46,7 +46,7 @@ func (h *DriveHandler) CreateDirectory(w http.ResponseWriter, r *http.Request) {
 
 	err = h.useCase.CreateDirectory(&createDirectoryDTO, authUser)
 	if err != nil {
-		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
+		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
 		return
 	}
 	SendResponse(w, http.StatusCreated, "HELLO")

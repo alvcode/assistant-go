@@ -255,6 +255,8 @@ func buildErrorMessage(lang string, err error) string {
 		return locale.T(lang, "file_system_is_full")
 	case errors.Is(err, ucase.ErrDriveDirectoryExists):
 		return locale.T(lang, "drive_dir_exists")
+	case errors.Is(err, ucase.ErrDriveParentIdNotFound):
+		return locale.T(lang, "drive_parent_id_not_found")
 	default:
 		return locale.T(lang, "unexpected_error")
 	}

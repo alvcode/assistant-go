@@ -7,6 +7,7 @@ import (
 )
 
 type DriveStructRepository interface {
+	FindByID(ID int) (*entity.DriveStruct, error)
 	FindRow(userID int, name string, rowType int8, parentID *int) (*entity.DriveStruct, error)
 	CreateDirectory(entity *entity.DriveStruct) error
 }
@@ -21,6 +22,26 @@ func NewDriveStructRepository(ctx context.Context, db *pgxpool.Pool) DriveStruct
 		ctx: ctx,
 		db:  db,
 	}
+}
+
+func (r *driveStructRepository) FindByID(ID int) (*entity.DriveStruct, error) {
+	query := `SELECT * FROM drive_structs WHERE id = $1`
+
+	row := r.db.QueryRow(r.ctx, query, ID)
+
+	var driveStruct entity.DriveStruct
+	if err := row.Scan(
+		&driveStruct.ID,
+		&driveStruct.UserID,
+		&driveStruct.Name,
+		&driveStruct.Type,
+		&driveStruct.ParentID,
+		&driveStruct.CreatedAt,
+		&driveStruct.UpdatedAt,
+	); err != nil {
+		return nil, err
+	}
+	return &driveStruct, nil
 }
 
 func (r *driveStructRepository) FindRow(
