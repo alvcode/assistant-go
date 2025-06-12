@@ -184,4 +184,14 @@ func (controller *Init) setDrive(ctx context.Context, repositories *repository.R
 		"/api/drive/directories",
 		handler.BuildHandler(driveHandler.CreateDirectory, handler.AuthMW),
 	)
+	controller.router.Handler(
+		http.MethodGet,
+		"/api/drive/tree",
+		handler.BuildHandler(driveHandler.GetTree, handler.AuthMW),
+	)
+	controller.router.Handler(
+		http.MethodPost,
+		"/api/drive/upload-file",
+		handler.BuildHandler(driveHandler.UploadFile, handler.AuthMW),
+	)
 }

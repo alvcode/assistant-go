@@ -4,9 +4,10 @@ import (
 	"assistant-go/internal/layer/dto"
 	"assistant-go/internal/layer/entity"
 	"assistant-go/internal/layer/repository"
+	"assistant-go/internal/logging"
+	"assistant-go/internal/storage/postgres"
 	"context"
 	"errors"
-	"fmt"
 	"github.com/jackc/pgx/v5"
 	"time"
 )
@@ -22,7 +23,8 @@ var (
 )
 
 type DriveUseCase interface {
-	CreateDirectory(dto *dto.DriveCreateDirectory, user *entity.User) error
+	CreateDirectory(dto *dto.DriveCreateDirectory, user *entity.User) ([]*entity.DriveStruct, error)
+	GetTree(parentID *int, user *entity.User) ([]*entity.DriveStruct, error)
 }
 
 type driveUseCase struct {
@@ -37,19 +39,33 @@ func NewDriveUseCase(ctx context.Context, repositories *repository.Repositories)
 	}
 }
 
-func (uc *driveUseCase) CreateDirectory(dto *dto.DriveCreateDirectory, user *entity.User) error {
+func (uc *driveUseCase) GetTree(parentID *int, user *entity.User) ([]*entity.DriveStruct, error) {
+	list, err := uc.repositories.DriveStructRepository.ListByUserID(user.ID, parentID)
+	if err != nil {
+		if !errors.Is(err, pgx.ErrNoRows) {
+			logging.GetLogger(uc.ctx).Error(err)
+			return nil, postgres.ErrUnexpectedDBError
+		}
+	}
+	return list, nil
+}
+
+func (uc *driveUseCase) CreateDirectory(dto *dto.DriveCreateDirectory, user *entity.User) ([]*entity.DriveStruct, error) {
 	if dto.ParentID != nil {
-		_, err := uc.repositories.DriveStructRepository.FindByID(*dto.ParentID)
+		parentStruct, err := uc.repositories.DriveStructRepository.GetByID(*dto.ParentID)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				return ErrDriveParentIdNotFound
+				return nil, ErrDriveParentIdNotFound
 			}
+		}
+		if parentStruct.UserID != user.ID {
+			return nil, ErrDriveDirectoryExists
 		}
 	}
 	_, err := uc.repositories.DriveStructRepository.FindRow(user.ID, dto.Name, typeDirectory, dto.ParentID)
-	fmt.Println(err)
+
 	if err == nil {
-		return ErrDriveDirectoryExists
+		return nil, ErrDriveDirectoryExists
 	}
 	createEntity := &entity.DriveStruct{
 		UserID:    user.ID,
@@ -61,8 +77,12 @@ func (uc *driveUseCase) CreateDirectory(dto *dto.DriveCreateDirectory, user *ent
 	}
 	err = uc.repositories.DriveStructRepository.CreateDirectory(createEntity)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return errors.New("директории создана, все ок. stop")
+	treeList, err := uc.GetTree(dto.ParentID, user)
+	if err != nil {
+		return nil, err
+	}
+	return treeList, nil
 }

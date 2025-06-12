@@ -22,6 +22,7 @@ type Config struct {
 	DB                Database
 	Cors              Cors
 	File              File
+	Drive             Drive
 	S3                S3
 	RateLimiter       RateLimiter
 }
@@ -67,8 +68,9 @@ type File struct {
 }
 
 type Drive struct {
-	UploadMaxSize int64 `env:"DRIVE_UPLOAD_MAX_SIZE"`
-	LimitPerUser  int64 `env:"DRIVE_LIMIT_STORAGE_PER_USER"`
+	UploadMaxSize int64  `env:"DRIVE_UPLOAD_MAX_SIZE"`
+	LimitPerUser  int64  `env:"DRIVE_LIMIT_STORAGE_PER_USER"`
+	SavePath      string `env:"FILE_SAVE_PATH" env-default:"./drive"`
 }
 
 type S3 struct {

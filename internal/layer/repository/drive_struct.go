@@ -7,9 +7,10 @@ import (
 )
 
 type DriveStructRepository interface {
-	FindByID(ID int) (*entity.DriveStruct, error)
+	GetByID(ID int) (*entity.DriveStruct, error)
 	FindRow(userID int, name string, rowType int8, parentID *int) (*entity.DriveStruct, error)
 	CreateDirectory(entity *entity.DriveStruct) error
+	ListByUserID(userID int, parentID *int) ([]*entity.DriveStruct, error)
 }
 
 type driveStructRepository struct {
@@ -24,7 +25,7 @@ func NewDriveStructRepository(ctx context.Context, db *pgxpool.Pool) DriveStruct
 	}
 }
 
-func (r *driveStructRepository) FindByID(ID int) (*entity.DriveStruct, error) {
+func (r *driveStructRepository) GetByID(ID int) (*entity.DriveStruct, error) {
 	query := `SELECT * FROM drive_structs WHERE id = $1`
 
 	row := r.db.QueryRow(r.ctx, query, ID)
@@ -93,4 +94,47 @@ func (r *driveStructRepository) CreateDirectory(in *entity.DriveStruct) error {
 		return err
 	}
 	return nil
+}
+
+func (r *driveStructRepository) ListByUserID(userID int, parentID *int) ([]*entity.DriveStruct, error) {
+	var (
+		query string
+		args  []any
+	)
+
+	if parentID == nil {
+		query = `select * from drive_structs where user_id = $1 and parent_id is null`
+		args = []any{userID}
+	} else {
+		query = `select * from drive_structs where user_id = $1 and parent_id = $2`
+		args = []any{userID, parentID}
+	}
+
+	rows, err := r.db.Query(r.ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	structs := make([]*entity.DriveStruct, 0)
+	for rows.Next() {
+		ds := &entity.DriveStruct{}
+		if err := rows.Scan(
+			&ds.ID,
+			&ds.UserID,
+			&ds.Name,
+			&ds.Type,
+			&ds.ParentID,
+			&ds.CreatedAt,
+			&ds.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		structs = append(structs, ds)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return structs, nil
 }
