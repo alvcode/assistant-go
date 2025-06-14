@@ -18,6 +18,7 @@ type Config struct {
 	Env               string `env:"ENV" env-required:"true"`
 	BlockingParanoia  int    `env:"BLOCKING_PARANOIA" env-default:"2"`
 	ThisServiceDomain string `env:"THIS_SERVICE_DOMAIN" env-required:"true"`
+	UploadPlace       string `env:"FILE_UPLOAD_PLACE" env-required:"true"`
 	HTTP              HTTPServer
 	DB                Database
 	Cors              Cors
@@ -64,13 +65,12 @@ type File struct {
 	UploadMaxSize    int64  `env:"FILE_UPLOAD_MAX_SIZE" env-required:"true"`
 	LimitFileStorage int64  `env:"FILE_LIMIT_FILE_STORAGE" env-required:"true"`
 	SavePath         string `env:"FILE_SAVE_PATH" env-default:"./uploads/user_files"`
-	UploadPlace      string `env:"FILE_UPLOAD_PLACE" env-required:"true"`
 }
 
 type Drive struct {
 	UploadMaxSize int64  `env:"DRIVE_UPLOAD_MAX_SIZE"`
 	LimitPerUser  int64  `env:"DRIVE_LIMIT_STORAGE_PER_USER"`
-	SavePath      string `env:"FILE_SAVE_PATH" env-default:"./drive"`
+	SavePath      string `env:"FILE_SAVE_PATH" env-default:"./uploads/drive"`
 }
 
 type S3 struct {

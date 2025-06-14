@@ -27,11 +27,12 @@ type Repositories struct {
 	FileNoteLinkRepository FileNoteLinkRepository
 	TransactionRepository  TransactionRepository
 	DriveStructRepository  DriveStructRepository
+	DriveFileRepository    DriveFileRepository
 }
 
 func NewRepositories(ctx context.Context, cfg *config.Config, db *pgxpool.Pool, minio *minio.Client) *Repositories {
 	var storageInterface FileStorageRepository
-	if cfg.File.UploadPlace == config.FileUploadS3Place {
+	if cfg.UploadPlace == config.FileUploadS3Place {
 		storageInterface = NewS3StorageRepository(ctx, minio, cfg.S3.BucketName)
 	} else {
 		storageInterface = NewLocalStorageRepository(ctx)
@@ -48,6 +49,7 @@ func NewRepositories(ctx context.Context, cfg *config.Config, db *pgxpool.Pool, 
 		FileNoteLinkRepository: NewFileNoteLinkRepository(ctx, db),
 		TransactionRepository:  &transactionRepository{ctx: ctx, db: db},
 		DriveStructRepository:  NewDriveStructRepository(ctx, db),
+		DriveFileRepository:    NewDriveFileRepository(ctx, db),
 	}
 }
 

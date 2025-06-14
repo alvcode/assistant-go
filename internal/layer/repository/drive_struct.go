@@ -9,7 +9,7 @@ import (
 type DriveStructRepository interface {
 	GetByID(ID int) (*entity.DriveStruct, error)
 	FindRow(userID int, name string, rowType int8, parentID *int) (*entity.DriveStruct, error)
-	CreateDirectory(entity *entity.DriveStruct) error
+	Create(entity *entity.DriveStruct) (*entity.DriveStruct, error)
 	ListByUserID(userID int, parentID *int) ([]*entity.DriveStruct, error)
 }
 
@@ -81,7 +81,7 @@ func (r *driveStructRepository) FindRow(
 	return &driveStruct, nil
 }
 
-func (r *driveStructRepository) CreateDirectory(in *entity.DriveStruct) error {
+func (r *driveStructRepository) Create(in *entity.DriveStruct) (*entity.DriveStruct, error) {
 	query := `
 		INSERT INTO drive_structs 
 		    (user_id, name, type, parent_id, created_at, updated_at) 
@@ -91,9 +91,9 @@ func (r *driveStructRepository) CreateDirectory(in *entity.DriveStruct) error {
 	row := r.db.QueryRow(r.ctx, query, in.UserID, in.Name, in.Type, in.ParentID, in.CreatedAt, in.UpdatedAt)
 
 	if err := row.Scan(&in.ID); err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return in, nil
 }
 
 func (r *driveStructRepository) ListByUserID(userID int, parentID *int) ([]*entity.DriveStruct, error) {

@@ -7,6 +7,7 @@ import (
 	"assistant-go/internal/locale"
 	"assistant-go/internal/logging"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"mime/multipart"
 	"net/http"
@@ -111,6 +112,20 @@ func (h *DriveHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var parentID *int
+	parentIDStr := r.URL.Query().Get("parentId")
+
+	if parentIDStr != "" {
+		parentIDInt, err := strconv.Atoi(parentIDStr)
+
+		if err != nil {
+			BlockEventHandle(r, BlockEventInputDataType)
+			SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
+			return
+		}
+		parentID = &parentIDInt
+	}
+
 	defer func(file multipart.File) {
 		err := file.Close()
 		if err != nil {
@@ -125,5 +140,47 @@ func (h *DriveHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
 		MaxSizeBytes:          appConf.Drive.UploadMaxSize << 20,
 		StorageMaxSizePerUser: appConf.Drive.LimitPerUser << 20,
 		SavePath:              appConf.Drive.SavePath,
+		ParentID:              parentID,
+	}
+
+	driveStructList, err := h.useCase.UploadFile(uploadFileDto, authUser)
+	if err != nil {
+		switch {
+		case errors.Is(err, ucase.ErrDriveParentIdNotFound),
+			errors.Is(err, ucase.ErrDriveFileNotSafeFilename),
+			errors.Is(err, ucase.ErrDriveFileTooLarge):
+			BlockEventHandle(r, BlockEventInputDataType)
+		default:
+			BlockEventHandle(r, BlockEventOtherType)
+		}
+
+		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
+		return
+	}
+
+	result := vmodel.DriveStructsFromEntities(driveStructList)
+	SendResponse(w, http.StatusCreated, result)
+	return
+}
+
+func (h *DriveHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	langRequest := locale.GetLangFromContext(r.Context())
+
+	authUser, err := GetAuthUser(r)
+	if err != nil {
+		BlockEventHandle(r, BlockEventUnauthorizedType)
+		SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
+		return
+	}
+
+	if structIDStr := params.ByName("id"); noteIDStr != "" {
+		noteIDInt, err := strconv.Atoi(noteIDStr)
+
+		if err != nil {
+			BlockEventHandle(r, BlockEventInputDataType)
+			SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
+			return
+		}
+		noteID.ID = noteIDInt
 	}
 }

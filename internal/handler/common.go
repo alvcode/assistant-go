@@ -257,6 +257,14 @@ func buildErrorMessage(lang string, err error) string {
 		return locale.T(lang, "drive_dir_exists")
 	case errors.Is(err, ucase.ErrDriveParentIdNotFound):
 		return locale.T(lang, "drive_parent_id_not_found")
+	case errors.Is(err, ucase.ErrDriveFileTooLarge):
+		return locale.T(lang, "file_too_large")
+	case errors.Is(err, ucase.ErrDriveFileSystemIsFull):
+		return locale.T(lang, "file_system_is_full")
+	case errors.Is(err, ucase.ErrDriveFileNotSafeFilename):
+		return locale.T(lang, "file_not_safe_filename")
+	case errors.Is(err, ucase.ErrDriveFileSave):
+		return locale.T(lang, "file_error_save")
 	default:
 		return locale.T(lang, "unexpected_error")
 	}

@@ -24,6 +24,7 @@ type DriveUploadFile struct {
 	MaxSizeBytes          int64
 	StorageMaxSizePerUser int64
 	SavePath              string
+	ParentID              *int
 }
 
 func (dto *DriveUploadFile) Validate(lang string) error {

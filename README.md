@@ -39,7 +39,7 @@ server {
 
         server_name api.<domain>.<com>;
 
-        # You need to sync this parameter with .env FILE_UPLOAD_MAX_SIZE
+        # You need to sync this parameter with .env FILE_UPLOAD_MAX_SIZE and DRIVE_UPLOAD_MAX_SIZE
         client_max_body_size 20m;
         
         #add_header X-Frame-Options "SAMEORIGIN";
