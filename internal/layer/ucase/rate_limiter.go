@@ -11,13 +11,13 @@ type RateLimiterUseCase interface {
 
 type rateLimiterUseCase struct {
 	ctx          context.Context
-	repositories repository.Repositories
+	repositories *repository.Repositories
 }
 
 func NewRateLimiterUseCase(ctx context.Context, repositories *repository.Repositories) RateLimiterUseCase {
 	return &rateLimiterUseCase{
 		ctx:          ctx,
-		repositories: *repositories,
+		repositories: repositories,
 	}
 }
 
