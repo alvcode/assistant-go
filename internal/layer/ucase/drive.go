@@ -38,6 +38,7 @@ type DriveUseCase interface {
 	CreateDirectory(dto *dto.DriveCreateDirectory, user *entity.User) ([]*entity.DriveStruct, error)
 	GetTree(parentID *int, user *entity.User) ([]*entity.DriveStruct, error)
 	UploadFile(in dto.DriveUploadFile, user *entity.User) ([]*entity.DriveStruct, error)
+	Delete(structID int, user *entity.User) error
 }
 
 type driveUseCase struct {
@@ -199,4 +200,8 @@ func (uc *driveUseCase) UploadFile(in dto.DriveUploadFile, user *entity.User) ([
 		return nil, err
 	}
 	return treeList, nil
+}
+
+func (uc *driveUseCase) Delete(structID int, user *entity.User) error {
+
 }

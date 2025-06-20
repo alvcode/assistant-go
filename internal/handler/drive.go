@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/julienschmidt/httprouter"
 	"mime/multipart"
 	"net/http"
 	"strconv"
@@ -173,14 +174,27 @@ func (h *DriveHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if structIDStr := params.ByName("id"); noteIDStr != "" {
-		noteIDInt, err := strconv.Atoi(noteIDStr)
+	var structID int
+
+	params := httprouter.ParamsFromContext(r.Context())
+	if structIDStr := params.ByName("id"); structIDStr != "" {
+		noteIDInt, err := strconv.Atoi(structIDStr)
 
 		if err != nil {
 			BlockEventHandle(r, BlockEventInputDataType)
 			SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
 			return
 		}
-		noteID.ID = noteIDInt
+		structID = noteIDInt
 	}
+
+	err = h.useCase.Delete(structID, authUser)
+	if err != nil {
+		//BlockEventHandle(r, BlockEventUnauthorizedType)
+		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
+		return
+	}
+
+	SendResponse(w, http.StatusNoContent, nil)
+	return
 }
