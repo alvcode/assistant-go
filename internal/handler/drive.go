@@ -188,7 +188,7 @@ func (h *DriveHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		structID = noteIDInt
 	}
 
-	err = h.useCase.Delete(structID, authUser)
+	err = h.useCase.Delete(structID, appConf.Drive.SavePath, authUser)
 	if err != nil {
 		//BlockEventHandle(r, BlockEventUnauthorizedType)
 		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)

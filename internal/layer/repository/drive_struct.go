@@ -11,6 +11,8 @@ type DriveStructRepository interface {
 	FindRow(userID int, name string, rowType int8, parentID *int) (*entity.DriveStruct, error)
 	Create(entity *entity.DriveStruct) (*entity.DriveStruct, error)
 	ListByUserID(userID int, parentID *int) ([]*entity.DriveStruct, error)
+	GetAllRecursive(userID int, structID int) ([]*entity.DriveStruct, error)
+	DeleteRecursive(userID int, structID int) error
 }
 
 type driveStructRepository struct {
@@ -137,4 +139,75 @@ func (r *driveStructRepository) ListByUserID(userID int, parentID *int) ([]*enti
 		return nil, err
 	}
 	return structs, nil
+}
+
+func (r *driveStructRepository) GetAllRecursive(userID int, structID int) ([]*entity.DriveStruct, error) {
+	query := `
+		WITH RECURSIVE structs AS (
+			SELECT *
+			FROM drive_structs 
+			WHERE id = $1 and user_id = $2
+		
+			UNION ALL
+		
+			SELECT ds.*
+			FROM drive_structs ds
+			INNER JOIN structs s ON ds.parent_id = s.id
+		)
+		SELECT * FROM structs
+	`
+
+	rows, err := r.db.Query(r.ctx, query, structID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	structs := make([]*entity.DriveStruct, 0)
+	for rows.Next() {
+		ds := &entity.DriveStruct{}
+		if err := rows.Scan(
+			&ds.ID,
+			&ds.UserID,
+			&ds.Name,
+			&ds.Type,
+			&ds.ParentID,
+			&ds.CreatedAt,
+			&ds.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		structs = append(structs, ds)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return structs, nil
+}
+
+func (r *driveStructRepository) DeleteRecursive(userID int, structID int) error {
+	query := `
+		DELETE FROM drive_structs
+		WHERE id in (
+		    WITH RECURSIVE structs AS (
+				SELECT *
+				FROM drive_structs 
+				WHERE id = $1 and user_id = $2
+			
+				UNION ALL
+			
+				SELECT ds.*
+				FROM drive_structs ds
+				INNER JOIN structs s ON ds.parent_id = s.id
+			)
+			SELECT id FROM structs
+		)
+	`
+
+	_, err := r.db.Exec(r.ctx, query, structID, userID)
+	if err != nil {
+		return err
+	}
+	return nil
 }

@@ -20,6 +20,7 @@ type FileStorageRepository interface {
 	Save(in *dto.SaveFile) error
 	GetFile(filePath string) (io.Reader, error)
 	Delete(filePath string) error
+	DeleteAll(filePaths []string) error
 }
 
 type localStorageRepository struct {
@@ -98,6 +99,16 @@ func (r *localStorageRepository) Delete(filePath string) error {
 	return nil
 }
 
+func (r *localStorageRepository) DeleteAll(filePaths []string) error {
+	for _, filePath := range filePaths {
+		err := r.Delete(filePath)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (r *s3StorageRepository) Save(in *dto.SaveFile) error {
 	_, err := r.minio.PutObject(
 		r.ctx,
@@ -136,5 +147,27 @@ func (r *s3StorageRepository) Delete(filePath string) error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func (r *s3StorageRepository) DeleteAll(filePaths []string) error {
+	objectCh := make(chan minio.ObjectInfo)
+
+	// Горутина для отправки объектов в канал
+	go func() {
+		defer close(objectCh)
+		for _, key := range filePaths {
+			objectCh <- minio.ObjectInfo{
+				Key: key,
+			}
+		}
+	}()
+
+	errorCh := r.minio.RemoveObjects(r.ctx, r.bucketName, objectCh, minio.RemoveObjectsOptions{})
+
+	for err := range errorCh {
+		logging.GetLogger(r.ctx).Errorf("Ошибка удаления объекта %s: %v", err.ObjectName, err.Err)
+	}
+
 	return nil
 }

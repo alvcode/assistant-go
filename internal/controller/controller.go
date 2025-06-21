@@ -197,6 +197,6 @@ func (controller *Init) setDrive(ctx context.Context, repositories *repository.R
 	controller.router.Handler(
 		http.MethodDelete,
 		"/api/drive/:id",
-		handler.BuildHandler(driveHandler.UploadFile, handler.AuthMW),
+		handler.BuildHandler(driveHandler.Delete, handler.AuthMW),
 	)
 }

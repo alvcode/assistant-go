@@ -32,13 +32,14 @@ var (
 var (
 	ErrDriveDirectoryExists  = errors.New("directory exists")
 	ErrDriveParentIdNotFound = errors.New("drive parent id does not exist")
+	ErrDriveStructNotFound   = errors.New("drive struct not found")
 )
 
 type DriveUseCase interface {
 	CreateDirectory(dto *dto.DriveCreateDirectory, user *entity.User) ([]*entity.DriveStruct, error)
 	GetTree(parentID *int, user *entity.User) ([]*entity.DriveStruct, error)
 	UploadFile(in dto.DriveUploadFile, user *entity.User) ([]*entity.DriveStruct, error)
-	Delete(structID int, user *entity.User) error
+	Delete(structID int, savePath string, user *entity.User) error
 }
 
 type driveUseCase struct {
@@ -202,6 +203,43 @@ func (uc *driveUseCase) UploadFile(in dto.DriveUploadFile, user *entity.User) ([
 	return treeList, nil
 }
 
-func (uc *driveUseCase) Delete(structID int, user *entity.User) error {
+func (uc *driveUseCase) Delete(structID int, savePath string, user *entity.User) error {
+	driveStruct, err := uc.repositories.DriveStructRepository.GetByID(structID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrDriveStructNotFound
+		}
+	}
+	if driveStruct.UserID != user.ID {
+		return ErrDriveStructNotFound
+	}
 
+	existsFiles := true
+	deleteFileList, err := uc.repositories.DriveFileRepository.GetAllRecursive(structID, user.ID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			existsFiles = false
+		} else {
+			return err
+		}
+	}
+
+	if existsFiles {
+		var keys []string
+		for _, file := range deleteFileList {
+			keys = append(keys, filepath.Join(savePath, file.Path))
+		}
+
+		if len(keys) > 0 {
+			_ = uc.repositories.StorageRepository.DeleteAll(keys)
+		}
+	}
+
+	// удаление записей из БД из двух таблиц
+	err = uc.repositories.DriveStructRepository.DeleteRecursive(user.ID, structID)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
