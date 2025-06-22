@@ -2,6 +2,7 @@ package handler
 
 import (
 	"assistant-go/internal/layer/dto"
+	"assistant-go/internal/layer/repository"
 	"assistant-go/internal/layer/ucase"
 	"assistant-go/internal/layer/vmodel"
 	"assistant-go/internal/locale"
@@ -10,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/julienschmidt/httprouter"
+	"io"
 	"mime/multipart"
 	"net/http"
 	"strconv"
@@ -175,22 +177,128 @@ func (h *DriveHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var structID int
-
 	params := httprouter.ParamsFromContext(r.Context())
 	if structIDStr := params.ByName("id"); structIDStr != "" {
-		noteIDInt, err := strconv.Atoi(structIDStr)
+		structIDInt, err := strconv.Atoi(structIDStr)
 
 		if err != nil {
 			BlockEventHandle(r, BlockEventInputDataType)
 			SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
 			return
 		}
-		structID = noteIDInt
+		structID = structIDInt
 	}
 
 	err = h.useCase.Delete(structID, appConf.Drive.SavePath, authUser)
 	if err != nil {
 		//BlockEventHandle(r, BlockEventUnauthorizedType)
+		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
+		return
+	}
+
+	SendResponse(w, http.StatusNoContent, nil)
+	return
+}
+
+func (h *DriveHandler) GetFile(w http.ResponseWriter, r *http.Request) {
+	langRequest := locale.GetLangFromContext(r.Context())
+
+	authUser, err := GetAuthUser(r)
+	if err != nil {
+		BlockEventHandle(r, BlockEventUnauthorizedType)
+		SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
+		return
+	}
+
+	var structID int
+	params := httprouter.ParamsFromContext(r.Context())
+	if structIDStr := params.ByName("id"); structIDStr != "" {
+		structIDInt, err := strconv.Atoi(structIDStr)
+
+		if err != nil {
+			BlockEventHandle(r, BlockEventInputDataType)
+			SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
+			return
+		}
+		structID = structIDInt
+	}
+
+	fileDto, err := h.useCase.GetFile(structID, appConf.Drive.SavePath, authUser)
+	if err != nil {
+		var responseStatus int
+		if errors.Is(err, ucase.ErrFileNotFound) {
+			responseStatus = http.StatusNotFound
+			BlockEventHandle(r, BlockEventFileNotFoundType)
+		} else if errors.Is(err, repository.ErrFileNotFoundInFilesystem) {
+			responseStatus = http.StatusNotFound
+		} else {
+			responseStatus = http.StatusUnprocessableEntity
+		}
+		SendErrorResponse(w, buildErrorMessage(langRequest, err), responseStatus, 0)
+		return
+	}
+	defer func() {
+		if closer, ok := fileDto.File.(io.Closer); ok {
+			_ = closer.Close()
+		}
+	}()
+
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", fileDto.OriginalFilename))
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.WriteHeader(http.StatusOK)
+
+	_, err = io.Copy(w, fileDto.File)
+	if err != nil {
+		SendErrorResponse(
+			w,
+			fmt.Sprintf("%s: %v", locale.T(langRequest, "file_failed_to_send"), err),
+			http.StatusInternalServerError,
+			0,
+		)
+		return
+	}
+	return
+}
+
+func (h *DriveHandler) Rename(w http.ResponseWriter, r *http.Request) {
+	langRequest := locale.GetLangFromContext(r.Context())
+	var renameDTO dto.DriveRenameStruct
+
+	authUser, err := GetAuthUser(r)
+	if err != nil {
+		BlockEventHandle(r, BlockEventUnauthorizedType)
+		SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
+		return
+	}
+
+	var structID int
+	params := httprouter.ParamsFromContext(r.Context())
+	if structIDStr := params.ByName("id"); structIDStr != "" {
+		structIDInt, err := strconv.Atoi(structIDStr)
+
+		if err != nil {
+			BlockEventHandle(r, BlockEventInputDataType)
+			SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
+			return
+		}
+		structID = structIDInt
+	}
+
+	err = json.NewDecoder(r.Body).Decode(&renameDTO)
+	if err != nil {
+		BlockEventHandle(r, BlockEventDecodeBodyType)
+		SendErrorResponse(w, locale.T(langRequest, "error_reading_request_body"), http.StatusBadRequest, 0)
+		return
+	}
+
+	if err = renameDTO.Validate(langRequest); err != nil {
+		BlockEventHandle(r, BlockEventInputDataType)
+		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
+		return
+	}
+
+	err = h.useCase.Rename(structID, renameDTO.Name, authUser)
+	if err != nil {
 		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
 		return
 	}

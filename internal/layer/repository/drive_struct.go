@@ -10,6 +10,7 @@ type DriveStructRepository interface {
 	GetByID(ID int) (*entity.DriveStruct, error)
 	FindRow(userID int, name string, rowType int8, parentID *int) (*entity.DriveStruct, error)
 	Create(entity *entity.DriveStruct) (*entity.DriveStruct, error)
+	Update(in *entity.DriveStruct) error
 	ListByUserID(userID int, parentID *int) ([]*entity.DriveStruct, error)
 	GetAllRecursive(userID int, structID int) ([]*entity.DriveStruct, error)
 	DeleteRecursive(userID int, structID int) error
@@ -96,6 +97,19 @@ func (r *driveStructRepository) Create(in *entity.DriveStruct) (*entity.DriveStr
 		return nil, err
 	}
 	return in, nil
+}
+
+func (r *driveStructRepository) Update(in *entity.DriveStruct) error {
+	query := `
+		UPDATE drive_structs SET user_id = $1, name = $2, type = $3, parent_id = $4, created_at = $5, updated_at = $6
+		WHERE id = $7
+	`
+
+	_, err := r.db.Exec(r.ctx, query, in.UserID, in.Name, in.Type, in.ParentID, in.CreatedAt, in.UpdatedAt, in.ID)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (r *driveStructRepository) ListByUserID(userID int, parentID *int) ([]*entity.DriveStruct, error) {

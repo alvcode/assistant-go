@@ -34,3 +34,15 @@ func (dto *DriveUploadFile) Validate(lang string) error {
 	}
 	return nil
 }
+
+type DriveRenameStruct struct {
+	Name string `json:"name" validate:"required,min=1,max=350"`
+}
+
+func (dto *DriveRenameStruct) Validate(lang string) error {
+	err := vld.Validate.Struct(dto)
+	if err != nil {
+		return vld.TextFromFirstError(err, lang)
+	}
+	return nil
+}

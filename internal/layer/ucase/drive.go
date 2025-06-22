@@ -27,12 +27,9 @@ var (
 	ErrDriveFileSystemIsFull    = errors.New("drive file system is full")
 	ErrDriveFileNotSafeFilename = errors.New("drive file not safe filename")
 	ErrDriveFileSave            = errors.New("drive unable to save file")
-)
-
-var (
-	ErrDriveDirectoryExists  = errors.New("directory exists")
-	ErrDriveParentIdNotFound = errors.New("drive parent id does not exist")
-	ErrDriveStructNotFound   = errors.New("drive struct not found")
+	ErrDriveDirectoryExists     = errors.New("directory exists")
+	ErrDriveParentIdNotFound    = errors.New("drive parent id does not exist")
+	ErrDriveStructNotFound      = errors.New("drive struct not found")
 )
 
 type DriveUseCase interface {
@@ -40,6 +37,8 @@ type DriveUseCase interface {
 	GetTree(parentID *int, user *entity.User) ([]*entity.DriveStruct, error)
 	UploadFile(in dto.DriveUploadFile, user *entity.User) ([]*entity.DriveStruct, error)
 	Delete(structID int, savePath string, user *entity.User) error
+	GetFile(structID int, savePath string, user *entity.User) (*dto.FileResponse, error)
+	Rename(structID int, newName string, user *entity.User) error
 }
 
 type driveUseCase struct {
@@ -237,6 +236,63 @@ func (uc *driveUseCase) Delete(structID int, savePath string, user *entity.User)
 
 	// удаление записей из БД из двух таблиц
 	err = uc.repositories.DriveStructRepository.DeleteRecursive(user.ID, structID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (uc *driveUseCase) GetFile(structID int, savePath string, user *entity.User) (*dto.FileResponse, error) {
+	driveStruct, err := uc.repositories.DriveStructRepository.GetByID(structID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrFileNotFound
+		}
+		return nil, err
+	}
+	if driveStruct.UserID != user.ID {
+		return nil, ErrFileNotFound
+	}
+	if driveStruct.Type != typeFile {
+		return nil, ErrFileNotFound
+	}
+
+	driveFile, err := uc.repositories.DriveFileRepository.GetByStructID(driveStruct.ID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrFileNotFound
+		}
+	}
+
+	fullPath := filepath.Join(savePath, driveFile.Path)
+	fileReader, err := uc.repositories.StorageRepository.GetFile(fullPath)
+	if err != nil {
+		logging.GetLogger(uc.ctx).Error(err)
+		return nil, err
+	}
+
+	fileResponse := &dto.FileResponse{
+		File:             fileReader,
+		OriginalFilename: driveStruct.Name,
+	}
+	return fileResponse, nil
+}
+
+func (uc *driveUseCase) Rename(structID int, newName string, user *entity.User) error {
+	driveStruct, err := uc.repositories.DriveStructRepository.GetByID(structID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrFileNotFound
+		}
+		return err
+	}
+	if driveStruct.UserID != user.ID {
+		return ErrFileNotFound
+	}
+
+	driveStruct.Name = newName
+	err = uc.repositories.DriveStructRepository.Update(driveStruct)
 	if err != nil {
 		return err
 	}

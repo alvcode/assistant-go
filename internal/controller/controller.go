@@ -190,6 +190,11 @@ func (controller *Init) setDrive(ctx context.Context, repositories *repository.R
 		handler.BuildHandler(driveHandler.GetTree, handler.AuthMW),
 	)
 	controller.router.Handler(
+		http.MethodGet,
+		"/api/drive/files/:id",
+		handler.BuildHandler(driveHandler.GetFile, handler.AuthMW),
+	)
+	controller.router.Handler(
 		http.MethodPost,
 		"/api/drive/upload-file",
 		handler.BuildHandler(driveHandler.UploadFile, handler.AuthMW),
@@ -198,5 +203,10 @@ func (controller *Init) setDrive(ctx context.Context, repositories *repository.R
 		http.MethodDelete,
 		"/api/drive/:id",
 		handler.BuildHandler(driveHandler.Delete, handler.AuthMW),
+	)
+	controller.router.Handler(
+		http.MethodPatch,
+		"/api/drive/files/:id/rename",
+		handler.BuildHandler(driveHandler.Rename, handler.AuthMW),
 	)
 }

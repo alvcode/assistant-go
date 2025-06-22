@@ -8,6 +8,7 @@ import (
 
 type DriveFileRepository interface {
 	GetStorageSize(userID int) (int64, error)
+	GetByStructID(structID int) (*entity.DriveFile, error)
 	GetLastID() (int, error)
 	Create(in *entity.DriveFile) (*entity.DriveFile, error)
 	GetAllRecursive(structID int, userID int) ([]*entity.DriveFile, error)
@@ -39,6 +40,25 @@ func (r *driveFileRepository) GetStorageSize(userID int) (int64, error) {
 		return 0, err
 	}
 	return result, nil
+}
+
+func (r *driveFileRepository) GetByStructID(structID int) (*entity.DriveFile, error) {
+	query := `select * from drive_files where drive_struct_id = $1`
+
+	var result entity.DriveFile
+	err := r.db.QueryRow(r.ctx, query, structID).Scan(
+		&result.ID,
+		&result.DriveStructID,
+		&result.Path,
+		&result.Ext,
+		&result.Size,
+		&result.CreatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &result, nil
 }
 
 func (r *driveFileRepository) GetLastID() (int, error) {
