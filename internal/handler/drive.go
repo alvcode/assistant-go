@@ -306,3 +306,23 @@ func (h *DriveHandler) Rename(w http.ResponseWriter, r *http.Request) {
 	SendResponse(w, http.StatusNoContent, nil)
 	return
 }
+
+func (h *DriveHandler) Space(w http.ResponseWriter, r *http.Request) {
+	langRequest := locale.GetLangFromContext(r.Context())
+
+	authUser, err := GetAuthUser(r)
+	if err != nil {
+		BlockEventHandle(r, BlockEventUnauthorizedType)
+		SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
+		return
+	}
+
+	dtoSpace, err := h.useCase.Space(authUser, appConf.Drive.LimitPerUser<<20)
+	if err != nil {
+		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
+		return
+	}
+
+	SendResponse(w, http.StatusOK, dtoSpace)
+	return
+}

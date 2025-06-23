@@ -209,4 +209,9 @@ func (controller *Init) setDrive(ctx context.Context, repositories *repository.R
 		"/api/drive/files/:id/rename",
 		handler.BuildHandler(driveHandler.Rename, handler.AuthMW),
 	)
+	controller.router.Handler(
+		http.MethodGet,
+		"/api/drive/space",
+		handler.BuildHandler(driveHandler.Space, handler.AuthMW),
+	)
 }

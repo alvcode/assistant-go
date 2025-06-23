@@ -46,3 +46,8 @@ func (dto *DriveRenameStruct) Validate(lang string) error {
 	}
 	return nil
 }
+
+type DriveSpace struct {
+	Total int64 `json:"total"`
+	Used  int64 `json:"used"`
+}

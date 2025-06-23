@@ -39,6 +39,7 @@ type DriveUseCase interface {
 	Delete(structID int, savePath string, user *entity.User) error
 	GetFile(structID int, savePath string, user *entity.User) (*dto.FileResponse, error)
 	Rename(structID int, newName string, user *entity.User) error
+	Space(user *entity.User, totalSpace int64) (*dto.DriveSpace, error)
 }
 
 type driveUseCase struct {
@@ -298,4 +299,17 @@ func (uc *driveUseCase) Rename(structID int, newName string, user *entity.User) 
 	}
 
 	return nil
+}
+
+func (uc *driveUseCase) Space(user *entity.User, totalSpace int64) (*dto.DriveSpace, error) {
+	result := &dto.DriveSpace{}
+	result.Total = totalSpace
+
+	usedSpace, err := uc.repositories.DriveFileRepository.GetStorageSize(user.ID)
+	if err != nil {
+		return nil, err
+	}
+	result.Used = usedSpace
+
+	return result, nil
 }
