@@ -17,8 +17,6 @@ import (
 	"strconv"
 )
 
-var ()
-
 type DriveHandler struct {
 	useCase ucase.DriveUseCase
 }
