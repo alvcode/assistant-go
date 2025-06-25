@@ -3,6 +3,7 @@ package dto
 import (
 	"assistant-go/pkg/vld"
 	"mime/multipart"
+	"time"
 )
 
 type DriveCreateDirectory struct {
@@ -50,4 +51,14 @@ func (dto *DriveRenameStruct) Validate(lang string) error {
 type DriveSpace struct {
 	Total int64 `json:"total"`
 	Used  int64 `json:"used"`
+}
+
+type DriveTree struct {
+	ID        int       `db:"id" json:"id"`
+	UserID    int       `db:"user_id" json:"user_id"`
+	Name      string    `db:"name" json:"name"`
+	Type      int8      `db:"type" json:"type"`
+	Size      int64     `db:"size" json:"size"`
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 }

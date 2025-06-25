@@ -33,9 +33,9 @@ var (
 )
 
 type DriveUseCase interface {
-	CreateDirectory(dto *dto.DriveCreateDirectory, user *entity.User) ([]*entity.DriveStruct, error)
-	GetTree(parentID *int, user *entity.User) ([]*entity.DriveStruct, error)
-	UploadFile(in dto.DriveUploadFile, user *entity.User) ([]*entity.DriveStruct, error)
+	CreateDirectory(dto *dto.DriveCreateDirectory, user *entity.User) ([]*dto.DriveTree, error)
+	GetTree(parentID *int, user *entity.User) ([]*dto.DriveTree, error)
+	UploadFile(in dto.DriveUploadFile, user *entity.User) ([]*dto.DriveTree, error)
 	Delete(structID int, savePath string, user *entity.User) error
 	GetFile(structID int, savePath string, user *entity.User) (*dto.FileResponse, error)
 	Rename(structID int, newName string, user *entity.User) error
@@ -54,8 +54,8 @@ func NewDriveUseCase(ctx context.Context, repositories *repository.Repositories)
 	}
 }
 
-func (uc *driveUseCase) GetTree(parentID *int, user *entity.User) ([]*entity.DriveStruct, error) {
-	list, err := uc.repositories.DriveStructRepository.ListByUserID(user.ID, parentID)
+func (uc *driveUseCase) GetTree(parentID *int, user *entity.User) ([]*dto.DriveTree, error) {
+	list, err := uc.repositories.DriveStructRepository.TreeByUserID(user.ID, parentID)
 	if err != nil {
 		if !errors.Is(err, pgx.ErrNoRows) {
 			logging.GetLogger(uc.ctx).Error(err)
@@ -65,7 +65,7 @@ func (uc *driveUseCase) GetTree(parentID *int, user *entity.User) ([]*entity.Dri
 	return list, nil
 }
 
-func (uc *driveUseCase) CreateDirectory(dto *dto.DriveCreateDirectory, user *entity.User) ([]*entity.DriveStruct, error) {
+func (uc *driveUseCase) CreateDirectory(dto *dto.DriveCreateDirectory, user *entity.User) ([]*dto.DriveTree, error) {
 	if dto.ParentID != nil {
 		parentStruct, err := uc.repositories.DriveStructRepository.GetByID(*dto.ParentID)
 		if err != nil {
@@ -102,7 +102,7 @@ func (uc *driveUseCase) CreateDirectory(dto *dto.DriveCreateDirectory, user *ent
 	return treeList, nil
 }
 
-func (uc *driveUseCase) UploadFile(in dto.DriveUploadFile, user *entity.User) ([]*entity.DriveStruct, error) {
+func (uc *driveUseCase) UploadFile(in dto.DriveUploadFile, user *entity.User) ([]*dto.DriveTree, error) {
 	fileService := service.NewFile().FileService()
 	limitedReader := io.LimitReader(in.File, in.MaxSizeBytes+1)
 

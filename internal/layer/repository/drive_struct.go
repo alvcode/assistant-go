@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"assistant-go/internal/layer/dto"
 	"assistant-go/internal/layer/entity"
 	"context"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -11,7 +12,7 @@ type DriveStructRepository interface {
 	FindRow(userID int, name string, rowType int8, parentID *int) (*entity.DriveStruct, error)
 	Create(entity *entity.DriveStruct) (*entity.DriveStruct, error)
 	Update(in *entity.DriveStruct) error
-	ListByUserID(userID int, parentID *int) ([]*entity.DriveStruct, error)
+	TreeByUserID(userID int, parentID *int) ([]*dto.DriveTree, error)
 	GetAllRecursive(userID int, structID int) ([]*entity.DriveStruct, error)
 	DeleteRecursive(userID int, structID int) error
 }
@@ -112,17 +113,29 @@ func (r *driveStructRepository) Update(in *entity.DriveStruct) error {
 	return nil
 }
 
-func (r *driveStructRepository) ListByUserID(userID int, parentID *int) ([]*entity.DriveStruct, error) {
+func (r *driveStructRepository) TreeByUserID(userID int, parentID *int) ([]*dto.DriveTree, error) {
 	var (
 		query string
 		args  []any
 	)
 
 	if parentID == nil {
-		query = `select * from drive_structs where user_id = $1 and parent_id is null`
+		query = `
+			select 
+			    ds.id, ds.user_id, ds.name, ds.type, ds.created_at, ds.updated_at,
+			    coalesce((select df.size from drive_files df where df.drive_struct_id = ds.id), 0) as size
+			from drive_structs ds 
+			where user_id = $1 and parent_id is null
+		`
 		args = []any{userID}
 	} else {
-		query = `select * from drive_structs where user_id = $1 and parent_id = $2`
+		query = `
+			select 
+			    ds.id, ds.user_id, ds.name, ds.type, ds.created_at, ds.updated_at,
+			    coalesce((select df.size from drive_files df where df.drive_struct_id = ds.id), 0) as size
+			from drive_structs ds
+			where user_id = $1 and parent_id = $2
+		`
 		args = []any{userID, parentID}
 	}
 
@@ -132,17 +145,17 @@ func (r *driveStructRepository) ListByUserID(userID int, parentID *int) ([]*enti
 	}
 	defer rows.Close()
 
-	structs := make([]*entity.DriveStruct, 0)
+	structs := make([]*dto.DriveTree, 0)
 	for rows.Next() {
-		ds := &entity.DriveStruct{}
+		ds := &dto.DriveTree{}
 		if err := rows.Scan(
 			&ds.ID,
 			&ds.UserID,
 			&ds.Name,
 			&ds.Type,
-			&ds.ParentID,
 			&ds.CreatedAt,
 			&ds.UpdatedAt,
+			&ds.Size,
 		); err != nil {
 			return nil, err
 		}

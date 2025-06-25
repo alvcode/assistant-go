@@ -4,7 +4,6 @@ import (
 	"assistant-go/internal/layer/dto"
 	"assistant-go/internal/layer/repository"
 	"assistant-go/internal/layer/ucase"
-	"assistant-go/internal/layer/vmodel"
 	"assistant-go/internal/locale"
 	"assistant-go/internal/logging"
 	"encoding/json"
@@ -50,14 +49,13 @@ func (h *DriveHandler) GetTree(w http.ResponseWriter, r *http.Request) {
 		parentID = &parentIDInt
 	}
 
-	driveStructList, err := h.useCase.GetTree(parentID, authUser)
+	driveTreeList, err := h.useCase.GetTree(parentID, authUser)
 	if err != nil {
 		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
 		return
 	}
 
-	result := vmodel.DriveStructsFromEntities(driveStructList)
-	SendResponse(w, http.StatusOK, result)
+	SendResponse(w, http.StatusOK, driveTreeList)
 	return
 }
 
@@ -84,14 +82,13 @@ func (h *DriveHandler) CreateDirectory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	driveStructList, err := h.useCase.CreateDirectory(&createDirectoryDTO, authUser)
+	driveTreeList, err := h.useCase.CreateDirectory(&createDirectoryDTO, authUser)
 	if err != nil {
 		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
 		return
 	}
 
-	result := vmodel.DriveStructsFromEntities(driveStructList)
-	SendResponse(w, http.StatusCreated, result)
+	SendResponse(w, http.StatusCreated, driveTreeList)
 	return
 }
 
@@ -144,7 +141,7 @@ func (h *DriveHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
 		ParentID:              parentID,
 	}
 
-	driveStructList, err := h.useCase.UploadFile(uploadFileDto, authUser)
+	driveTreeList, err := h.useCase.UploadFile(uploadFileDto, authUser)
 	if err != nil {
 		switch {
 		case errors.Is(err, ucase.ErrDriveParentIdNotFound),
@@ -159,8 +156,7 @@ func (h *DriveHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result := vmodel.DriveStructsFromEntities(driveStructList)
-	SendResponse(w, http.StatusCreated, result)
+	SendResponse(w, http.StatusCreated, driveTreeList)
 	return
 }
 
