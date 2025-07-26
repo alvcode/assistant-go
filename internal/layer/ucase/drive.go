@@ -28,6 +28,7 @@ var (
 	ErrDriveFileNotSafeFilename = errors.New("drive file not safe filename")
 	ErrDriveFileSave            = errors.New("drive unable to save file")
 	ErrDriveDirectoryExists     = errors.New("directory exists")
+	ErrDriveFilenameExists      = errors.New("drive filename exists")
 	ErrDriveParentIdNotFound    = errors.New("drive parent id does not exist")
 	ErrDriveStructNotFound      = errors.New("drive struct not found")
 )
@@ -140,6 +141,12 @@ func (uc *driveUseCase) UploadFile(in dto.DriveUploadFile, user *entity.User) ([
 	safeName := filepath.Base(in.OriginalFilename)
 	if strings.Contains(safeName, "..") {
 		return nil, ErrDriveFileNotSafeFilename
+	}
+
+	_, err = uc.repositories.DriveStructRepository.FindRow(user.ID, in.OriginalFilename, typeFile, in.ParentID)
+
+	if err == nil {
+		return nil, ErrDriveFilenameExists
 	}
 
 	newFilename, err := fileService.GenerateNewFileName(fileExt)

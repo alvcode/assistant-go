@@ -267,6 +267,8 @@ func buildErrorMessage(lang string, err error) string {
 		return locale.T(lang, "file_error_save")
 	case errors.Is(err, ucase.ErrDriveStructNotFound):
 		return locale.T(lang, "drive_struct_not_found")
+	case errors.Is(err, ucase.ErrDriveFilenameExists):
+		return locale.T(lang, "drive_filename_exists")
 	default:
 		return locale.T(lang, "unexpected_error")
 	}

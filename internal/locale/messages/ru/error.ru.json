@@ -29,6 +29,7 @@
   "file_failed_to_send": "Ошибка отправки файла",
   "file_system_is_full": "Файловая система переполнена",
   "drive_dir_exists": "Директория уже существует",
+  "drive_filename_exists": "Файл с таким именем уже существует в директории",
   "drive_parent_id_not_found": "Родительская директория не найдена",
   "drive_struct_not_found": "Структура диска не найдена"
 }
