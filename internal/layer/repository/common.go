@@ -84,6 +84,7 @@ func WithTransaction(ctx context.Context, tr TransactionRepository, fn func(tx p
 	return tx.Commit(ctx)
 }
 
+// TODO: еще не тестировался
 func WithTransactionResult[T any](
 	ctx context.Context,
 	tr transactionRepository,
