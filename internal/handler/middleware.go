@@ -85,7 +85,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		userTokenEntity, err := userRepository.FindUserToken(dtoUserToken.Token)
+		userTokenEntity, err := userRepository.FindUserToken(r.Context(), dtoUserToken.Token)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				BlockEventHandle(r, BlockEventUnauthorizedType)
@@ -103,7 +103,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		userEntity, err := userRepository.FindById(userTokenEntity.UserId)
+		userEntity, err := userRepository.FindById(r.Context(), userTokenEntity.UserId)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				BlockEventHandle(r, BlockEventUnauthorizedType)

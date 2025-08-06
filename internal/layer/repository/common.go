@@ -38,34 +38,69 @@ func NewRepositories(ctx context.Context, cfg *config.Config, db *pgxpool.Pool, 
 		storageInterface = NewLocalStorageRepository(ctx)
 	}
 	return &Repositories{
-		UserRepository:         NewUserRepository(ctx, db),
+		UserRepository:         NewUserRepository(db),
 		NoteRepository:         NewNoteRepository(ctx, db),
-		NoteCategoryRepository: NewNoteCategoryRepository(ctx, db),
+		NoteCategoryRepository: NewNoteCategoryRepository(db),
 		BlockIPRepository:      NewBlockIpRepository(ctx, db),
 		BlockEventRepository:   NewBlockEventRepository(ctx, db),
 		RateLimiterRepository:  NewRateLimiterRepository(ctx, db),
 		FileRepository:         NewFileRepository(ctx, db),
 		StorageRepository:      storageInterface,
 		FileNoteLinkRepository: NewFileNoteLinkRepository(ctx, db),
-		TransactionRepository:  &transactionRepository{ctx: ctx, db: db},
+		TransactionRepository:  &transactionRepository{db: db},
 		DriveStructRepository:  NewDriveStructRepository(ctx, db),
 		DriveFileRepository:    NewDriveFileRepository(ctx, db),
 	}
 }
 
 type TransactionRepository interface {
-	GetTransaction() (pgx.Tx, error)
+	GetTransaction(ctx context.Context) (pgx.Tx, error)
 }
 
 type transactionRepository struct {
-	ctx context.Context
-	db  *pgxpool.Pool
+	db *pgxpool.Pool
 }
 
-func (r *transactionRepository) GetTransaction() (pgx.Tx, error) {
-	tx, err := r.db.BeginTx(r.ctx, pgx.TxOptions{})
+func (r *transactionRepository) GetTransaction(ctx context.Context) (pgx.Tx, error) {
+	tx, err := r.db.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return nil, err
 	}
 	return tx, nil
+}
+
+func WithTransaction(ctx context.Context, tr TransactionRepository, fn func(tx pgx.Tx) error) error {
+	tx, err := tr.GetTransaction(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = fn(tx)
+	if err != nil {
+		_ = tx.Rollback(ctx)
+		return err
+	}
+
+	return tx.Commit(ctx)
+}
+
+func WithTransactionResult[T any](
+	ctx context.Context,
+	tr transactionRepository,
+	fn func(tx pgx.Tx) (T, error),
+) (T, error) {
+	var zero T
+
+	tx, err := tr.GetTransaction(ctx)
+	if err != nil {
+		return zero, err
+	}
+
+	result, err := fn(tx)
+	if err != nil {
+		_ = tx.Rollback(ctx)
+		return zero, err
+	}
+
+	return result, tx.Commit(ctx)
 }

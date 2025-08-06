@@ -26,7 +26,7 @@ type positionService struct {
 }
 
 func (ps *positionService) CalculateForNew(userID int, parentCatID *int) (int, error) {
-	maxPosition, err := ps.repositories.NoteCategoryRepository.GetMaxPosition(userID, parentCatID)
+	maxPosition, err := ps.repositories.NoteCategoryRepository.GetMaxPosition(ps.ctx, userID, parentCatID)
 	if err != nil {
 		return 0, err
 	}
@@ -34,7 +34,7 @@ func (ps *positionService) CalculateForNew(userID int, parentCatID *int) (int, e
 }
 
 func (ps *positionService) PositionUp(userID int, catID int) error {
-	categories, err := ps.repositories.NoteCategoryRepository.FindAll(userID)
+	categories, err := ps.repositories.NoteCategoryRepository.FindAll(ps.ctx, userID)
 	if err != nil {
 		logging.GetLogger(ps.ctx).Error(err)
 		return postgres.ErrUnexpectedDBError
@@ -90,7 +90,7 @@ func (ps *positionService) PositionUp(userID int, catID int) error {
 			newPosition := i + 1
 			if grouped[key][i].Position != newPosition {
 				grouped[key][i].Position = newPosition
-				err = ps.repositories.NoteCategoryRepository.UpdatePosition(grouped[key][i])
+				err = ps.repositories.NoteCategoryRepository.UpdatePosition(ps.ctx, grouped[key][i])
 				if err != nil {
 					logging.GetLogger(ps.ctx).Error(err)
 					return postgres.ErrUnexpectedDBError

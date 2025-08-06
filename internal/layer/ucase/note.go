@@ -41,7 +41,7 @@ func NewNoteUseCase(ctx context.Context, repositories *repository.Repositories) 
 }
 
 func (uc *noteUseCase) Create(in dto.NoteCreate, userEntity *entity.User) (*entity.Note, error) {
-	_, err := uc.repositories.NoteCategoryRepository.FindByIDAndUser(userEntity.ID, in.CategoryID)
+	_, err := uc.repositories.NoteCategoryRepository.FindByIDAndUser(uc.ctx, userEntity.ID, in.CategoryID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrCategoryNotFound
@@ -84,7 +84,7 @@ func (uc *noteUseCase) Create(in dto.NoteCreate, userEntity *entity.User) (*enti
 }
 
 func (uc *noteUseCase) GetAll(catIdStruct dto.RequiredID, userEntity *entity.User) ([]*entity.Note, error) {
-	categories, err := uc.repositories.NoteCategoryRepository.FindByIDAndUserWithChildren(userEntity.ID, catIdStruct.ID)
+	categories, err := uc.repositories.NoteCategoryRepository.FindByIDAndUserWithChildren(uc.ctx, userEntity.ID, catIdStruct.ID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrCategoryNotFound
@@ -122,7 +122,7 @@ func (uc *noteUseCase) Update(in dto.NoteUpdate, userEntity *entity.User) (*enti
 	}
 
 	// проверим, что текущая категория заметки принадлежит пользователю
-	_, err = uc.repositories.NoteCategoryRepository.FindByIDAndUser(userEntity.ID, currentNote.CategoryID)
+	_, err = uc.repositories.NoteCategoryRepository.FindByIDAndUser(uc.ctx, userEntity.ID, currentNote.CategoryID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrNoteNotFound
@@ -133,7 +133,7 @@ func (uc *noteUseCase) Update(in dto.NoteUpdate, userEntity *entity.User) (*enti
 
 	// проверим, что новая категория заметки принадлежит пользователю, если она изменяется
 	if currentNote.CategoryID != in.CategoryID {
-		_, err := uc.repositories.NoteCategoryRepository.FindByIDAndUser(userEntity.ID, in.CategoryID)
+		_, err := uc.repositories.NoteCategoryRepository.FindByIDAndUser(uc.ctx, userEntity.ID, in.CategoryID)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return nil, ErrCategoryNotFound
@@ -205,7 +205,7 @@ func (uc *noteUseCase) GetOne(noteIdStruct dto.RequiredID, userEntity *entity.Us
 	}
 
 	// проверим, что текущая категория заметки принадлежит пользователю
-	_, err = uc.repositories.NoteCategoryRepository.FindByIDAndUser(userEntity.ID, currentNote.CategoryID)
+	_, err = uc.repositories.NoteCategoryRepository.FindByIDAndUser(uc.ctx, userEntity.ID, currentNote.CategoryID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrNoteNotFound
@@ -228,7 +228,7 @@ func (uc *noteUseCase) DeleteOne(noteIdStruct dto.RequiredID, userEntity *entity
 	}
 
 	// проверим, что текущая категория заметки принадлежит пользователю
-	_, err = uc.repositories.NoteCategoryRepository.FindByIDAndUser(userEntity.ID, currentNote.CategoryID)
+	_, err = uc.repositories.NoteCategoryRepository.FindByIDAndUser(uc.ctx, userEntity.ID, currentNote.CategoryID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrNoteNotFound
@@ -281,7 +281,7 @@ func (uc *noteUseCase) Pin(noteIdStruct dto.RequiredID, userEntity *entity.User)
 	}
 
 	// проверим, что текущая категория заметки принадлежит пользователю
-	_, err = uc.repositories.NoteCategoryRepository.FindByIDAndUser(userEntity.ID, currentNote.CategoryID)
+	_, err = uc.repositories.NoteCategoryRepository.FindByIDAndUser(uc.ctx, userEntity.ID, currentNote.CategoryID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrNoteNotFound
@@ -308,7 +308,7 @@ func (uc *noteUseCase) UnPin(noteIdStruct dto.RequiredID, userEntity *entity.Use
 		return postgres.ErrUnexpectedDBError
 	}
 
-	_, err = uc.repositories.NoteCategoryRepository.FindByIDAndUser(userEntity.ID, currentNote.CategoryID)
+	_, err = uc.repositories.NoteCategoryRepository.FindByIDAndUser(uc.ctx, userEntity.ID, currentNote.CategoryID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrNoteNotFound
