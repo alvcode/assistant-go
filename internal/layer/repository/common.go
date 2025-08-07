@@ -33,23 +33,23 @@ type Repositories struct {
 func NewRepositories(ctx context.Context, cfg *config.Config, db *pgxpool.Pool, minio *minio.Client) *Repositories {
 	var storageInterface FileStorageRepository
 	if cfg.UploadPlace == config.FileUploadS3Place {
-		storageInterface = NewS3StorageRepository(ctx, minio, cfg.S3.BucketName)
+		storageInterface = NewS3StorageRepository(minio, cfg.S3.BucketName)
 	} else {
-		storageInterface = NewLocalStorageRepository(ctx)
+		storageInterface = NewLocalStorageRepository()
 	}
 	return &Repositories{
 		UserRepository:         NewUserRepository(db),
-		NoteRepository:         NewNoteRepository(ctx, db),
+		NoteRepository:         NewNoteRepository(db),
 		NoteCategoryRepository: NewNoteCategoryRepository(db),
-		BlockIPRepository:      NewBlockIpRepository(ctx, db),
-		BlockEventRepository:   NewBlockEventRepository(ctx, db),
-		RateLimiterRepository:  NewRateLimiterRepository(ctx, db),
-		FileRepository:         NewFileRepository(ctx, db),
+		BlockIPRepository:      NewBlockIpRepository(db),
+		BlockEventRepository:   NewBlockEventRepository(db),
+		RateLimiterRepository:  NewRateLimiterRepository(db),
+		FileRepository:         NewFileRepository(db),
 		StorageRepository:      storageInterface,
-		FileNoteLinkRepository: NewFileNoteLinkRepository(ctx, db),
+		FileNoteLinkRepository: NewFileNoteLinkRepository(db),
 		TransactionRepository:  &transactionRepository{db: db},
-		DriveStructRepository:  NewDriveStructRepository(ctx, db),
-		DriveFileRepository:    NewDriveFileRepository(ctx, db),
+		DriveStructRepository:  NewDriveStructRepository(db),
+		DriveFileRepository:    NewDriveFileRepository(db),
 	}
 }
 

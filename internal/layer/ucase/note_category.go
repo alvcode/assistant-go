@@ -101,7 +101,7 @@ func (uc *noteCategoryUseCase) Delete(userId int, catId int) error {
 		return ErrCategoryNotFound
 	}
 
-	checkExists, err := uc.repositories.NoteRepository.CheckExistsByCategoryIDs(catIds)
+	checkExists, err := uc.repositories.NoteRepository.CheckExistsByCategoryIDs(uc.ctx, catIds)
 	if err != nil {
 		if !errors.Is(err, pgx.ErrNoRows) {
 			logging.GetLogger(uc.ctx).Error(err)

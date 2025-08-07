@@ -8,49 +8,45 @@ import (
 )
 
 type RateLimiterRepository interface {
-	CheckExists(ip string) (bool, error)
-	UpsertIP(limiter *entity.RateLimiter) error
-	FindIP(ip string) (*entity.RateLimiter, error)
-	UpdateIP(limiter *entity.RateLimiter) (*entity.RateLimiter, error)
+	CheckExists(ctx context.Context, ip string) (bool, error)
+	UpsertIP(ctx context.Context, limiter *entity.RateLimiter) error
+	FindIP(ctx context.Context, ip string) (*entity.RateLimiter, error)
+	UpdateIP(ctx context.Context, limiter *entity.RateLimiter) (*entity.RateLimiter, error)
 }
 
 type rateLimiterRepository struct {
-	ctx context.Context
-	db  *pgxpool.Pool
+	db *pgxpool.Pool
 }
 
-func NewRateLimiterRepository(ctx context.Context, db *pgxpool.Pool) RateLimiterRepository {
-	return &rateLimiterRepository{
-		ctx: ctx,
-		db:  db,
-	}
+func NewRateLimiterRepository(db *pgxpool.Pool) RateLimiterRepository {
+	return &rateLimiterRepository{db: db}
 }
 
-func (ur *rateLimiterRepository) CheckExists(ip string) (bool, error) {
+func (ur *rateLimiterRepository) CheckExists(ctx context.Context, ip string) (bool, error) {
 	query := `SELECT EXISTS (SELECT 1 FROM rate_limiter WHERE ip = $1)`
 
 	var exists bool
-	err := ur.db.QueryRow(ur.ctx, query, ip).Scan(&exists)
+	err := ur.db.QueryRow(ctx, query, ip).Scan(&exists)
 	if err != nil {
 		return false, err
 	}
 	return exists, nil
 }
 
-func (ur *rateLimiterRepository) UpsertIP(limiter *entity.RateLimiter) error {
+func (ur *rateLimiterRepository) UpsertIP(ctx context.Context, limiter *entity.RateLimiter) error {
 	query := `INSERT INTO rate_limiter (ip, allowance, timestamp) VALUES ($1, $2, $3) ON CONFLICT (ip) DO UPDATE SET allowance = $2, timestamp = $3`
 
-	_, err := ur.db.Exec(ur.ctx, query, limiter.IP, limiter.AllowanceRequests, limiter.Timestamp)
+	_, err := ur.db.Exec(ctx, query, limiter.IP, limiter.AllowanceRequests, limiter.Timestamp)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (ur *rateLimiterRepository) FindIP(ip string) (*entity.RateLimiter, error) {
+func (ur *rateLimiterRepository) FindIP(ctx context.Context, ip string) (*entity.RateLimiter, error) {
 	query := `SELECT ip, allowance, timestamp FROM rate_limiter WHERE ip = $1`
 
-	row := ur.db.QueryRow(ur.ctx, query, ip)
+	row := ur.db.QueryRow(ctx, query, ip)
 
 	var limiter entity.RateLimiter
 	var ipVal net.IPNet
@@ -65,10 +61,10 @@ func (ur *rateLimiterRepository) FindIP(ip string) (*entity.RateLimiter, error) 
 	return &limiter, nil
 }
 
-func (ur *rateLimiterRepository) UpdateIP(limiter *entity.RateLimiter) (*entity.RateLimiter, error) {
+func (ur *rateLimiterRepository) UpdateIP(ctx context.Context, limiter *entity.RateLimiter) (*entity.RateLimiter, error) {
 	query := `UPDATE rate_limiter SET allowance = allowance - 1 WHERE ip = $1 returning allowance`
 
-	row := ur.db.QueryRow(ur.ctx, query, limiter.IP)
+	row := ur.db.QueryRow(ctx, query, limiter.IP)
 	if err := row.Scan(&limiter.AllowanceRequests); err != nil {
 		return nil, err
 	}

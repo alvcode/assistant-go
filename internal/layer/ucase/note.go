@@ -68,14 +68,14 @@ func (uc *noteUseCase) Create(in dto.NoteCreate, userEntity *entity.User) (*enti
 		Pinned:     pinned,
 	}
 
-	data, err := uc.repositories.NoteRepository.Create(noteEntity)
+	data, err := uc.repositories.NoteRepository.Create(uc.ctx, noteEntity)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
 		return nil, postgres.ErrUnexpectedDBError
 	}
 
 	fileIDs, _ := getFileIDsByBlocks(string(in.NoteBlocks))
-	err = uc.repositories.FileNoteLinkRepository.Upsert(data.ID, fileIDs)
+	err = uc.repositories.FileNoteLinkRepository.Upsert(uc.ctx, data.ID, fileIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +101,7 @@ func (uc *noteUseCase) GetAll(catIdStruct dto.RequiredID, userEntity *entity.Use
 		return nil, ErrCategoryNotFound
 	}
 
-	notes, err := uc.repositories.NoteRepository.GetMinimalByCategoryIds(catIds)
+	notes, err := uc.repositories.NoteRepository.GetMinimalByCategoryIds(uc.ctx, catIds)
 	if err != nil {
 		if !errors.Is(err, pgx.ErrNoRows) {
 			logging.GetLogger(uc.ctx).Error(err)
@@ -112,7 +112,7 @@ func (uc *noteUseCase) GetAll(catIdStruct dto.RequiredID, userEntity *entity.Use
 }
 
 func (uc *noteUseCase) Update(in dto.NoteUpdate, userEntity *entity.User) (*entity.Note, error) {
-	currentNote, err := uc.repositories.NoteRepository.GetById(in.ID)
+	currentNote, err := uc.repositories.NoteRepository.GetById(uc.ctx, in.ID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrNoteNotFound
@@ -156,14 +156,14 @@ func (uc *noteUseCase) Update(in dto.NoteUpdate, userEntity *entity.User) (*enti
 	currentNote.UpdatedAt = time.Now().UTC()
 	currentNote.Pinned = pinned
 
-	err = uc.repositories.NoteRepository.Update(currentNote)
+	err = uc.repositories.NoteRepository.Update(uc.ctx, currentNote)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
 		return nil, postgres.ErrUnexpectedDBError
 	}
 
 	fileIDs, _ := getFileIDsByBlocks(string(in.NoteBlocks))
-	err = uc.repositories.FileNoteLinkRepository.Upsert(currentNote.ID, fileIDs)
+	err = uc.repositories.FileNoteLinkRepository.Upsert(uc.ctx, currentNote.ID, fileIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -195,7 +195,7 @@ func getFileIDsByBlocks(blocks string) ([]int, error) {
 }
 
 func (uc *noteUseCase) GetOne(noteIdStruct dto.RequiredID, userEntity *entity.User) (*entity.Note, error) {
-	currentNote, err := uc.repositories.NoteRepository.GetById(noteIdStruct.ID)
+	currentNote, err := uc.repositories.NoteRepository.GetById(uc.ctx, noteIdStruct.ID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrNoteNotFound
@@ -218,7 +218,7 @@ func (uc *noteUseCase) GetOne(noteIdStruct dto.RequiredID, userEntity *entity.Us
 }
 
 func (uc *noteUseCase) DeleteOne(noteIdStruct dto.RequiredID, userEntity *entity.User) error {
-	currentNote, err := uc.repositories.NoteRepository.GetById(noteIdStruct.ID)
+	currentNote, err := uc.repositories.NoteRepository.GetById(uc.ctx, noteIdStruct.ID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrNoteNotFound
@@ -237,13 +237,13 @@ func (uc *noteUseCase) DeleteOne(noteIdStruct dto.RequiredID, userEntity *entity
 		return postgres.ErrUnexpectedDBError
 	}
 
-	err = uc.repositories.NoteRepository.DeleteOne(currentNote.ID)
+	err = uc.repositories.NoteRepository.DeleteOne(uc.ctx, currentNote.ID)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
 		return postgres.ErrUnexpectedDBError
 	}
 
-	err = uc.repositories.FileNoteLinkRepository.DeleteByNoteID(currentNote.ID)
+	err = uc.repositories.FileNoteLinkRepository.DeleteByNoteID(uc.ctx, currentNote.ID)
 	if err != nil {
 		return err
 	}
@@ -271,7 +271,7 @@ func (uc *noteUseCase) getNoteTitle(title string, blocks string) *string {
 }
 
 func (uc *noteUseCase) Pin(noteIdStruct dto.RequiredID, userEntity *entity.User) error {
-	currentNote, err := uc.repositories.NoteRepository.GetById(noteIdStruct.ID)
+	currentNote, err := uc.repositories.NoteRepository.GetById(uc.ctx, noteIdStruct.ID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrNoteNotFound
@@ -290,7 +290,7 @@ func (uc *noteUseCase) Pin(noteIdStruct dto.RequiredID, userEntity *entity.User)
 		return postgres.ErrUnexpectedDBError
 	}
 
-	err = uc.repositories.NoteRepository.Pin(currentNote.ID)
+	err = uc.repositories.NoteRepository.Pin(uc.ctx, currentNote.ID)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
 		return postgres.ErrUnexpectedDBError
@@ -299,7 +299,7 @@ func (uc *noteUseCase) Pin(noteIdStruct dto.RequiredID, userEntity *entity.User)
 }
 
 func (uc *noteUseCase) UnPin(noteIdStruct dto.RequiredID, userEntity *entity.User) error {
-	currentNote, err := uc.repositories.NoteRepository.GetById(noteIdStruct.ID)
+	currentNote, err := uc.repositories.NoteRepository.GetById(uc.ctx, noteIdStruct.ID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrNoteNotFound
@@ -317,7 +317,7 @@ func (uc *noteUseCase) UnPin(noteIdStruct dto.RequiredID, userEntity *entity.Use
 		return postgres.ErrUnexpectedDBError
 	}
 
-	err = uc.repositories.NoteRepository.UnPin(currentNote.ID)
+	err = uc.repositories.NoteRepository.UnPin(uc.ctx, currentNote.ID)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
 		return postgres.ErrUnexpectedDBError

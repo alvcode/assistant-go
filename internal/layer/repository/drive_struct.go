@@ -8,31 +8,27 @@ import (
 )
 
 type DriveStructRepository interface {
-	GetByID(ID int) (*entity.DriveStruct, error)
-	FindRow(userID int, name string, rowType int8, parentID *int) (*entity.DriveStruct, error)
-	Create(entity *entity.DriveStruct) (*entity.DriveStruct, error)
-	Update(in *entity.DriveStruct) error
-	TreeByUserID(userID int, parentID *int) ([]*dto.DriveTree, error)
-	GetAllRecursive(userID int, structID int) ([]*entity.DriveStruct, error)
-	DeleteRecursive(userID int, structID int) error
+	GetByID(ctx context.Context, ID int) (*entity.DriveStruct, error)
+	FindRow(ctx context.Context, userID int, name string, rowType int8, parentID *int) (*entity.DriveStruct, error)
+	Create(ctx context.Context, entity *entity.DriveStruct) (*entity.DriveStruct, error)
+	Update(ctx context.Context, in *entity.DriveStruct) error
+	TreeByUserID(ctx context.Context, userID int, parentID *int) ([]*dto.DriveTree, error)
+	GetAllRecursive(ctx context.Context, userID int, structID int) ([]*entity.DriveStruct, error)
+	DeleteRecursive(ctx context.Context, userID int, structID int) error
 }
 
 type driveStructRepository struct {
-	ctx context.Context
-	db  *pgxpool.Pool
+	db *pgxpool.Pool
 }
 
-func NewDriveStructRepository(ctx context.Context, db *pgxpool.Pool) DriveStructRepository {
-	return &driveStructRepository{
-		ctx: ctx,
-		db:  db,
-	}
+func NewDriveStructRepository(db *pgxpool.Pool) DriveStructRepository {
+	return &driveStructRepository{db: db}
 }
 
-func (r *driveStructRepository) GetByID(ID int) (*entity.DriveStruct, error) {
+func (r *driveStructRepository) GetByID(ctx context.Context, ID int) (*entity.DriveStruct, error) {
 	query := `SELECT * FROM drive_structs WHERE id = $1`
 
-	row := r.db.QueryRow(r.ctx, query, ID)
+	row := r.db.QueryRow(ctx, query, ID)
 
 	var driveStruct entity.DriveStruct
 	if err := row.Scan(
@@ -50,6 +46,7 @@ func (r *driveStructRepository) GetByID(ID int) (*entity.DriveStruct, error) {
 }
 
 func (r *driveStructRepository) FindRow(
+	ctx context.Context,
 	userID int,
 	name string,
 	rowType int8,
@@ -68,7 +65,7 @@ func (r *driveStructRepository) FindRow(
 		args = []any{userID, name, rowType, parentID}
 	}
 
-	row := r.db.QueryRow(r.ctx, query, args...)
+	row := r.db.QueryRow(ctx, query, args...)
 
 	var driveStruct entity.DriveStruct
 	if err := row.Scan(
@@ -85,14 +82,14 @@ func (r *driveStructRepository) FindRow(
 	return &driveStruct, nil
 }
 
-func (r *driveStructRepository) Create(in *entity.DriveStruct) (*entity.DriveStruct, error) {
+func (r *driveStructRepository) Create(ctx context.Context, in *entity.DriveStruct) (*entity.DriveStruct, error) {
 	query := `
 		INSERT INTO drive_structs 
 		    (user_id, name, type, parent_id, created_at, updated_at) 
 		VALUES ($1, $2, $3, $4, $5, $6) RETURNING id
 	`
 
-	row := r.db.QueryRow(r.ctx, query, in.UserID, in.Name, in.Type, in.ParentID, in.CreatedAt, in.UpdatedAt)
+	row := r.db.QueryRow(ctx, query, in.UserID, in.Name, in.Type, in.ParentID, in.CreatedAt, in.UpdatedAt)
 
 	if err := row.Scan(&in.ID); err != nil {
 		return nil, err
@@ -100,20 +97,20 @@ func (r *driveStructRepository) Create(in *entity.DriveStruct) (*entity.DriveStr
 	return in, nil
 }
 
-func (r *driveStructRepository) Update(in *entity.DriveStruct) error {
+func (r *driveStructRepository) Update(ctx context.Context, in *entity.DriveStruct) error {
 	query := `
 		UPDATE drive_structs SET user_id = $1, name = $2, type = $3, parent_id = $4, created_at = $5, updated_at = $6
 		WHERE id = $7
 	`
 
-	_, err := r.db.Exec(r.ctx, query, in.UserID, in.Name, in.Type, in.ParentID, in.CreatedAt, in.UpdatedAt, in.ID)
+	_, err := r.db.Exec(ctx, query, in.UserID, in.Name, in.Type, in.ParentID, in.CreatedAt, in.UpdatedAt, in.ID)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (r *driveStructRepository) TreeByUserID(userID int, parentID *int) ([]*dto.DriveTree, error) {
+func (r *driveStructRepository) TreeByUserID(ctx context.Context, userID int, parentID *int) ([]*dto.DriveTree, error) {
 	var (
 		query string
 		args  []any
@@ -139,7 +136,7 @@ func (r *driveStructRepository) TreeByUserID(userID int, parentID *int) ([]*dto.
 		args = []any{userID, parentID}
 	}
 
-	rows, err := r.db.Query(r.ctx, query, args...)
+	rows, err := r.db.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -168,7 +165,7 @@ func (r *driveStructRepository) TreeByUserID(userID int, parentID *int) ([]*dto.
 	return structs, nil
 }
 
-func (r *driveStructRepository) GetAllRecursive(userID int, structID int) ([]*entity.DriveStruct, error) {
+func (r *driveStructRepository) GetAllRecursive(ctx context.Context, userID int, structID int) ([]*entity.DriveStruct, error) {
 	query := `
 		WITH RECURSIVE structs AS (
 			SELECT *
@@ -184,7 +181,7 @@ func (r *driveStructRepository) GetAllRecursive(userID int, structID int) ([]*en
 		SELECT * FROM structs
 	`
 
-	rows, err := r.db.Query(r.ctx, query, structID, userID)
+	rows, err := r.db.Query(ctx, query, structID, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -213,7 +210,7 @@ func (r *driveStructRepository) GetAllRecursive(userID int, structID int) ([]*en
 	return structs, nil
 }
 
-func (r *driveStructRepository) DeleteRecursive(userID int, structID int) error {
+func (r *driveStructRepository) DeleteRecursive(ctx context.Context, userID int, structID int) error {
 	query := `
 		DELETE FROM drive_structs
 		WHERE id in (
@@ -232,7 +229,7 @@ func (r *driveStructRepository) DeleteRecursive(userID int, structID int) error 
 		)
 	`
 
-	_, err := r.db.Exec(r.ctx, query, structID, userID)
+	_, err := r.db.Exec(ctx, query, structID, userID)
 	if err != nil {
 		return err
 	}

@@ -24,7 +24,7 @@ func NewBlockEventUseCase(ctx context.Context, repositories *repository.Reposito
 
 func (uc *blockEventUseCase) CleanOld() error {
 	deleteTime := time.Now().Add(-30 * time.Minute).UTC()
-	err := uc.repositories.BlockEventRepository.RemoveByDateExpired(deleteTime)
+	err := uc.repositories.BlockEventRepository.RemoveByDateExpired(uc.ctx, deleteTime)
 	if err != nil {
 		return err
 	}

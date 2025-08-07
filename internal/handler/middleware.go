@@ -130,7 +130,7 @@ func BlockIPMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		foundIP, err := blockIpRepository.FindBlocking(IPAddress, time.Now().UTC())
+		foundIP, err := blockIpRepository.FindBlocking(r.Context(), IPAddress, time.Now().UTC())
 		if err != nil {
 			if !errors.Is(err, pgx.ErrNoRows) {
 				SendErrorResponse(w, locale.T(langRequest, "unexpected_database_error"), http.StatusForbidden, 0)
@@ -161,7 +161,7 @@ func RateLimiterMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		}
 
 		exists := true
-		foundIP, err := rateLimiterRepository.FindIP(IPAddress)
+		foundIP, err := rateLimiterRepository.FindIP(r.Context(), IPAddress)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				exists = false
@@ -180,7 +180,7 @@ func RateLimiterMiddleware(next http.HandlerFunc) http.HandlerFunc {
 
 		// записи нет, создаем
 		if exists == false {
-			err := rateLimiterRepository.UpsertIP(limiter)
+			err := rateLimiterRepository.UpsertIP(r.Context(), limiter)
 			if err != nil {
 				logging.GetLogger(r.Context()).Error(err)
 				SendErrorResponse(w, buildErrorMessage(langRequest, postgres.ErrUnexpectedDBError), http.StatusUnprocessableEntity, 0)
@@ -192,7 +192,7 @@ func RateLimiterMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		limiterExpired := false
 		if exists && (time.Now().Unix()-foundIP.Timestamp > int64(timeDuration)) {
 			limiterExpired = true
-			err := rateLimiterRepository.UpsertIP(limiter)
+			err := rateLimiterRepository.UpsertIP(r.Context(), limiter)
 			if err != nil {
 				logging.GetLogger(r.Context()).Error(err)
 				SendErrorResponse(w, buildErrorMessage(langRequest, postgres.ErrUnexpectedDBError), http.StatusUnprocessableEntity, 0)
@@ -216,7 +216,7 @@ func RateLimiterMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		}
 
 		if updateEntity.AllowanceRequests > 0 {
-			updateEntity, err = rateLimiterRepository.UpdateIP(updateEntity)
+			updateEntity, err = rateLimiterRepository.UpdateIP(r.Context(), updateEntity)
 			if err != nil {
 				logging.GetLogger(r.Context()).Error(err)
 				SendErrorResponse(w, buildErrorMessage(langRequest, postgres.ErrUnexpectedDBError), http.StatusUnprocessableEntity, 0)

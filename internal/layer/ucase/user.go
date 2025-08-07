@@ -212,17 +212,25 @@ func (uc *userUseCase) ChangePassword(userID int, in dto.UserChangePassword) err
 		return err
 	}
 
-	err = uc.repositories.UserRepository.ChangePassword(uc.ctx, userID, string(hashedPassword))
-	if err != nil {
-		return err
-	}
+	err = repository.WithTransaction(uc.ctx, uc.repositories.TransactionRepository, func(tx pgx.Tx) error {
+		userRepoTx := repository.NewUserRepository(tx)
 
-	err = uc.repositories.UserRepository.DeleteUserTokensByID(uc.ctx, userID)
+		err := userRepoTx.ChangePassword(uc.ctx, userID, string(hashedPassword))
+		if err != nil {
+			return err
+		}
+
+		err = userRepoTx.DeleteUserTokensByID(uc.ctx, userID)
+		if err != nil {
+			return postgres.ErrUnexpectedDBError
+		}
+		return nil
+	})
+
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
-		return postgres.ErrUnexpectedDBError
+		return err
 	}
-
 	return nil
 }
 

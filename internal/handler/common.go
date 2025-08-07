@@ -99,14 +99,14 @@ func BlockEventHandle(r *http.Request, eventName string) {
 
 	IPAddress, err := GetIpAddress(r)
 	if err == nil {
-		_, err := blockEventRepository.SetEvent(IPAddress, eventName, time.Now().UTC())
+		_, err := blockEventRepository.SetEvent(r.Context(), IPAddress, eventName, time.Now().UTC())
 		if err != nil {
 			return
 		}
 	}
 	checkTime := time.Now().Add(-30 * time.Minute).UTC()
 
-	blockEventStat, err := blockEventRepository.GetStat(IPAddress, checkTime)
+	blockEventStat, err := blockEventRepository.GetStat(r.Context(), IPAddress, checkTime)
 	if err != nil {
 		return
 	}
@@ -166,7 +166,7 @@ func BlockEventHandle(r *http.Request, eventName string) {
 		blockEventStat.FileNotFound >= fileNotFoundMaxCount ||
 		blockEventStat.TooManyRequests >= tooManyRequestsMaxCount {
 		unblockTime := time.Now().Add(time.Duration(blockMinute) * time.Minute).UTC()
-		_ = blockIpRepository.SetBlock(IPAddress, unblockTime)
+		_ = blockIpRepository.SetBlock(r.Context(), IPAddress, unblockTime)
 	}
 }
 

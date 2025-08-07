@@ -56,7 +56,7 @@ func NewDriveUseCase(ctx context.Context, repositories *repository.Repositories)
 }
 
 func (uc *driveUseCase) GetTree(parentID *int, user *entity.User) ([]*dto.DriveTree, error) {
-	list, err := uc.repositories.DriveStructRepository.TreeByUserID(user.ID, parentID)
+	list, err := uc.repositories.DriveStructRepository.TreeByUserID(uc.ctx, user.ID, parentID)
 	if err != nil {
 		if !errors.Is(err, pgx.ErrNoRows) {
 			logging.GetLogger(uc.ctx).Error(err)
@@ -68,7 +68,7 @@ func (uc *driveUseCase) GetTree(parentID *int, user *entity.User) ([]*dto.DriveT
 
 func (uc *driveUseCase) CreateDirectory(dto *dto.DriveCreateDirectory, user *entity.User) ([]*dto.DriveTree, error) {
 	if dto.ParentID != nil {
-		parentStruct, err := uc.repositories.DriveStructRepository.GetByID(*dto.ParentID)
+		parentStruct, err := uc.repositories.DriveStructRepository.GetByID(uc.ctx, *dto.ParentID)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return nil, ErrDriveParentIdNotFound
@@ -78,7 +78,7 @@ func (uc *driveUseCase) CreateDirectory(dto *dto.DriveCreateDirectory, user *ent
 			return nil, ErrDriveDirectoryExists
 		}
 	}
-	_, err := uc.repositories.DriveStructRepository.FindRow(user.ID, dto.Name, typeDirectory, dto.ParentID)
+	_, err := uc.repositories.DriveStructRepository.FindRow(uc.ctx, user.ID, dto.Name, typeDirectory, dto.ParentID)
 
 	if err == nil {
 		return nil, ErrDriveDirectoryExists
@@ -91,7 +91,7 @@ func (uc *driveUseCase) CreateDirectory(dto *dto.DriveCreateDirectory, user *ent
 		CreatedAt: time.Now().UTC(),
 		UpdatedAt: time.Now().UTC(),
 	}
-	_, err = uc.repositories.DriveStructRepository.Create(createEntity)
+	_, err = uc.repositories.DriveStructRepository.Create(uc.ctx, createEntity)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +116,7 @@ func (uc *driveUseCase) UploadFile(in dto.DriveUploadFile, user *entity.User) ([
 		return nil, ErrDriveFileTooLarge
 	}
 
-	allStorageSize, err := uc.repositories.DriveFileRepository.GetStorageSize(user.ID)
+	allStorageSize, err := uc.repositories.DriveFileRepository.GetStorageSize(uc.ctx, user.ID)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
 		return nil, postgres.ErrUnexpectedDBError
@@ -143,7 +143,7 @@ func (uc *driveUseCase) UploadFile(in dto.DriveUploadFile, user *entity.User) ([
 		return nil, ErrDriveFileNotSafeFilename
 	}
 
-	_, err = uc.repositories.DriveStructRepository.FindRow(user.ID, in.OriginalFilename, typeFile, in.ParentID)
+	_, err = uc.repositories.DriveStructRepository.FindRow(uc.ctx, user.ID, in.OriginalFilename, typeFile, in.ParentID)
 
 	if err == nil {
 		return nil, ErrDriveFilenameExists
@@ -154,7 +154,7 @@ func (uc *driveUseCase) UploadFile(in dto.DriveUploadFile, user *entity.User) ([
 		return nil, err
 	}
 
-	maxFileID, err := uc.repositories.DriveFileRepository.GetLastID()
+	maxFileID, err := uc.repositories.DriveFileRepository.GetLastID(uc.ctx)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
 		return nil, postgres.ErrUnexpectedDBError
@@ -169,7 +169,7 @@ func (uc *driveUseCase) UploadFile(in dto.DriveUploadFile, user *entity.User) ([
 		SizeBytes: int64(len(data)),
 	}
 
-	saveErr := uc.repositories.StorageRepository.Save(saveDto)
+	saveErr := uc.repositories.StorageRepository.Save(uc.ctx, saveDto)
 	if saveErr != nil {
 		return nil, ErrDriveFileSave
 	}
@@ -184,7 +184,7 @@ func (uc *driveUseCase) UploadFile(in dto.DriveUploadFile, user *entity.User) ([
 		UpdatedAt: time.Now().UTC(),
 	}
 
-	driveStruct, err = uc.repositories.DriveStructRepository.Create(driveStruct)
+	driveStruct, err = uc.repositories.DriveStructRepository.Create(uc.ctx, driveStruct)
 	if err != nil {
 		return nil, err
 	}
@@ -197,7 +197,7 @@ func (uc *driveUseCase) UploadFile(in dto.DriveUploadFile, user *entity.User) ([
 		CreatedAt:     time.Now().UTC(),
 	}
 
-	_, err = uc.repositories.DriveFileRepository.Create(driveFile)
+	_, err = uc.repositories.DriveFileRepository.Create(uc.ctx, driveFile)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
 		return nil, postgres.ErrUnexpectedDBError
@@ -211,7 +211,7 @@ func (uc *driveUseCase) UploadFile(in dto.DriveUploadFile, user *entity.User) ([
 }
 
 func (uc *driveUseCase) Delete(structID int, savePath string, user *entity.User) error {
-	driveStruct, err := uc.repositories.DriveStructRepository.GetByID(structID)
+	driveStruct, err := uc.repositories.DriveStructRepository.GetByID(uc.ctx, structID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrDriveStructNotFound
@@ -222,7 +222,7 @@ func (uc *driveUseCase) Delete(structID int, savePath string, user *entity.User)
 	}
 
 	existsFiles := true
-	deleteFileList, err := uc.repositories.DriveFileRepository.GetAllRecursive(structID, user.ID)
+	deleteFileList, err := uc.repositories.DriveFileRepository.GetAllRecursive(uc.ctx, structID, user.ID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			existsFiles = false
@@ -238,12 +238,12 @@ func (uc *driveUseCase) Delete(structID int, savePath string, user *entity.User)
 		}
 
 		if len(keys) > 0 {
-			_ = uc.repositories.StorageRepository.DeleteAll(keys)
+			_ = uc.repositories.StorageRepository.DeleteAll(uc.ctx, keys)
 		}
 	}
 
 	// удаление записей из БД из двух таблиц
-	err = uc.repositories.DriveStructRepository.DeleteRecursive(user.ID, structID)
+	err = uc.repositories.DriveStructRepository.DeleteRecursive(uc.ctx, user.ID, structID)
 	if err != nil {
 		return err
 	}
@@ -252,7 +252,7 @@ func (uc *driveUseCase) Delete(structID int, savePath string, user *entity.User)
 }
 
 func (uc *driveUseCase) GetFile(structID int, savePath string, user *entity.User) (*dto.FileResponse, error) {
-	driveStruct, err := uc.repositories.DriveStructRepository.GetByID(structID)
+	driveStruct, err := uc.repositories.DriveStructRepository.GetByID(uc.ctx, structID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrFileNotFound
@@ -266,7 +266,7 @@ func (uc *driveUseCase) GetFile(structID int, savePath string, user *entity.User
 		return nil, ErrFileNotFound
 	}
 
-	driveFile, err := uc.repositories.DriveFileRepository.GetByStructID(driveStruct.ID)
+	driveFile, err := uc.repositories.DriveFileRepository.GetByStructID(uc.ctx, driveStruct.ID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrFileNotFound
@@ -274,7 +274,7 @@ func (uc *driveUseCase) GetFile(structID int, savePath string, user *entity.User
 	}
 
 	fullPath := filepath.Join(savePath, driveFile.Path)
-	fileReader, err := uc.repositories.StorageRepository.GetFile(fullPath)
+	fileReader, err := uc.repositories.StorageRepository.GetFile(uc.ctx, fullPath)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
 		return nil, err
@@ -288,7 +288,7 @@ func (uc *driveUseCase) GetFile(structID int, savePath string, user *entity.User
 }
 
 func (uc *driveUseCase) Rename(structID int, newName string, user *entity.User) error {
-	driveStruct, err := uc.repositories.DriveStructRepository.GetByID(structID)
+	driveStruct, err := uc.repositories.DriveStructRepository.GetByID(uc.ctx, structID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrFileNotFound
@@ -300,7 +300,7 @@ func (uc *driveUseCase) Rename(structID int, newName string, user *entity.User) 
 	}
 
 	driveStruct.Name = newName
-	err = uc.repositories.DriveStructRepository.Update(driveStruct)
+	err = uc.repositories.DriveStructRepository.Update(uc.ctx, driveStruct)
 	if err != nil {
 		return err
 	}
@@ -312,7 +312,7 @@ func (uc *driveUseCase) Space(user *entity.User, totalSpace int64) (*dto.DriveSp
 	result := &dto.DriveSpace{}
 	result.Total = totalSpace
 
-	usedSpace, err := uc.repositories.DriveFileRepository.GetStorageSize(user.ID)
+	usedSpace, err := uc.repositories.DriveFileRepository.GetStorageSize(uc.ctx, user.ID)
 	if err != nil {
 		return nil, err
 	}
