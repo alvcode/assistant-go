@@ -320,3 +320,37 @@ func (h *DriveHandler) Space(w http.ResponseWriter, r *http.Request) {
 	SendResponse(w, http.StatusOK, dtoSpace)
 	return
 }
+
+func (h *DriveHandler) RenMov(w http.ResponseWriter, r *http.Request) {
+	langRequest := locale.GetLangFromContext(r.Context())
+	var renMovDTO dto.DriveRenMov
+
+	authUser, err := GetAuthUser(r)
+	if err != nil {
+		BlockEventHandle(r, BlockEventUnauthorizedType)
+		SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
+		return
+	}
+
+	err = json.NewDecoder(r.Body).Decode(&renMovDTO)
+	if err != nil {
+		BlockEventHandle(r, BlockEventDecodeBodyType)
+		SendErrorResponse(w, locale.T(langRequest, "error_reading_request_body"), http.StatusBadRequest, 0)
+		return
+	}
+
+	if err = renMovDTO.Validate(langRequest); err != nil {
+		BlockEventHandle(r, BlockEventInputDataType)
+		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
+		return
+	}
+
+	err = h.useCase.RenMov(authUser, renMovDTO)
+	if err != nil {
+		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
+		return
+	}
+
+	SendResponse(w, http.StatusNoContent, nil)
+	return
+}

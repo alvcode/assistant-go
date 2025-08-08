@@ -214,4 +214,9 @@ func (controller *Init) setDrive(ctx context.Context, repositories *repository.R
 		"/api/drive/space",
 		handler.BuildHandler(driveHandler.Space, handler.AuthMW),
 	)
+	controller.router.Handler(
+		http.MethodPatch,
+		"/api/drive/renmov",
+		handler.BuildHandler(driveHandler.RenMov, handler.AuthMW),
+	)
 }

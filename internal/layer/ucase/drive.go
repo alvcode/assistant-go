@@ -41,6 +41,7 @@ type DriveUseCase interface {
 	GetFile(structID int, savePath string, user *entity.User) (*dto.FileResponse, error)
 	Rename(structID int, newName string, user *entity.User) error
 	Space(user *entity.User, totalSpace int64) (*dto.DriveSpace, error)
+	RenMov(user *entity.User, in dto.DriveRenMov) error
 }
 
 type driveUseCase struct {
@@ -73,6 +74,7 @@ func (uc *driveUseCase) CreateDirectory(dto *dto.DriveCreateDirectory, user *ent
 			if errors.Is(err, pgx.ErrNoRows) {
 				return nil, ErrDriveParentIdNotFound
 			}
+			return nil, err
 		}
 		if parentStruct.UserID != user.ID {
 			return nil, ErrDriveDirectoryExists
@@ -319,4 +321,32 @@ func (uc *driveUseCase) Space(user *entity.User, totalSpace int64) (*dto.DriveSp
 	result.Used = usedSpace
 
 	return result, nil
+}
+
+func (uc *driveUseCase) RenMov(user *entity.User, in dto.DriveRenMov) error {
+	/**
+	проверяем принадлежность parent_id к юзеру и то что его тип - директория
+
+	идем циклом по списку перемещаемых ID. создаем мапу с батчами по 100 штук.
+
+	идем циклом по мапе, в репозитории получаем count записей
+	where user_id = юзеру, id = список в батче. Если count не соответствует
+	кол-ву в батче, то выдаем ошибку.
+
+	если ошибок не было, то идем по мапе заново и в транзакции меняем parent_id
+	всему батчу. если ошибка - откат, если нет, то возвращаем nil
+	*/
+	parentStruct, err := uc.repositories.DriveStructRepository.GetByID(uc.ctx, in.ParentID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrDriveParentIdNotFound
+		}
+		return err
+	}
+
+	if parentStruct.UserID != in.ParentID {
+		return ErrDriveDirectoryExists
+	}
+
+	var batches [][]int
 }

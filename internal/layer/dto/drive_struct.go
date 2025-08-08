@@ -62,3 +62,16 @@ type DriveTree struct {
 	CreatedAt time.Time `db:"created_at" json:"created_at"`
 	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 }
+
+type DriveRenMov struct {
+	StructIDs []int `json:"struct_ids" validate:"required"`
+	ParentID  int   `json:"parent_id" validate:"required"`
+}
+
+func (dto *DriveRenMov) Validate(lang string) error {
+	err := vld.Validate.Struct(dto)
+	if err != nil {
+		return vld.TextFromFirstError(err, lang)
+	}
+	return nil
+}
