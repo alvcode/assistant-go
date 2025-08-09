@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"github.com/jackc/pgx/v5"
 	"io"
 	"path/filepath"
@@ -336,17 +337,33 @@ func (uc *driveUseCase) RenMov(user *entity.User, in dto.DriveRenMov) error {
 	если ошибок не было, то идем по мапе заново и в транзакции меняем parent_id
 	всему батчу. если ошибка - откат, если нет, то возвращаем nil
 	*/
-	parentStruct, err := uc.repositories.DriveStructRepository.GetByID(uc.ctx, in.ParentID)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+	if in.ParentID != nil {
+		parentStruct, err := uc.repositories.DriveStructRepository.GetByID(uc.ctx, *in.ParentID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return ErrDriveParentIdNotFound
+			}
+			return err
+		}
+
+		if parentStruct.UserID != user.ID {
 			return ErrDriveParentIdNotFound
 		}
-		return err
-	}
-
-	if parentStruct.UserID != in.ParentID {
-		return ErrDriveDirectoryExists
+		if parentStruct.Type != typeDirectory {
+			return ErrDriveParentIdNotFound
+		}
 	}
 
 	var batches [][]int
+	batchSize := 100
+	for i, structID := range in.StructIDs {
+		if i%batchSize == 0 {
+			batches = append(batches, []int{})
+		}
+		batches[len(batches)-1] = append(batches[len(batches)-1], structID)
+	}
+
+	fmt.Println(batches)
+
+	return nil
 }

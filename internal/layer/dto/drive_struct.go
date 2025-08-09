@@ -65,7 +65,7 @@ type DriveTree struct {
 
 type DriveRenMov struct {
 	StructIDs []int `json:"struct_ids" validate:"required"`
-	ParentID  int   `json:"parent_id" validate:"required"`
+	ParentID  *int  `json:"parent_id"`
 }
 
 func (dto *DriveRenMov) Validate(lang string) error {
