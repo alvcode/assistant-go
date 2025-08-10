@@ -31,5 +31,6 @@
   "drive_dir_exists": "The directory already exists",
   "drive_filename_exists": "A file with this name already exists in the directory",
   "drive_parent_id_not_found": "Parent directory not found",
-  "drive_struct_not_found": "Disk structure not found"
+  "drive_struct_not_found": "Disk structure not found",
+  "drive_relocatable_structure_not_found": "Relocatable structure not found"
 }

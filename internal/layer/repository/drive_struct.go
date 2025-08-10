@@ -15,6 +15,7 @@ type DriveStructRepository interface {
 	TreeByUserID(ctx context.Context, userID int, parentID *int) ([]*dto.DriveTree, error)
 	GetAllRecursive(ctx context.Context, userID int, structID int) ([]*entity.DriveStruct, error)
 	DeleteRecursive(ctx context.Context, userID int, structID int) error
+	StructCountByUserAndIDs(ctx context.Context, userID int, IDs []int) (int, error)
 }
 
 type driveStructRepository struct {
@@ -234,4 +235,20 @@ func (r *driveStructRepository) DeleteRecursive(ctx context.Context, userID int,
 		return err
 	}
 	return nil
+}
+
+func (r *driveStructRepository) StructCountByUserAndIDs(ctx context.Context, userID int, IDs []int) (int, error) {
+	query := `
+			select 
+			    coalesce(count(ds.id), 0) as count
+			from drive_structs ds 
+			where user_id = $1 and id = ANY($2)
+		`
+
+	var result int
+	err := r.db.QueryRow(ctx, query, userID, IDs).Scan(&result)
+	if err != nil {
+		return 0, err
+	}
+	return result, nil
 }

@@ -24,14 +24,15 @@ const (
 )
 
 var (
-	ErrDriveFileTooLarge        = errors.New("drive file too large")
-	ErrDriveFileSystemIsFull    = errors.New("drive file system is full")
-	ErrDriveFileNotSafeFilename = errors.New("drive file not safe filename")
-	ErrDriveFileSave            = errors.New("drive unable to save file")
-	ErrDriveDirectoryExists     = errors.New("directory exists")
-	ErrDriveFilenameExists      = errors.New("drive filename exists")
-	ErrDriveParentIdNotFound    = errors.New("drive parent id does not exist")
-	ErrDriveStructNotFound      = errors.New("drive struct not found")
+	ErrDriveFileTooLarge                 = errors.New("drive file too large")
+	ErrDriveFileSystemIsFull             = errors.New("drive file system is full")
+	ErrDriveFileNotSafeFilename          = errors.New("drive file not safe filename")
+	ErrDriveFileSave                     = errors.New("drive unable to save file")
+	ErrDriveDirectoryExists              = errors.New("directory exists")
+	ErrDriveFilenameExists               = errors.New("drive filename exists")
+	ErrDriveParentIdNotFound             = errors.New("drive parent id does not exist")
+	ErrDriveStructNotFound               = errors.New("drive struct not found")
+	ErrDriveRelocatableStructureNotFound = errors.New("drive relocatable structure not found")
 )
 
 type DriveUseCase interface {
@@ -362,6 +363,18 @@ func (uc *driveUseCase) RenMov(user *entity.User, in dto.DriveRenMov) error {
 		}
 		batches[len(batches)-1] = append(batches[len(batches)-1], structID)
 	}
+
+	for _, batch := range batches {
+		structCount, err := uc.repositories.DriveStructRepository.StructCountByUserAndIDs(uc.ctx, user.ID, batch)
+		if err != nil {
+			return err
+		}
+		if structCount != len(batch) {
+			return ErrDriveRelocatableStructureNotFound
+		}
+	}
+
+	//for _, batch := range batches {
 
 	fmt.Println(batches)
 
