@@ -10,7 +10,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"github.com/jackc/pgx/v5"
 	"io"
 	"path/filepath"
@@ -24,15 +23,17 @@ const (
 )
 
 var (
-	ErrDriveFileTooLarge                 = errors.New("drive file too large")
-	ErrDriveFileSystemIsFull             = errors.New("drive file system is full")
-	ErrDriveFileNotSafeFilename          = errors.New("drive file not safe filename")
-	ErrDriveFileSave                     = errors.New("drive unable to save file")
-	ErrDriveDirectoryExists              = errors.New("directory exists")
-	ErrDriveFilenameExists               = errors.New("drive filename exists")
-	ErrDriveParentIdNotFound             = errors.New("drive parent id does not exist")
-	ErrDriveStructNotFound               = errors.New("drive struct not found")
-	ErrDriveRelocatableStructureNotFound = errors.New("drive relocatable structure not found")
+	ErrDriveFileTooLarge                    = errors.New("drive file too large")
+	ErrDriveFileSystemIsFull                = errors.New("drive file system is full")
+	ErrDriveFileNotSafeFilename             = errors.New("drive file not safe filename")
+	ErrDriveFileSave                        = errors.New("drive unable to save file")
+	ErrDriveDirectoryExists                 = errors.New("directory exists")
+	ErrDriveFilenameExists                  = errors.New("drive filename exists")
+	ErrDriveParentIdNotFound                = errors.New("drive parent id does not exist")
+	ErrDriveStructNotFound                  = errors.New("drive struct not found")
+	ErrDriveRelocatableStructureNotFound    = errors.New("drive relocatable structure not found")
+	ErrDriveMovingIntoOneself               = errors.New("drive moving into oneself")
+	ErrDriveParentRefOfTheRelocatableStruct = errors.New("drive parent ref of the relocatable struct")
 )
 
 type DriveUseCase interface {
@@ -326,18 +327,6 @@ func (uc *driveUseCase) Space(user *entity.User, totalSpace int64) (*dto.DriveSp
 }
 
 func (uc *driveUseCase) RenMov(user *entity.User, in dto.DriveRenMov) error {
-	/**
-	проверяем принадлежность parent_id к юзеру и то что его тип - директория
-
-	идем циклом по списку перемещаемых ID. создаем мапу с батчами по 100 штук.
-
-	идем циклом по мапе, в репозитории получаем count записей
-	where user_id = юзеру, id = список в батче. Если count не соответствует
-	кол-ву в батче, то выдаем ошибку.
-
-	если ошибок не было, то идем по мапе заново и в транзакции меняем parent_id
-	всему батчу. если ошибка - откат, если нет, то возвращаем nil
-	*/
 	if in.ParentID != nil {
 		parentStruct, err := uc.repositories.DriveStructRepository.GetByID(uc.ctx, *in.ParentID)
 		if err != nil {
@@ -353,11 +342,22 @@ func (uc *driveUseCase) RenMov(user *entity.User, in dto.DriveRenMov) error {
 		if parentStruct.Type != typeDirectory {
 			return ErrDriveParentIdNotFound
 		}
+		if parentStruct.ParentID != nil {
+			for _, structID := range in.StructIDs {
+				if structID == *parentStruct.ParentID {
+					return ErrDriveParentRefOfTheRelocatableStruct
+				}
+			}
+		}
 	}
 
 	var batches [][]int
 	batchSize := 100
 	for i, structID := range in.StructIDs {
+		if in.ParentID != nil && *in.ParentID == structID {
+			return ErrDriveMovingIntoOneself
+		}
+
 		if i%batchSize == 0 {
 			batches = append(batches, []int{})
 		}
@@ -374,9 +374,20 @@ func (uc *driveUseCase) RenMov(user *entity.User, in dto.DriveRenMov) error {
 		}
 	}
 
-	//for _, batch := range batches {
+	err := repository.WithTransaction(uc.ctx, uc.repositories.TransactionRepository, func(tx pgx.Tx) error {
+		driveStructRepoTx := repository.NewDriveStructRepository(tx)
 
-	fmt.Println(batches)
-
+		for _, batch := range batches {
+			err := driveStructRepoTx.MassUpdateParentID(uc.ctx, in.ParentID, batch)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		logging.GetLogger(uc.ctx).Error(err)
+		return err
+	}
 	return nil
 }

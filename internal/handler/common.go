@@ -271,6 +271,10 @@ func buildErrorMessage(lang string, err error) string {
 		return locale.T(lang, "drive_filename_exists")
 	case errors.Is(err, ucase.ErrDriveRelocatableStructureNotFound):
 		return locale.T(lang, "drive_relocatable_structure_not_found")
+	case errors.Is(err, ucase.ErrDriveMovingIntoOneself):
+		return locale.T(lang, "drive_moving_into_oneself")
+	case errors.Is(err, ucase.ErrDriveParentRefOfTheRelocatableStruct):
+		return locale.T(lang, "drive_parent_references_one_of_the_relocatable_struct")
 	default:
 		return locale.T(lang, "unexpected_error")
 	}

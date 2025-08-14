@@ -4,7 +4,6 @@ import (
 	"assistant-go/internal/layer/dto"
 	"assistant-go/internal/layer/entity"
 	"context"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type DriveStructRepository interface {
@@ -16,13 +15,14 @@ type DriveStructRepository interface {
 	GetAllRecursive(ctx context.Context, userID int, structID int) ([]*entity.DriveStruct, error)
 	DeleteRecursive(ctx context.Context, userID int, structID int) error
 	StructCountByUserAndIDs(ctx context.Context, userID int, IDs []int) (int, error)
+	MassUpdateParentID(ctx context.Context, parentID *int, IDs []int) error
 }
 
 type driveStructRepository struct {
-	db *pgxpool.Pool
+	db DBExecutor
 }
 
-func NewDriveStructRepository(db *pgxpool.Pool) DriveStructRepository {
+func NewDriveStructRepository(db DBExecutor) DriveStructRepository {
 	return &driveStructRepository{db: db}
 }
 
@@ -251,4 +251,14 @@ func (r *driveStructRepository) StructCountByUserAndIDs(ctx context.Context, use
 		return 0, err
 	}
 	return result, nil
+}
+
+func (r *driveStructRepository) MassUpdateParentID(ctx context.Context, parentID *int, IDs []int) error {
+	query := `UPDATE drive_structs SET parent_id = $1 WHERE id = ANY($2)`
+
+	_, err := r.db.Exec(ctx, query, parentID, IDs)
+	if err != nil {
+		return err
+	}
+	return nil
 }
