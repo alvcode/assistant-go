@@ -15,4 +15,14 @@ func InitCliCommands(rootCmd *cobra.Command, ctx context.Context, cfg *config.Co
 		Run: func(cmd *cobra.Command, args []string) {
 			CleanDBInit(ctx, cfg, db, minio)
 		}})
+
+	rootCmd.AddCommand(&cobra.Command{
+		Use:   "reset-password-db <login> <password>",
+		Short: "Reset the password for a user",
+		Args:  cobra.ExactArgs(2),
+		Run: func(cmd *cobra.Command, args []string) {
+			login := args[0]
+			password := args[1]
+			ChangePasswordDBInit(ctx, db, login, password)
+		}})
 }
