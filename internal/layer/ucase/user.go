@@ -32,6 +32,7 @@ type UserUseCase interface {
 	Delete(userID int) error
 	ChangePassword(userID int, in dto.UserChangePassword) error
 	CleanOldTokens() error
+	ChangePasswordWithoutCurrent(login string, password string) error
 }
 
 type userUseCase struct {
@@ -227,6 +228,33 @@ func (uc *userUseCase) CleanOldTokens() error {
 
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+func (uc *userUseCase) ChangePasswordWithoutCurrent(login string, password string) error {
+	user, err := uc.repositories.UserRepository.Find(login)
+	if err != nil {
+		logging.GetLogger(uc.ctx).Error(err)
+		return postgres.ErrUnexpectedDBError
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 11)
+	if err != nil {
+		logging.GetLogger(uc.ctx).Error(err)
+		return postgres.ErrUnexpectedDBError
+	}
+
+	err = uc.repositories.UserRepository.ChangePassword(user.ID, string(hashedPassword))
+	if err != nil {
+		logging.GetLogger(uc.ctx).Error(err)
+		return postgres.ErrUnexpectedDBError
+	}
+
+	err = uc.repositories.UserRepository.DeleteUserTokensByID(user.ID)
+	if err != nil {
+		logging.GetLogger(uc.ctx).Error(err)
+		return postgres.ErrUnexpectedDBError
 	}
 	return nil
 }
