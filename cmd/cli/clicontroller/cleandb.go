@@ -11,7 +11,7 @@ import (
 	"github.com/minio/minio-go/v7"
 )
 
-func CleanDBInit(ctx context.Context, cfg *config.Config, db *pgxpool.Pool, minio *minio.Client) {
+func CleanDB(ctx context.Context, cfg *config.Config, db *pgxpool.Pool, minio *minio.Client) {
 	fmt.Println("start clean-db cli command")
 	logging.GetLogger(ctx).Println("start clean-db cli command")
 	repos := repository.NewRepositories(ctx, cfg, db, minio)
