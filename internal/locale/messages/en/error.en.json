@@ -27,5 +27,12 @@
   "file_not_found": "File not found",
   "file_not_found_in_filesystem": "File not found in file system",
   "file_failed_to_send": "Error sending file",
-  "file_system_is_full": "File system is full"
+  "file_system_is_full": "File system is full",
+  "drive_dir_exists": "The directory already exists",
+  "drive_filename_exists": "A file with this name already exists in the directory",
+  "drive_parent_id_not_found": "Parent directory not found",
+  "drive_struct_not_found": "Disk structure not found",
+  "drive_relocatable_structure_not_found": "Relocatable structure not found",
+  "drive_moving_into_oneself": "You can't move a structure into itself",
+  "drive_parent_references_one_of_the_relocatable_struct": "The parent structure references one of the relocatable structures"
 }

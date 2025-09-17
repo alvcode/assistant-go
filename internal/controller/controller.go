@@ -51,6 +51,7 @@ func (controller *Init) SetRoutes(ctx context.Context) error {
 	controller.setNotesCategories(ctx, repos)
 	controller.setNotes(ctx, repos)
 	controller.setFiles(ctx, repos)
+	controller.setDrive(ctx, repos)
 
 	return nil
 }
@@ -171,5 +172,51 @@ func (controller *Init) setFiles(ctx context.Context, repositories *repository.R
 		http.MethodGet,
 		"/api/files/hash/:hash",
 		handler.BuildHandler(fileHandler.GetByHash),
+	)
+}
+
+func (controller *Init) setDrive(ctx context.Context, repositories *repository.Repositories) {
+	driveUseCase := ucase.NewDriveUseCase(ctx, repositories)
+	driveHandler := handler.NewDriveHandler(driveUseCase)
+
+	controller.router.Handler(
+		http.MethodPost,
+		"/api/drive/directories",
+		handler.BuildHandler(driveHandler.CreateDirectory, handler.AuthMW),
+	)
+	controller.router.Handler(
+		http.MethodGet,
+		"/api/drive/tree",
+		handler.BuildHandler(driveHandler.GetTree, handler.AuthMW),
+	)
+	controller.router.Handler(
+		http.MethodGet,
+		"/api/drive/files/:id",
+		handler.BuildHandler(driveHandler.GetFile, handler.AuthMW),
+	)
+	controller.router.Handler(
+		http.MethodPost,
+		"/api/drive/upload-file",
+		handler.BuildHandler(driveHandler.UploadFile, handler.AuthMW),
+	)
+	controller.router.Handler(
+		http.MethodDelete,
+		"/api/drive/:id",
+		handler.BuildHandler(driveHandler.Delete, handler.AuthMW),
+	)
+	controller.router.Handler(
+		http.MethodPatch,
+		"/api/drive/files/:id/rename",
+		handler.BuildHandler(driveHandler.Rename, handler.AuthMW),
+	)
+	controller.router.Handler(
+		http.MethodGet,
+		"/api/drive/space",
+		handler.BuildHandler(driveHandler.Space, handler.AuthMW),
+	)
+	controller.router.Handler(
+		http.MethodPatch,
+		"/api/drive/renmov",
+		handler.BuildHandler(driveHandler.RenMov, handler.AuthMW),
 	)
 }

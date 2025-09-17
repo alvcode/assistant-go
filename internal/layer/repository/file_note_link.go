@@ -6,30 +6,26 @@ import (
 )
 
 type FileNoteLinkRepository interface {
-	Upsert(noteID int, fileIDs []int) error
-	DeleteByNoteID(noteID int) error
-	Set(noteID int, fileIDs []int) error
+	Upsert(ctx context.Context, noteID int, fileIDs []int) error
+	DeleteByNoteID(ctx context.Context, noteID int) error
+	Set(ctx context.Context, noteID int, fileIDs []int) error
 }
 
 type fileNoteLinkRepository struct {
-	ctx context.Context
-	db  *pgxpool.Pool
+	db *pgxpool.Pool
 }
 
-func NewFileNoteLinkRepository(ctx context.Context, db *pgxpool.Pool) FileNoteLinkRepository {
-	return &fileNoteLinkRepository{
-		ctx: ctx,
-		db:  db,
-	}
+func NewFileNoteLinkRepository(db *pgxpool.Pool) FileNoteLinkRepository {
+	return &fileNoteLinkRepository{db: db}
 }
 
-func (r *fileNoteLinkRepository) Upsert(noteID int, fileIDs []int) error {
-	err := r.DeleteByNoteID(noteID)
+func (r *fileNoteLinkRepository) Upsert(ctx context.Context, noteID int, fileIDs []int) error {
+	err := r.DeleteByNoteID(ctx, noteID)
 	if err != nil {
 		return err
 	}
 	if len(fileIDs) > 0 {
-		err = r.Set(noteID, fileIDs)
+		err = r.Set(ctx, noteID, fileIDs)
 		if err != nil {
 			return err
 		}
@@ -37,21 +33,21 @@ func (r *fileNoteLinkRepository) Upsert(noteID int, fileIDs []int) error {
 	return nil
 }
 
-func (r *fileNoteLinkRepository) DeleteByNoteID(noteID int) error {
+func (r *fileNoteLinkRepository) DeleteByNoteID(ctx context.Context, noteID int) error {
 	query := `DELETE FROM file_note_links WHERE note_id = $1`
 
-	_, err := r.db.Exec(r.ctx, query, noteID)
+	_, err := r.db.Exec(ctx, query, noteID)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (r *fileNoteLinkRepository) Set(noteID int, fileIDs []int) error {
+func (r *fileNoteLinkRepository) Set(ctx context.Context, noteID int, fileIDs []int) error {
 	for _, fileID := range fileIDs {
 		query := `INSERT INTO file_note_links (file_id, note_id) VALUES ($1, $2)`
 
-		_, err := r.db.Exec(r.ctx, query, fileID, noteID)
+		_, err := r.db.Exec(ctx, query, fileID, noteID)
 		if err != nil {
 			return err
 		}

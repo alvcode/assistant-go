@@ -99,14 +99,14 @@ func BlockEventHandle(r *http.Request, eventName string) {
 
 	IPAddress, err := GetIpAddress(r)
 	if err == nil {
-		_, err := blockEventRepository.SetEvent(IPAddress, eventName, time.Now().UTC())
+		_, err := blockEventRepository.SetEvent(r.Context(), IPAddress, eventName, time.Now().UTC())
 		if err != nil {
 			return
 		}
 	}
 	checkTime := time.Now().Add(-30 * time.Minute).UTC()
 
-	blockEventStat, err := blockEventRepository.GetStat(IPAddress, checkTime)
+	blockEventStat, err := blockEventRepository.GetStat(r.Context(), IPAddress, checkTime)
 	if err != nil {
 		return
 	}
@@ -166,7 +166,7 @@ func BlockEventHandle(r *http.Request, eventName string) {
 		blockEventStat.FileNotFound >= fileNotFoundMaxCount ||
 		blockEventStat.TooManyRequests >= tooManyRequestsMaxCount {
 		unblockTime := time.Now().Add(time.Duration(blockMinute) * time.Minute).UTC()
-		_ = blockIpRepository.SetBlock(IPAddress, unblockTime)
+		_ = blockIpRepository.SetBlock(r.Context(), IPAddress, unblockTime)
 	}
 }
 
@@ -253,6 +253,28 @@ func buildErrorMessage(lang string, err error) string {
 		return locale.T(lang, "file_not_found_in_filesystem")
 	case errors.Is(err, ucase.ErrFileSystemIsFull):
 		return locale.T(lang, "file_system_is_full")
+	case errors.Is(err, ucase.ErrDriveDirectoryExists):
+		return locale.T(lang, "drive_dir_exists")
+	case errors.Is(err, ucase.ErrDriveParentIdNotFound):
+		return locale.T(lang, "drive_parent_id_not_found")
+	case errors.Is(err, ucase.ErrDriveFileTooLarge):
+		return locale.T(lang, "file_too_large")
+	case errors.Is(err, ucase.ErrDriveFileSystemIsFull):
+		return locale.T(lang, "file_system_is_full")
+	case errors.Is(err, ucase.ErrDriveFileNotSafeFilename):
+		return locale.T(lang, "file_not_safe_filename")
+	case errors.Is(err, ucase.ErrDriveFileSave):
+		return locale.T(lang, "file_error_save")
+	case errors.Is(err, ucase.ErrDriveStructNotFound):
+		return locale.T(lang, "drive_struct_not_found")
+	case errors.Is(err, ucase.ErrDriveFilenameExists):
+		return locale.T(lang, "drive_filename_exists")
+	case errors.Is(err, ucase.ErrDriveRelocatableStructureNotFound):
+		return locale.T(lang, "drive_relocatable_structure_not_found")
+	case errors.Is(err, ucase.ErrDriveMovingIntoOneself):
+		return locale.T(lang, "drive_moving_into_oneself")
+	case errors.Is(err, ucase.ErrDriveParentRefOfTheRelocatableStruct):
+		return locale.T(lang, "drive_parent_references_one_of_the_relocatable_struct")
 	default:
 		return locale.T(lang, "unexpected_error")
 	}

@@ -47,7 +47,7 @@ func (uc *noteCategoryUseCase) Create(in dto.NoteCategoryCreate, userEntity *ent
 	}
 
 	if in.ParentId != nil {
-		_, err := uc.repositories.NoteCategoryRepository.FindByIDAndUser(userEntity.ID, *in.ParentId)
+		_, err := uc.repositories.NoteCategoryRepository.FindByIDAndUser(uc.ctx, userEntity.ID, *in.ParentId)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return nil, ErrCategoryParentIdNotFound
@@ -66,7 +66,7 @@ func (uc *noteCategoryUseCase) Create(in dto.NoteCategoryCreate, userEntity *ent
 
 	noteCategoryEntity.Position = newPosition
 
-	data, err := uc.repositories.NoteCategoryRepository.Create(noteCategoryEntity)
+	data, err := uc.repositories.NoteCategoryRepository.Create(uc.ctx, noteCategoryEntity)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
 		return nil, postgres.ErrUnexpectedDBError
@@ -75,7 +75,7 @@ func (uc *noteCategoryUseCase) Create(in dto.NoteCategoryCreate, userEntity *ent
 }
 
 func (uc *noteCategoryUseCase) FindAll(userId int) ([]*entity.NoteCategory, error) {
-	data, err := uc.repositories.NoteCategoryRepository.FindAll(userId)
+	data, err := uc.repositories.NoteCategoryRepository.FindAll(uc.ctx, userId)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
 		return nil, postgres.ErrUnexpectedDBError
@@ -84,7 +84,7 @@ func (uc *noteCategoryUseCase) FindAll(userId int) ([]*entity.NoteCategory, erro
 }
 
 func (uc *noteCategoryUseCase) Delete(userId int, catId int) error {
-	categories, err := uc.repositories.NoteCategoryRepository.FindByIDAndUserWithChildren(userId, catId)
+	categories, err := uc.repositories.NoteCategoryRepository.FindByIDAndUserWithChildren(uc.ctx, userId, catId)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrCategoryNotFound
@@ -101,7 +101,7 @@ func (uc *noteCategoryUseCase) Delete(userId int, catId int) error {
 		return ErrCategoryNotFound
 	}
 
-	checkExists, err := uc.repositories.NoteRepository.CheckExistsByCategoryIDs(catIds)
+	checkExists, err := uc.repositories.NoteRepository.CheckExistsByCategoryIDs(uc.ctx, catIds)
 	if err != nil {
 		if !errors.Is(err, pgx.ErrNoRows) {
 			logging.GetLogger(uc.ctx).Error(err)
@@ -112,7 +112,7 @@ func (uc *noteCategoryUseCase) Delete(userId int, catId int) error {
 		return ErrCategoryHasNotes
 	}
 
-	err = uc.repositories.NoteCategoryRepository.DeleteByIds(catIds)
+	err = uc.repositories.NoteCategoryRepository.DeleteByIds(uc.ctx, catIds)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
 		return postgres.ErrUnexpectedDBError
@@ -128,7 +128,7 @@ func (uc *noteCategoryUseCase) Update(in dto.NoteCategoryUpdate, userID int) (*e
 		ParentId: in.ParentID,
 	}
 
-	currentCategory, err := uc.repositories.NoteCategoryRepository.FindByIDAndUser(userID, in.ID)
+	currentCategory, err := uc.repositories.NoteCategoryRepository.FindByIDAndUser(uc.ctx, userID, in.ID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrCategoryNotFound
@@ -139,7 +139,7 @@ func (uc *noteCategoryUseCase) Update(in dto.NoteCategoryUpdate, userID int) (*e
 	noteCategoryEntity.Position = currentCategory.Position
 
 	if in.ParentID != nil {
-		_, err = uc.repositories.NoteCategoryRepository.FindByIDAndUser(userID, *in.ParentID)
+		_, err = uc.repositories.NoteCategoryRepository.FindByIDAndUser(uc.ctx, userID, *in.ParentID)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return nil, ErrCategoryNotFound
@@ -159,7 +159,7 @@ func (uc *noteCategoryUseCase) Update(in dto.NoteCategoryUpdate, userID int) (*e
 		noteCategoryEntity.Position = newPosition
 	}
 
-	err = uc.repositories.NoteCategoryRepository.Update(noteCategoryEntity)
+	err = uc.repositories.NoteCategoryRepository.Update(uc.ctx, noteCategoryEntity)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
 		return nil, postgres.ErrUnexpectedDBError
@@ -168,7 +168,7 @@ func (uc *noteCategoryUseCase) Update(in dto.NoteCategoryUpdate, userID int) (*e
 }
 
 func (uc *noteCategoryUseCase) PositionUp(in dto.RequiredID, userID int) error {
-	_, err := uc.repositories.NoteCategoryRepository.FindByIDAndUser(userID, in.ID)
+	_, err := uc.repositories.NoteCategoryRepository.FindByIDAndUser(uc.ctx, userID, in.ID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrCategoryNotFound

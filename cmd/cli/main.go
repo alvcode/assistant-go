@@ -30,7 +30,7 @@ func main() {
 	}
 
 	var minioClient *minio.Client
-	if cfg.File.UploadPlace == config.FileUploadS3Place && cfg.S3.SecretAccessKey != "" {
+	if cfg.UploadPlace == config.FileUploadS3Place && cfg.S3.SecretAccessKey != "" {
 		minioClient, err = minio.New(cfg.S3.Endpoint, &minio.Options{
 			Creds:  credentials.NewStaticV4(cfg.S3.AccessKey, cfg.S3.SecretAccessKey, ""),
 			Secure: cfg.S3.UseSSL,

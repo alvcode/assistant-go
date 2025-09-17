@@ -23,7 +23,7 @@ func NewBlockIpUseCase(ctx context.Context, repositories *repository.Repositorie
 }
 
 func (uc *blockIpUseCase) CleanOld() error {
-	err := uc.repositories.BlockIPRepository.RemoveByDateExpired(time.Now().UTC())
+	err := uc.repositories.BlockIPRepository.RemoveByDateExpired(uc.ctx, time.Now().UTC())
 	if err != nil {
 		return err
 	}

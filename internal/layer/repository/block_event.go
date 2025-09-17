@@ -8,27 +8,23 @@ import (
 )
 
 type BlockEventRepository interface {
-	SetEvent(ip string, eventName string, time time.Time) (int, error)
-	GetStat(ip string, timeFrom time.Time) (*dto.BlockEventsStat, error)
-	RemoveByDateExpired(time time.Time) error
+	SetEvent(ctx context.Context, ip string, eventName string, time time.Time) (int, error)
+	GetStat(ctx context.Context, ip string, timeFrom time.Time) (*dto.BlockEventsStat, error)
+	RemoveByDateExpired(ctx context.Context, time time.Time) error
 }
 
 type blockEventRepository struct {
-	ctx context.Context
-	db  *pgxpool.Pool
+	db *pgxpool.Pool
 }
 
-func NewBlockEventRepository(ctx context.Context, db *pgxpool.Pool) BlockEventRepository {
-	return &blockEventRepository{
-		ctx: ctx,
-		db:  db,
-	}
+func NewBlockEventRepository(db *pgxpool.Pool) BlockEventRepository {
+	return &blockEventRepository{db: db}
 }
 
-func (ur *blockEventRepository) SetEvent(ip string, eventName string, time time.Time) (int, error) {
+func (ur *blockEventRepository) SetEvent(ctx context.Context, ip string, eventName string, time time.Time) (int, error) {
 	query := `INSERT INTO block_events (ip, event, created_at) VALUES ($1, $2, $3) RETURNING id`
 
-	row := ur.db.QueryRow(ur.ctx, query, ip, eventName, time)
+	row := ur.db.QueryRow(ctx, query, ip, eventName, time)
 
 	var resID int
 	if err := row.Scan(&resID); err != nil {
@@ -37,7 +33,7 @@ func (ur *blockEventRepository) SetEvent(ip string, eventName string, time time.
 	return resID, nil
 }
 
-func (ur *blockEventRepository) GetStat(ip string, timeFrom time.Time) (*dto.BlockEventsStat, error) {
+func (ur *blockEventRepository) GetStat(ctx context.Context, ip string, timeFrom time.Time) (*dto.BlockEventsStat, error) {
 	query := `
 		WITH error_counts AS (
 			SELECT 
@@ -74,7 +70,7 @@ func (ur *blockEventRepository) GetStat(ip string, timeFrom time.Time) (*dto.Blo
 			total_errors te;
 	`
 
-	rows, err := ur.db.Query(ur.ctx, query, ip, timeFrom)
+	rows, err := ur.db.Query(ctx, query, ip, timeFrom)
 	if err != nil {
 		return nil, err
 	}
@@ -117,10 +113,10 @@ func (ur *blockEventRepository) GetStat(ip string, timeFrom time.Time) (*dto.Blo
 	return stat, nil
 }
 
-func (ur *blockEventRepository) RemoveByDateExpired(time time.Time) error {
+func (ur *blockEventRepository) RemoveByDateExpired(ctx context.Context, time time.Time) error {
 	query := `DELETE FROM block_events WHERE created_at < $1`
 
-	_, err := ur.db.Exec(ur.ctx, query, time)
+	_, err := ur.db.Exec(ctx, query, time)
 	if err != nil {
 		return err
 	}

@@ -48,7 +48,7 @@ func NewUserUseCase(ctx context.Context, repositories *repository.Repositories) 
 }
 
 func (uc *userUseCase) Create(in dto.UserLoginAndPassword) (*entity.User, error) {
-	existingUser, err := uc.repositories.UserRepository.Find(in.Login)
+	existingUser, err := uc.repositories.UserRepository.Find(uc.ctx, in.Login)
 	if err == nil && existingUser != nil {
 		return nil, ErrUserAlreadyExists
 	}
@@ -65,7 +65,7 @@ func (uc *userUseCase) Create(in dto.UserLoginAndPassword) (*entity.User, error)
 		UpdatedAt: time.Now(),
 	}
 
-	data, err := uc.repositories.UserRepository.Create(userEntity)
+	data, err := uc.repositories.UserRepository.Create(uc.ctx, userEntity)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
 		return nil, postgres.ErrUnexpectedDBError
@@ -74,7 +74,7 @@ func (uc *userUseCase) Create(in dto.UserLoginAndPassword) (*entity.User, error)
 }
 
 func (uc *userUseCase) Login(in dto.UserLoginAndPassword) (*entity.UserToken, error) {
-	existingUser, err := uc.repositories.UserRepository.Find(in.Login)
+	existingUser, err := uc.repositories.UserRepository.Find(uc.ctx, in.Login)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrUserIncorrectUsernameOrPassword
@@ -94,7 +94,7 @@ func (uc *userUseCase) Login(in dto.UserLoginAndPassword) (*entity.UserToken, er
 		return nil, ErrUnexpectedError
 	}
 
-	data, err := uc.repositories.UserRepository.SetUserToken(*userTokenEntity)
+	data, err := uc.repositories.UserRepository.SetUserToken(uc.ctx, *userTokenEntity)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
 		return nil, postgres.ErrUnexpectedDBError
@@ -103,7 +103,7 @@ func (uc *userUseCase) Login(in dto.UserLoginAndPassword) (*entity.UserToken, er
 }
 
 func (uc *userUseCase) RefreshToken(in dto.UserRefreshToken) (*entity.UserToken, error) {
-	existingToken, err := uc.repositories.UserRepository.FindUserToken(in.Token)
+	existingToken, err := uc.repositories.UserRepository.FindUserToken(uc.ctx, in.Token)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrRefreshTokenNotFound
@@ -119,7 +119,7 @@ func (uc *userUseCase) RefreshToken(in dto.UserRefreshToken) (*entity.UserToken,
 		logging.GetLogger(uc.ctx).Error(err)
 		return nil, ErrUnexpectedError
 	}
-	data, err := uc.repositories.UserRepository.SetUserToken(*userTokenEntity)
+	data, err := uc.repositories.UserRepository.SetUserToken(uc.ctx, *userTokenEntity)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
 		return nil, postgres.ErrUnexpectedDBError
@@ -139,7 +139,7 @@ func (uc *userUseCase) generateTokenPair(userId int) (*entity.UserToken, error) 
 			return nil, err
 		}
 
-		_, err = uc.repositories.UserRepository.FindUserToken(token)
+		_, err = uc.repositories.UserRepository.FindUserToken(uc.ctx, token)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				userTokenEntity = &entity.UserToken{
@@ -165,30 +165,36 @@ func generateAPIToken() (string, error) {
 }
 
 func (uc *userUseCase) Delete(userID int) error {
+	err := repository.WithTransaction(uc.ctx, uc.repositories.TransactionRepository, func(tx pgx.Tx) error {
+		userRepoTx := repository.NewUserRepository(tx)
+		err := userRepoTx.Delete(uc.ctx, userID)
+		if err != nil {
+			return postgres.ErrUnexpectedDBError
+		}
 
-	err := uc.repositories.UserRepository.Delete(userID)
+		err = userRepoTx.DeleteUserTokensByID(uc.ctx, userID)
+		if err != nil {
+			return postgres.ErrUnexpectedDBError
+		}
+
+		noteCategoryRepoTx := repository.NewNoteCategoryRepository(tx)
+		err = noteCategoryRepoTx.DeleteByUserId(uc.ctx, userID)
+		if err != nil {
+			return postgres.ErrUnexpectedDBError
+		}
+
+		return nil
+	})
+
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
-		return postgres.ErrUnexpectedDBError
+		return err
 	}
-
-	err = uc.repositories.UserRepository.DeleteUserTokensByID(userID)
-	if err != nil {
-		logging.GetLogger(uc.ctx).Error(err)
-		return postgres.ErrUnexpectedDBError
-	}
-
-	err = uc.repositories.NoteCategoryRepository.DeleteByUserId(userID)
-	if err != nil {
-		logging.GetLogger(uc.ctx).Error(err)
-		return postgres.ErrUnexpectedDBError
-	}
-
 	return nil
 }
 
 func (uc *userUseCase) ChangePassword(userID int, in dto.UserChangePassword) error {
-	user, err := uc.repositories.UserRepository.FindById(userID)
+	user, err := uc.repositories.UserRepository.FindById(uc.ctx, userID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrUserNotFound
@@ -207,22 +213,31 @@ func (uc *userUseCase) ChangePassword(userID int, in dto.UserChangePassword) err
 		return err
 	}
 
-	err = uc.repositories.UserRepository.ChangePassword(userID, string(hashedPassword))
-	if err != nil {
-		return err
-	}
+	err = repository.WithTransaction(uc.ctx, uc.repositories.TransactionRepository, func(tx pgx.Tx) error {
+		userRepoTx := repository.NewUserRepository(tx)
 
-	err = uc.repositories.UserRepository.DeleteUserTokensByID(userID)
+		err := userRepoTx.ChangePassword(uc.ctx, userID, string(hashedPassword))
+		if err != nil {
+			return err
+		}
+
+		err = userRepoTx.DeleteUserTokensByID(uc.ctx, userID)
+		if err != nil {
+			return postgres.ErrUnexpectedDBError
+		}
+		return nil
+	})
+
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
-		return postgres.ErrUnexpectedDBError
+		return err
 	}
-
 	return nil
 }
 
 func (uc *userUseCase) CleanOldTokens() error {
 	err := uc.repositories.UserRepository.RemoveTokensByDateExpired(
+		uc.ctx,
 		int(time.Now().AddDate(0, 0, -30).Unix()),
 	)
 

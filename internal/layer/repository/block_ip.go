@@ -7,48 +7,44 @@ import (
 )
 
 type BlockIPRepository interface {
-	FindBlocking(ip string, time time.Time) (bool, error)
-	RemoveByDateExpired(time time.Time) error
-	SetBlock(ip string, time time.Time) error
+	FindBlocking(ctx context.Context, ip string, time time.Time) (bool, error)
+	RemoveByDateExpired(ctx context.Context, time time.Time) error
+	SetBlock(ctx context.Context, ip string, time time.Time) error
 }
 
 type blockIpRepository struct {
-	ctx context.Context
-	db  *pgxpool.Pool
+	db *pgxpool.Pool
 }
 
-func NewBlockIpRepository(ctx context.Context, db *pgxpool.Pool) BlockIPRepository {
-	return &blockIpRepository{
-		ctx: ctx,
-		db:  db,
-	}
+func NewBlockIpRepository(db *pgxpool.Pool) BlockIPRepository {
+	return &blockIpRepository{db: db}
 }
 
-func (ur *blockIpRepository) FindBlocking(ip string, time time.Time) (bool, error) {
+func (ur *blockIpRepository) FindBlocking(ctx context.Context, ip string, time time.Time) (bool, error) {
 	query := `SELECT EXISTS(SELECT 1 FROM block_ip WHERE ip = $1 and blocked_until > $2)`
 
 	var exists bool
-	err := ur.db.QueryRow(ur.ctx, query, ip, time).Scan(&exists)
+	err := ur.db.QueryRow(ctx, query, ip, time).Scan(&exists)
 	if err != nil {
 		return false, err
 	}
 	return exists, nil
 }
 
-func (ur *blockIpRepository) RemoveByDateExpired(time time.Time) error {
+func (ur *blockIpRepository) RemoveByDateExpired(ctx context.Context, time time.Time) error {
 	query := `DELETE FROM block_ip WHERE blocked_until < $1`
 
-	_, err := ur.db.Exec(ur.ctx, query, time)
+	_, err := ur.db.Exec(ctx, query, time)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (ur *blockIpRepository) SetBlock(ip string, unblockTime time.Time) error {
+func (ur *blockIpRepository) SetBlock(ctx context.Context, ip string, unblockTime time.Time) error {
 	query := `INSERT INTO block_ip (ip, blocked_until) VALUES ($1, $2) RETURNING id`
 
-	row := ur.db.QueryRow(ur.ctx, query, ip, unblockTime)
+	row := ur.db.QueryRow(ctx, query, ip, unblockTime)
 
 	var id int
 	if err := row.Scan(&id); err != nil {

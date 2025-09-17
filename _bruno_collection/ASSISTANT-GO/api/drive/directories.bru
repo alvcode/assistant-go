@@ -1,0 +1,18 @@
+meta {
+  name: directories
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{domain}}/api/drive/directories
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "name": "Разное",
+    "parent_id": null
+  }
+}
