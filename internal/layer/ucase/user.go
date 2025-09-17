@@ -248,7 +248,7 @@ func (uc *userUseCase) CleanOldTokens() error {
 }
 
 func (uc *userUseCase) ChangePasswordWithoutCurrent(login string, password string) error {
-	user, err := uc.repositories.UserRepository.Find(login)
+	user, err := uc.repositories.UserRepository.Find(uc.ctx, login)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
 		return postgres.ErrUnexpectedDBError
@@ -260,13 +260,13 @@ func (uc *userUseCase) ChangePasswordWithoutCurrent(login string, password strin
 		return postgres.ErrUnexpectedDBError
 	}
 
-	err = uc.repositories.UserRepository.ChangePassword(user.ID, string(hashedPassword))
+	err = uc.repositories.UserRepository.ChangePassword(uc.ctx, user.ID, string(hashedPassword))
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
 		return postgres.ErrUnexpectedDBError
 	}
 
-	err = uc.repositories.UserRepository.DeleteUserTokensByID(user.ID)
+	err = uc.repositories.UserRepository.DeleteUserTokensByID(uc.ctx, user.ID)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
 		return postgres.ErrUnexpectedDBError

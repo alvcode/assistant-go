@@ -22,7 +22,7 @@ func NewRateLimiterUseCase(ctx context.Context, repositories *repository.Reposit
 }
 
 func (uc *rateLimiterUseCase) Clean() error {
-	err := uc.repositories.RateLimiterRepository.Clean()
+	err := uc.repositories.RateLimiterRepository.Clean(uc.ctx)
 	if err != nil {
 		return err
 	}
