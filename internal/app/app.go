@@ -102,6 +102,7 @@ func (a *App) startHTTP(ctx context.Context) error {
 		Handler:      hdl,
 		WriteTimeout: a.cfg.HTTP.WriteTimeout,
 		ReadTimeout:  a.cfg.HTTP.ReadTimeout,
+		IdleTimeout:  a.cfg.HTTP.IdleTimeout,
 	}
 
 	logging.GetLogger(ctx).Println("http server started")

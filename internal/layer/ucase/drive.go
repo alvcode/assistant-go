@@ -9,6 +9,7 @@ import (
 	"assistant-go/internal/storage/postgres"
 	"context"
 	"errors"
+	"fmt"
 	"github.com/jackc/pgx/v5"
 	"io"
 	"os"
@@ -110,7 +111,6 @@ func (uc *driveUseCase) CreateDirectory(dto *dto.DriveCreateDirectory, user *ent
 
 func (uc *driveUseCase) UploadFile(in dto.DriveUploadFile, user *entity.User) ([]*dto.DriveTree, error) {
 	fileService := service.NewFile().FileService()
-	limitedReader := io.LimitReader(in.File, in.MaxSizeBytes+1)
 
 	var size int64
 	// Если файл поддерживает Stat():
@@ -120,14 +120,19 @@ func (uc *driveUseCase) UploadFile(in dto.DriveUploadFile, user *entity.User) ([
 		}
 	}
 
+	fmt.Println("1")
+
 	// Если не получилось через Stat() — считаем вручную через LimitedReader:
 	if size == 0 {
-		n, err := io.Copy(io.Discard, limitedReader)
+		lr := io.LimitReader(in.File, in.MaxSizeBytes+1)
+		n, err := io.Copy(io.Discard, lr)
 		if err != nil {
 			return nil, err
 		}
 		size = n
 	}
+
+	fmt.Println("2")
 
 	if size > in.MaxSizeBytes {
 		return nil, ErrDriveFileTooLarge
@@ -143,14 +148,15 @@ func (uc *driveUseCase) UploadFile(in dto.DriveUploadFile, user *entity.User) ([
 		return nil, ErrDriveFileSystemIsFull
 	}
 
-	if seeker, ok := in.File.(io.Seeker); ok {
-		_, err := seeker.Seek(0, io.SeekStart)
-		if err != nil {
-			return nil, ErrFileResettingPointer
-		}
-	} else {
-		return nil, ErrFileUnableToSeek
-	}
+	//if seeker, ok := in.File.(io.Seeker); ok {
+	//	_, err := seeker.Seek(0, io.SeekStart)
+	//	if err != nil {
+	//		return nil, ErrFileResettingPointer
+	//	}
+	//} else {
+	//	return nil, ErrFileUnableToSeek
+	//}
+	fmt.Println("3")
 
 	fileExt := strings.ToLower(filepath.Ext(in.OriginalFilename))
 	fileExt = strings.TrimPrefix(fileExt, ".")
@@ -180,6 +186,7 @@ func (uc *driveUseCase) UploadFile(in dto.DriveUploadFile, user *entity.User) ([
 	middleFilePath := filepath.Join(fileService.GetMiddlePathByFileId(maxFileID+1), newFilename)
 	fullFilePath := filepath.Join(in.SavePath, middleFilePath)
 
+	limitedReader := io.LimitReader(in.File, in.MaxSizeBytes+1)
 	saveDto := &dto.SaveFile{
 		File:      limitedReader,
 		SavePath:  fullFilePath,
@@ -190,6 +197,8 @@ func (uc *driveUseCase) UploadFile(in dto.DriveUploadFile, user *entity.User) ([
 	if saveErr != nil {
 		return nil, ErrDriveFileSave
 	}
+
+	fmt.Println("4")
 
 	// сохраняем 2 записи в БД
 	driveStruct := &entity.DriveStruct{
@@ -206,6 +215,8 @@ func (uc *driveUseCase) UploadFile(in dto.DriveUploadFile, user *entity.User) ([
 		return nil, err
 	}
 
+	fmt.Println("5")
+
 	driveFile := &entity.DriveFile{
 		DriveStructID: driveStruct.ID,
 		Path:          middleFilePath,
@@ -220,10 +231,13 @@ func (uc *driveUseCase) UploadFile(in dto.DriveUploadFile, user *entity.User) ([
 		return nil, postgres.ErrUnexpectedDBError
 	}
 
+	fmt.Println("6")
+
 	treeList, err := uc.GetTree(in.ParentID, user)
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("7")
 	return treeList, nil
 }
 
