@@ -7,11 +7,11 @@ import (
 	service "assistant-go/internal/layer/service/file"
 	"assistant-go/internal/logging"
 	"assistant-go/internal/storage/postgres"
-	"bytes"
 	"context"
 	"errors"
 	"github.com/jackc/pgx/v5"
 	"io"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -112,12 +112,24 @@ func (uc *driveUseCase) UploadFile(in dto.DriveUploadFile, user *entity.User) ([
 	fileService := service.NewFile().FileService()
 	limitedReader := io.LimitReader(in.File, in.MaxSizeBytes+1)
 
-	data, err := io.ReadAll(limitedReader)
-	if err != nil {
-		return nil, err
+	var size int64
+	// Если файл поддерживает Stat():
+	if statter, ok := in.File.(interface{ Stat() (os.FileInfo, error) }); ok {
+		if fi, err := statter.Stat(); err == nil {
+			size = fi.Size()
+		}
 	}
 
-	if int64(len(data)) > in.MaxSizeBytes {
+	// Если не получилось через Stat() — считаем вручную через LimitedReader:
+	if size == 0 {
+		n, err := io.Copy(io.Discard, limitedReader)
+		if err != nil {
+			return nil, err
+		}
+		size = n
+	}
+
+	if size > in.MaxSizeBytes {
 		return nil, ErrDriveFileTooLarge
 	}
 
@@ -127,7 +139,7 @@ func (uc *driveUseCase) UploadFile(in dto.DriveUploadFile, user *entity.User) ([
 		return nil, postgres.ErrUnexpectedDBError
 	}
 
-	if (allStorageSize + int64(len(data))) > in.StorageMaxSizePerUser {
+	if (allStorageSize + size) > in.StorageMaxSizePerUser {
 		return nil, ErrDriveFileSystemIsFull
 	}
 
@@ -169,9 +181,9 @@ func (uc *driveUseCase) UploadFile(in dto.DriveUploadFile, user *entity.User) ([
 	fullFilePath := filepath.Join(in.SavePath, middleFilePath)
 
 	saveDto := &dto.SaveFile{
-		File:      bytes.NewReader(data),
+		File:      limitedReader,
 		SavePath:  fullFilePath,
-		SizeBytes: int64(len(data)),
+		SizeBytes: size,
 	}
 
 	saveErr := uc.repositories.StorageRepository.Save(uc.ctx, saveDto)
@@ -198,7 +210,7 @@ func (uc *driveUseCase) UploadFile(in dto.DriveUploadFile, user *entity.User) ([
 		DriveStructID: driveStruct.ID,
 		Path:          middleFilePath,
 		Ext:           fileExt,
-		Size:          len(data),
+		Size:          size,
 		CreatedAt:     time.Now().UTC(),
 	}
 

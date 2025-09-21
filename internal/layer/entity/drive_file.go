@@ -7,6 +7,6 @@ type DriveFile struct {
 	DriveStructID int       `db:"drive_struct_id"`
 	Path          string    `db:"path"`
 	Ext           string    `db:"ext"`
-	Size          int       `db:"size"`
+	Size          int64     `db:"size"`
 	CreatedAt     time.Time `db:"created_at"`
 }
