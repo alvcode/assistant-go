@@ -44,4 +44,5 @@ func (dto *GetFileByHash) Validate(lang string) error {
 type FileResponse struct {
 	File             io.Reader
 	OriginalFilename string
+	SizeBytes        int64
 }

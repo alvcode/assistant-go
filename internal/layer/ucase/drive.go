@@ -9,7 +9,6 @@ import (
 	"assistant-go/internal/storage/postgres"
 	"context"
 	"errors"
-	"fmt"
 	"github.com/jackc/pgx/v5"
 	"io"
 	"os"
@@ -120,8 +119,6 @@ func (uc *driveUseCase) UploadFile(in dto.DriveUploadFile, user *entity.User) ([
 		}
 	}
 
-	fmt.Println("1")
-
 	// Если не получилось через Stat() — считаем вручную через LimitedReader:
 	if size == 0 {
 		lr := io.LimitReader(in.File, in.MaxSizeBytes+1)
@@ -131,8 +128,6 @@ func (uc *driveUseCase) UploadFile(in dto.DriveUploadFile, user *entity.User) ([
 		}
 		size = n
 	}
-
-	fmt.Println("2")
 
 	if size > in.MaxSizeBytes {
 		return nil, ErrDriveFileTooLarge
@@ -156,7 +151,6 @@ func (uc *driveUseCase) UploadFile(in dto.DriveUploadFile, user *entity.User) ([
 	//} else {
 	//	return nil, ErrFileUnableToSeek
 	//}
-	fmt.Println("3")
 
 	fileExt := strings.ToLower(filepath.Ext(in.OriginalFilename))
 	fileExt = strings.TrimPrefix(fileExt, ".")
@@ -198,8 +192,6 @@ func (uc *driveUseCase) UploadFile(in dto.DriveUploadFile, user *entity.User) ([
 		return nil, ErrDriveFileSave
 	}
 
-	fmt.Println("4")
-
 	// сохраняем 2 записи в БД
 	driveStruct := &entity.DriveStruct{
 		UserID:    user.ID,
@@ -215,8 +207,6 @@ func (uc *driveUseCase) UploadFile(in dto.DriveUploadFile, user *entity.User) ([
 		return nil, err
 	}
 
-	fmt.Println("5")
-
 	driveFile := &entity.DriveFile{
 		DriveStructID: driveStruct.ID,
 		Path:          middleFilePath,
@@ -231,13 +221,11 @@ func (uc *driveUseCase) UploadFile(in dto.DriveUploadFile, user *entity.User) ([
 		return nil, postgres.ErrUnexpectedDBError
 	}
 
-	fmt.Println("6")
-
 	treeList, err := uc.GetTree(in.ParentID, user)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("7")
+
 	return treeList, nil
 }
 
@@ -314,6 +302,7 @@ func (uc *driveUseCase) GetFile(structID int, savePath string, user *entity.User
 	fileResponse := &dto.FileResponse{
 		File:             fileReader,
 		OriginalFilename: driveStruct.Name,
+		SizeBytes:        driveFile.Size,
 	}
 	return fileResponse, nil
 }

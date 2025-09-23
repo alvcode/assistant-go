@@ -241,6 +241,7 @@ func (h *DriveHandler) GetFile(w http.ResponseWriter, r *http.Request) {
 	filename := url.PathEscape(fileDto.OriginalFilename)
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename*=UTF-8''%s", filename))
 	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set("Content-Length", strconv.FormatInt(fileDto.SizeBytes, 10))
 	w.WriteHeader(http.StatusOK)
 
 	_, err = io.Copy(w, fileDto.File)
