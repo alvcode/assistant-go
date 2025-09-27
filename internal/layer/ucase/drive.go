@@ -143,14 +143,14 @@ func (uc *driveUseCase) UploadFile(in dto.DriveUploadFile, user *entity.User) ([
 		return nil, ErrDriveFileSystemIsFull
 	}
 
-	//if seeker, ok := in.File.(io.Seeker); ok {
-	//	_, err := seeker.Seek(0, io.SeekStart)
-	//	if err != nil {
-	//		return nil, ErrFileResettingPointer
-	//	}
-	//} else {
-	//	return nil, ErrFileUnableToSeek
-	//}
+	if seeker, ok := in.File.(io.Seeker); ok {
+		_, err := seeker.Seek(0, io.SeekStart)
+		if err != nil {
+			return nil, ErrFileResettingPointer
+		}
+	} else {
+		return nil, ErrFileUnableToSeek
+	}
 
 	fileExt := strings.ToLower(filepath.Ext(in.OriginalFilename))
 	fileExt = strings.TrimPrefix(fileExt, ".")
