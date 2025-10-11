@@ -3,7 +3,6 @@ package repository
 import (
 	"assistant-go/internal/layer/entity"
 	"context"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type DriveFileRepository interface {
@@ -15,10 +14,10 @@ type DriveFileRepository interface {
 }
 
 type driveFileRepository struct {
-	db *pgxpool.Pool
+	db DBExecutor
 }
 
-func NewDriveFileRepository(db *pgxpool.Pool) DriveFileRepository {
+func NewDriveFileRepository(db DBExecutor) DriveFileRepository {
 	return &driveFileRepository{db: db}
 }
 
@@ -49,6 +48,7 @@ func (r *driveFileRepository) GetByStructID(ctx context.Context, structID int) (
 		&result.Ext,
 		&result.Size,
 		&result.CreatedAt,
+		&result.IsChunk,
 	)
 	if err != nil {
 		return nil, err
@@ -70,8 +70,8 @@ func (r *driveFileRepository) GetLastID(ctx context.Context) (int, error) {
 
 func (r *driveFileRepository) Create(ctx context.Context, in *entity.DriveFile) (*entity.DriveFile, error) {
 	query := `
-		INSERT INTO drive_files (drive_struct_id, path, ext, size, created_at) 
-		VALUES ($1, $2, $3, $4, $5) RETURNING id
+		INSERT INTO drive_files (drive_struct_id, path, ext, size, created_at, is_chunk) 
+		VALUES ($1, $2, $3, $4, $5, $6) RETURNING id
 	`
 
 	row := r.db.QueryRow(
@@ -82,6 +82,7 @@ func (r *driveFileRepository) Create(ctx context.Context, in *entity.DriveFile) 
 		in.Ext,
 		in.Size,
 		in.CreatedAt,
+		in.IsChunk,
 	)
 
 	if err := row.Scan(&in.ID); err != nil {
@@ -120,7 +121,7 @@ func (r *driveFileRepository) GetAllRecursive(ctx context.Context, structID int,
 
 	for rows.Next() {
 		df := &entity.DriveFile{}
-		if err := rows.Scan(&df.ID, &df.DriveStructID, &df.Path, &df.Ext, &df.Size, &df.CreatedAt); err != nil {
+		if err := rows.Scan(&df.ID, &df.DriveStructID, &df.Path, &df.Ext, &df.Size, &df.CreatedAt, &df.IsChunk); err != nil {
 			return nil, err
 		}
 		result = append(result, df)

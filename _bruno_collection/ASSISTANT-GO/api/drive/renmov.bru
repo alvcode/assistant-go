@@ -1,0 +1,22 @@
+meta {
+  name: renmov
+  type: http
+  seq: 8
+}
+
+patch {
+  url: {{domain}}/api/drive/renmov
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+      "parent_id": null,
+      "struct_ids": [9, 28, 27, 32]
+  }
+}
+
+settings {
+  encodeUrl: true
+}

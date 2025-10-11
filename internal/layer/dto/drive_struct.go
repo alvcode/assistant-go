@@ -61,6 +61,7 @@ type DriveTree struct {
 	Size      int64     `db:"size" json:"size"`
 	CreatedAt time.Time `db:"created_at" json:"created_at"`
 	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
+	IsChunk   bool      `db:"is_chunk" json:"is_chunk"`
 }
 
 type DriveRenMov struct {
@@ -74,4 +75,28 @@ func (dto *DriveRenMov) Validate(lang string) error {
 		return vld.TextFromFirstError(err, lang)
 	}
 	return nil
+}
+
+type DriveChunkPrepare struct {
+	Filename string `json:"filename" validate:"required"`
+	FullSize int64  `json:"full_size" validate:"required"`
+	ParentID *int   `json:"parent_id"`
+}
+
+func (dto *DriveChunkPrepare) Validate(lang string) error {
+	err := vld.Validate.Struct(dto)
+	if err != nil {
+		return vld.TextFromFirstError(err, lang)
+	}
+	return nil
+}
+
+type DriveChunkPrepareIn struct {
+	DriveChunkPrepare
+	MaxSizeBytes          int64
+	StorageMaxSizePerUser int64
+}
+
+type DriveChunkPrepareResponse struct {
+	FileID int `json:"file_id"`
 }

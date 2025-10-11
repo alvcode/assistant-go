@@ -219,4 +219,15 @@ func (controller *Init) setDrive(ctx context.Context, repositories *repository.R
 		"/api/drive/renmov",
 		handler.BuildHandler(driveHandler.RenMov, handler.AuthMW),
 	)
+	// ==== chunks
+	controller.router.Handler(
+		http.MethodPost,
+		"/api/drive/chunk-prepare",
+		handler.BuildHandler(driveHandler.ChunkPrepare, handler.AuthMW),
+	)
+	controller.router.Handler(
+		http.MethodPost,
+		"/api/drive/upload-chunk",
+		handler.BuildHandler(driveHandler.ChunkPrepare, handler.AuthMW),
+	)
 }

@@ -147,14 +147,20 @@ func (h *DriveHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case errors.Is(err, ucase.ErrDriveParentIdNotFound),
 			errors.Is(err, ucase.ErrDriveFileNotSafeFilename),
-			errors.Is(err, ucase.ErrDriveFileTooLarge):
+			errors.Is(err, ucase.ErrDriveFileTooLarge),
+			errors.Is(err, ucase.ErrDriveFileTooLargeUseChunks):
 			BlockEventHandle(r, BlockEventInputDataType)
 		default:
 			BlockEventHandle(r, BlockEventOtherType)
 		}
 
-		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
-		return
+		if errors.Is(err, ucase.ErrDriveFileTooLargeUseChunks) {
+			SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, -1)
+			return
+		} else {
+			SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
+			return
+		}
 	}
 
 	SendResponse(w, http.StatusCreated, driveTreeList)
@@ -356,4 +362,86 @@ func (h *DriveHandler) RenMov(w http.ResponseWriter, r *http.Request) {
 
 	SendResponse(w, http.StatusNoContent, nil)
 	return
+}
+
+func (h *DriveHandler) ChunkPrepare(w http.ResponseWriter, r *http.Request) {
+	langRequest := locale.GetLangFromContext(r.Context())
+	var chunkPrepareDTO dto.DriveChunkPrepare
+
+	authUser, err := GetAuthUser(r)
+	if err != nil {
+		BlockEventHandle(r, BlockEventUnauthorizedType)
+		SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
+		return
+	}
+
+	err = json.NewDecoder(r.Body).Decode(&chunkPrepareDTO)
+	if err != nil {
+		BlockEventHandle(r, BlockEventDecodeBodyType)
+		SendErrorResponse(w, locale.T(langRequest, "error_reading_request_body"), http.StatusBadRequest, 0)
+		return
+	}
+
+	if err = chunkPrepareDTO.Validate(langRequest); err != nil {
+		BlockEventHandle(r, BlockEventInputDataType)
+		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
+		return
+	}
+
+	inDTO := dto.DriveChunkPrepareIn{
+		DriveChunkPrepare:     chunkPrepareDTO,
+		MaxSizeBytes:          appConf.Drive.UploadMaxSize << 20,
+		StorageMaxSizePerUser: appConf.Drive.LimitPerUser << 20,
+	}
+
+	responseDTO, err := h.useCase.ChunkPrepare(authUser, inDTO)
+	if err != nil {
+		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
+		return
+	}
+
+	SendResponse(w, http.StatusCreated, responseDTO)
+	return
+}
+
+func (h *DriveHandler) UploadChunk(w http.ResponseWriter, r *http.Request) {
+	langRequest := locale.GetLangFromContext(r.Context())
+
+	authUser, err := GetAuthUser(r)
+	if err != nil {
+		BlockEventHandle(r, BlockEventUnauthorizedType)
+		SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
+		return
+	}
+
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		logging.GetLogger(r.Context()).Error(err)
+		BlockEventHandle(r, BlockEventDecodeBodyType)
+		SendErrorResponse(w, buildErrorMessage(langRequest, ErrFileInvalidReadForm), http.StatusUnprocessableEntity, 0)
+		return
+	}
+
+	var fileID *int
+	fileIDStr := r.URL.Query().Get("fileId")
+
+	if fileIDStr != "" {
+		parentIDInt, err := strconv.Atoi(fileIDStr)
+
+		if err != nil {
+			BlockEventHandle(r, BlockEventInputDataType)
+			SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
+			return
+		}
+		fileID = &parentIDInt
+	}
+
+	defer func(file multipart.File) {
+		err := file.Close()
+		if err != nil {
+			SendErrorResponse(w, "failed to close uploaded file", http.StatusUnprocessableEntity, 0)
+			return
+		}
+	}(file)
+
 }

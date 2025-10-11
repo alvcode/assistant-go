@@ -17,6 +17,7 @@
   "failed_to_determine_ip": "The IP address could not be determined",
   "category_already_in_1_position": "Category is already in position 1",
   "file_too_large": "File too large",
+  "file_too_large_use_chunks": "The file is too large for this upload method. Please use chunk upload",
   "file_error_reading": "Error reading file",
   "file_invalid_type": "The file format you are uploading is not supported. Allowed: {{.Formats}}",
   "file_error_resetting_pointer": "Pointer reset error",

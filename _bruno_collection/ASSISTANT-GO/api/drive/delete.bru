@@ -1,0 +1,15 @@
+meta {
+  name: delete
+  type: http
+  seq: 4
+}
+
+delete {
+  url: {{domain}}/api/drive/32
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+}

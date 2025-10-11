@@ -24,6 +24,7 @@ const (
 
 var (
 	ErrDriveFileTooLarge                    = errors.New("drive file too large")
+	ErrDriveFileTooLargeUseChunks           = errors.New("drive file too large use chunks")
 	ErrDriveFileSystemIsFull                = errors.New("drive file system is full")
 	ErrDriveFileNotSafeFilename             = errors.New("drive file not safe filename")
 	ErrDriveFileSave                        = errors.New("drive unable to save file")
@@ -45,6 +46,7 @@ type DriveUseCase interface {
 	Rename(structID int, newName string, user *entity.User) error
 	Space(user *entity.User, totalSpace int64) (*dto.DriveSpace, error)
 	RenMov(user *entity.User, in dto.DriveRenMov) error
+	ChunkPrepare(user *entity.User, in dto.DriveChunkPrepareIn) (*dto.DriveChunkPrepareResponse, error)
 }
 
 type driveUseCase struct {
@@ -129,6 +131,10 @@ func (uc *driveUseCase) UploadFile(in dto.DriveUploadFile, user *entity.User) ([
 		size = n
 	}
 
+	if size > 64<<20 {
+		return nil, ErrDriveFileTooLargeUseChunks
+	}
+
 	if size > in.MaxSizeBytes {
 		return nil, ErrDriveFileTooLarge
 	}
@@ -209,10 +215,11 @@ func (uc *driveUseCase) UploadFile(in dto.DriveUploadFile, user *entity.User) ([
 
 	driveFile := &entity.DriveFile{
 		DriveStructID: driveStruct.ID,
-		Path:          middleFilePath,
+		Path:          &middleFilePath,
 		Ext:           fileExt,
 		Size:          size,
 		CreatedAt:     time.Now().UTC(),
+		IsChunk:       false,
 	}
 
 	_, err = uc.repositories.DriveFileRepository.Create(uc.ctx, driveFile)
@@ -253,7 +260,7 @@ func (uc *driveUseCase) Delete(structID int, savePath string, user *entity.User)
 	if existsFiles {
 		var keys []string
 		for _, file := range deleteFileList {
-			keys = append(keys, filepath.Join(savePath, file.Path))
+			keys = append(keys, filepath.Join(savePath, *file.Path))
 		}
 
 		if len(keys) > 0 {
@@ -292,7 +299,7 @@ func (uc *driveUseCase) GetFile(structID int, savePath string, user *entity.User
 		}
 	}
 
-	fullPath := filepath.Join(savePath, driveFile.Path)
+	fullPath := filepath.Join(savePath, *driveFile.Path)
 	fileReader, err := uc.repositories.StorageRepository.GetFile(uc.ctx, fullPath)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
@@ -405,4 +412,81 @@ func (uc *driveUseCase) RenMov(user *entity.User, in dto.DriveRenMov) error {
 		return err
 	}
 	return nil
+}
+
+func (uc *driveUseCase) ChunkPrepare(user *entity.User, in dto.DriveChunkPrepareIn) (*dto.DriveChunkPrepareResponse, error) {
+	if in.FullSize > in.MaxSizeBytes {
+		return nil, ErrDriveFileTooLarge
+	}
+
+	allStorageSize, err := uc.repositories.DriveFileRepository.GetStorageSize(uc.ctx, user.ID)
+	if err != nil {
+		logging.GetLogger(uc.ctx).Error(err)
+		return nil, postgres.ErrUnexpectedDBError
+	}
+
+	if (allStorageSize + in.FullSize) > in.StorageMaxSizePerUser {
+		return nil, ErrDriveFileSystemIsFull
+	}
+
+	fileExt := strings.ToLower(filepath.Ext(in.Filename))
+	fileExt = strings.TrimPrefix(fileExt, ".")
+
+	safeName := filepath.Base(in.Filename)
+	if strings.Contains(safeName, "..") {
+		return nil, ErrDriveFileNotSafeFilename
+	}
+
+	_, err = uc.repositories.DriveStructRepository.FindRow(uc.ctx, user.ID, in.Filename, typeFile, in.ParentID)
+
+	if err == nil {
+		return nil, ErrDriveFilenameExists
+	}
+
+	driveStruct := &entity.DriveStruct{
+		UserID:    user.ID,
+		Name:      in.Filename,
+		Type:      typeFile,
+		ParentID:  in.ParentID,
+		CreatedAt: time.Now().UTC(),
+		UpdatedAt: time.Now().UTC(),
+	}
+
+	driveFileResult, err := repository.WithTransactionResult(
+		uc.ctx,
+		uc.repositories.TransactionRepository,
+		func(tx pgx.Tx) (*entity.DriveFile, error) {
+			driveStructRepo := repository.NewDriveStructRepository(tx)
+
+			driveStruct, err = driveStructRepo.Create(uc.ctx, driveStruct)
+			if err != nil {
+				return nil, err
+			}
+
+			driveFile := &entity.DriveFile{
+				DriveStructID: driveStruct.ID,
+				Path:          nil,
+				Ext:           fileExt,
+				Size:          0,
+				CreatedAt:     time.Now().UTC(),
+				IsChunk:       true,
+			}
+
+			driveFileRepo := repository.NewDriveFileRepository(tx)
+
+			driveFile, err = driveFileRepo.Create(uc.ctx, driveFile)
+			if err != nil {
+				logging.GetLogger(uc.ctx).Error(err)
+				return nil, postgres.ErrUnexpectedDBError
+			}
+
+			return driveFile, nil
+		})
+
+	if err != nil {
+		logging.GetLogger(uc.ctx).Error(err)
+		return nil, err
+	}
+
+	return &dto.DriveChunkPrepareResponse{FileID: driveFileResult.ID}, nil
 }

@@ -1,0 +1,23 @@
+meta {
+  name: chunk-prepare
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{domain}}/api/drive/chunk-prepare
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "filename": "fxgvsdgdsfg.png",
+    "full_size": 3354534436456454564,
+    "parent_id": null
+  }
+}
+
+settings {
+  encodeUrl: true
+}

@@ -1,0 +1,23 @@
+meta {
+  name: file-upload
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{domain}}/api/drive/upload-file?parentId=
+  body: multipartForm
+  auth: inherit
+}
+
+params:query {
+  parentId: 
+}
+
+body:multipart-form {
+  file: @file(/home/alvcode/Загрузки/646ba766.Загрузчик анн полисов август.xlsx)
+}
+
+settings {
+  encodeUrl: true
+}
