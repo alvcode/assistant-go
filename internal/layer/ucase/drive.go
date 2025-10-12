@@ -9,8 +9,10 @@ import (
 	"assistant-go/internal/storage/postgres"
 	"context"
 	"errors"
+	"fmt"
 	"github.com/jackc/pgx/v5"
 	"io"
+	"mime/multipart"
 	"os"
 	"path/filepath"
 	"strings"
@@ -47,6 +49,8 @@ type DriveUseCase interface {
 	Space(user *entity.User, totalSpace int64) (*dto.DriveSpace, error)
 	RenMov(user *entity.User, in dto.DriveRenMov) error
 	ChunkPrepare(user *entity.User, in dto.DriveChunkPrepareIn) (*dto.DriveChunkPrepareResponse, error)
+	ChunkUpload(user *entity.User, in dto.DriveUploadChunk) error
+	ChunkEnd(structID int) error
 }
 
 type driveUseCase struct {
@@ -74,15 +78,9 @@ func (uc *driveUseCase) GetTree(parentID *int, user *entity.User) ([]*dto.DriveT
 
 func (uc *driveUseCase) CreateDirectory(dto *dto.DriveCreateDirectory, user *entity.User) ([]*dto.DriveTree, error) {
 	if dto.ParentID != nil {
-		parentStruct, err := uc.repositories.DriveStructRepository.GetByID(uc.ctx, *dto.ParentID)
+		err := uc.checkParentOwner(*dto.ParentID, user.ID)
 		if err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				return nil, ErrDriveParentIdNotFound
-			}
 			return nil, err
-		}
-		if parentStruct.UserID != user.ID {
-			return nil, ErrDriveDirectoryExists
 		}
 	}
 	_, err := uc.repositories.DriveStructRepository.FindRow(uc.ctx, user.ID, dto.Name, typeDirectory, dto.ParentID)
@@ -113,22 +111,9 @@ func (uc *driveUseCase) CreateDirectory(dto *dto.DriveCreateDirectory, user *ent
 func (uc *driveUseCase) UploadFile(in dto.DriveUploadFile, user *entity.User) ([]*dto.DriveTree, error) {
 	fileService := service.NewFile().FileService()
 
-	var size int64
-	// Если файл поддерживает Stat():
-	if statter, ok := in.File.(interface{ Stat() (os.FileInfo, error) }); ok {
-		if fi, err := statter.Stat(); err == nil {
-			size = fi.Size()
-		}
-	}
-
-	// Если не получилось через Stat() — считаем вручную через LimitedReader:
-	if size == 0 {
-		lr := io.LimitReader(in.File, in.MaxSizeBytes+1)
-		n, err := io.Copy(io.Discard, lr)
-		if err != nil {
-			return nil, err
-		}
-		size = n
+	size, err := uc.getFileSize(in.File, in.MaxSizeBytes)
+	if err != nil {
+		return nil, err
 	}
 
 	if size > 64<<20 {
@@ -147,15 +132,6 @@ func (uc *driveUseCase) UploadFile(in dto.DriveUploadFile, user *entity.User) ([
 
 	if (allStorageSize + size) > in.StorageMaxSizePerUser {
 		return nil, ErrDriveFileSystemIsFull
-	}
-
-	if seeker, ok := in.File.(io.Seeker); ok {
-		_, err := seeker.Seek(0, io.SeekStart)
-		if err != nil {
-			return nil, ErrFileResettingPointer
-		}
-	} else {
-		return nil, ErrFileUnableToSeek
 	}
 
 	fileExt := strings.ToLower(filepath.Ext(in.OriginalFilename))
@@ -247,28 +223,39 @@ func (uc *driveUseCase) Delete(structID int, savePath string, user *entity.User)
 		return ErrDriveStructNotFound
 	}
 
-	existsFiles := true
-	deleteFileList, err := uc.repositories.DriveFileRepository.GetAllRecursive(uc.ctx, structID, user.ID)
+	deleteChunkList, err := uc.repositories.DriveFileChunkRepository.GetAllRecursive(uc.ctx, structID, user.ID)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			existsFiles = false
-		} else {
+		if !errors.Is(err, pgx.ErrNoRows) {
 			return err
 		}
 	}
 
-	if existsFiles {
-		var keys []string
-		for _, file := range deleteFileList {
-			keys = append(keys, filepath.Join(savePath, *file.Path))
-		}
-
-		if len(keys) > 0 {
-			_ = uc.repositories.StorageRepository.DeleteAll(uc.ctx, keys)
+	deleteFileList, err := uc.repositories.DriveFileRepository.GetAllRecursive(uc.ctx, structID, user.ID)
+	if err != nil {
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return err
 		}
 	}
 
-	// удаление записей из БД из двух таблиц
+	var keys []string
+	if len(deleteChunkList) > 0 {
+		for _, fileChunk := range deleteChunkList {
+			keys = append(keys, filepath.Join(savePath, fileChunk.Path))
+		}
+	}
+	if len(deleteFileList) > 0 {
+		for _, file := range deleteFileList {
+			if !file.IsChunk {
+				keys = append(keys, filepath.Join(savePath, *file.Path))
+			}
+		}
+	}
+
+	if len(keys) > 0 {
+		_ = uc.repositories.StorageRepository.DeleteAll(uc.ctx, keys)
+	}
+
+	// удаление записей из БД из трех таблиц (через cascade fk)
 	err = uc.repositories.DriveStructRepository.DeleteRecursive(uc.ctx, user.ID, structID)
 	if err != nil {
 		return err
@@ -429,6 +416,13 @@ func (uc *driveUseCase) ChunkPrepare(user *entity.User, in dto.DriveChunkPrepare
 		return nil, ErrDriveFileSystemIsFull
 	}
 
+	if in.ParentID != nil {
+		err := uc.checkParentOwner(*in.ParentID, user.ID)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	fileExt := strings.ToLower(filepath.Ext(in.Filename))
 	fileExt = strings.TrimPrefix(fileExt, ".")
 
@@ -452,10 +446,10 @@ func (uc *driveUseCase) ChunkPrepare(user *entity.User, in dto.DriveChunkPrepare
 		UpdatedAt: time.Now().UTC(),
 	}
 
-	driveFileResult, err := repository.WithTransactionResult(
+	driveStructResult, err := repository.WithTransactionResult(
 		uc.ctx,
 		uc.repositories.TransactionRepository,
-		func(tx pgx.Tx) (*entity.DriveFile, error) {
+		func(tx pgx.Tx) (*entity.DriveStruct, error) {
 			driveStructRepo := repository.NewDriveStructRepository(tx)
 
 			driveStruct, err = driveStructRepo.Create(uc.ctx, driveStruct)
@@ -480,7 +474,7 @@ func (uc *driveUseCase) ChunkPrepare(user *entity.User, in dto.DriveChunkPrepare
 				return nil, postgres.ErrUnexpectedDBError
 			}
 
-			return driveFile, nil
+			return driveStruct, nil
 		})
 
 	if err != nil {
@@ -488,5 +482,152 @@ func (uc *driveUseCase) ChunkPrepare(user *entity.User, in dto.DriveChunkPrepare
 		return nil, err
 	}
 
-	return &dto.DriveChunkPrepareResponse{FileID: driveFileResult.ID}, nil
+	return &dto.DriveChunkPrepareResponse{StructID: driveStructResult.ID}, nil
+}
+
+func (uc *driveUseCase) ChunkUpload(user *entity.User, in dto.DriveUploadChunk) error {
+	fileService := service.NewFile().FileService()
+
+	size, err := uc.getFileSize(in.File, in.MaxSizeBytes)
+	if err != nil {
+		return err
+	}
+
+	if size > 64<<20 {
+		return ErrDriveFileTooLargeUseChunks
+	}
+
+	fileEntity, err := uc.repositories.DriveFileRepository.GetByStructID(uc.ctx, in.StructID)
+	if err != nil {
+		return err
+	}
+
+	checkFileOwner, err := uc.repositories.DriveFileRepository.CheckFileOwner(uc.ctx, fileEntity.ID, user.ID)
+	if err != nil {
+		logging.GetLogger(uc.ctx).Error(err)
+		return err
+	}
+	if !checkFileOwner {
+		return ErrDriveStructNotFound
+	}
+
+	chunksSize, err := uc.repositories.DriveFileChunkRepository.GetChunksSize(uc.ctx, fileEntity.ID)
+	if err != nil {
+		logging.GetLogger(uc.ctx).Error(err)
+		return err
+	}
+
+	if chunksSize+size > in.MaxSizeBytes {
+		return ErrDriveFileTooLarge
+	}
+
+	allStorageSize, err := uc.repositories.DriveFileRepository.GetStorageSize(uc.ctx, user.ID)
+	if err != nil {
+		logging.GetLogger(uc.ctx).Error(err)
+		return postgres.ErrUnexpectedDBError
+	}
+
+	if (allStorageSize + chunksSize + size) > in.StorageMaxSizePerUser {
+		return ErrDriveFileSystemIsFull
+	}
+
+	newFilename, err := fileService.GenerateNewFileName(fmt.Sprintf("%s_%d", "part", in.ChunkNumber))
+	if err != nil {
+		return err
+	}
+
+	middleFilePath := filepath.Join(fileService.GetMiddlePathByFileId(fileEntity.ID), newFilename)
+	fullFilePath := filepath.Join(in.SavePath, middleFilePath)
+
+	limitedReader := io.LimitReader(in.File, 65<<20)
+	saveDto := &dto.SaveFile{
+		File:      limitedReader,
+		SavePath:  fullFilePath,
+		SizeBytes: size,
+	}
+
+	saveErr := uc.repositories.StorageRepository.Save(uc.ctx, saveDto)
+	if saveErr != nil {
+		return ErrDriveFileSave
+	}
+
+	driveFileChunk := &entity.DriveFileChunk{
+		DriveFileID: fileEntity.ID,
+		Path:        middleFilePath,
+		Size:        size,
+		ChunkNumber: in.ChunkNumber,
+	}
+
+	_, err = uc.repositories.DriveFileChunkRepository.Create(uc.ctx, driveFileChunk)
+	if err != nil {
+		logging.GetLogger(uc.ctx).Error(err)
+		return postgres.ErrUnexpectedDBError
+	}
+
+	return nil
+}
+
+func (uc *driveUseCase) ChunkEnd(structID int) error {
+	fileEntity, err := uc.repositories.DriveFileRepository.GetByStructID(uc.ctx, structID)
+	if err != nil {
+		return err
+	}
+
+	chunksSize, err := uc.repositories.DriveFileChunkRepository.GetChunksSize(uc.ctx, fileEntity.ID)
+	if err != nil {
+		logging.GetLogger(uc.ctx).Error(err)
+		return err
+	}
+
+	err = uc.repositories.DriveFileRepository.UpdateSize(uc.ctx, fileEntity.ID, chunksSize)
+	if err != nil {
+		logging.GetLogger(uc.ctx).Error(err)
+		return err
+	}
+	return nil
+}
+
+func (uc *driveUseCase) getFileSize(file multipart.File, maxSize int64) (int64, error) {
+	var size int64
+	// Если файл поддерживает Stat():
+	if statter, ok := file.(interface{ Stat() (os.FileInfo, error) }); ok {
+		if fi, err := statter.Stat(); err == nil {
+			size = fi.Size()
+		}
+	}
+
+	// Если не получилось через Stat() — считаем вручную через LimitedReader:
+	if size == 0 {
+		lr := io.LimitReader(file, maxSize+1)
+		n, err := io.Copy(io.Discard, lr)
+		if err != nil {
+			return 0, err
+		}
+		size = n
+	}
+
+	if seeker, ok := file.(io.Seeker); ok {
+		_, err := seeker.Seek(0, io.SeekStart)
+		if err != nil {
+			return 0, ErrFileResettingPointer
+		}
+	} else {
+		return 0, ErrFileUnableToSeek
+	}
+
+	return size, nil
+}
+
+func (uc *driveUseCase) checkParentOwner(parentID int, userID int) error {
+	parentStruct, err := uc.repositories.DriveStructRepository.GetByID(uc.ctx, parentID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrDriveParentIdNotFound
+		}
+		return err
+	}
+	if parentStruct.UserID != userID {
+		return ErrDriveDirectoryExists
+	}
+	return nil
 }

@@ -16,18 +16,19 @@ type DBExecutor interface {
 }
 
 type Repositories struct {
-	UserRepository         UserRepository
-	NoteRepository         NoteRepository
-	NoteCategoryRepository NoteCategoryRepository
-	BlockIPRepository      BlockIPRepository
-	BlockEventRepository   BlockEventRepository
-	RateLimiterRepository  RateLimiterRepository
-	FileRepository         FileRepository
-	StorageRepository      FileStorageRepository
-	FileNoteLinkRepository FileNoteLinkRepository
-	TransactionRepository  TransactionRepository
-	DriveStructRepository  DriveStructRepository
-	DriveFileRepository    DriveFileRepository
+	UserRepository           UserRepository
+	NoteRepository           NoteRepository
+	NoteCategoryRepository   NoteCategoryRepository
+	BlockIPRepository        BlockIPRepository
+	BlockEventRepository     BlockEventRepository
+	RateLimiterRepository    RateLimiterRepository
+	FileRepository           FileRepository
+	StorageRepository        FileStorageRepository
+	FileNoteLinkRepository   FileNoteLinkRepository
+	TransactionRepository    TransactionRepository
+	DriveStructRepository    DriveStructRepository
+	DriveFileRepository      DriveFileRepository
+	DriveFileChunkRepository DriveFileChunkRepository
 }
 
 func NewRepositories(ctx context.Context, cfg *config.Config, db *pgxpool.Pool, minio *minio.Client) *Repositories {
@@ -38,18 +39,19 @@ func NewRepositories(ctx context.Context, cfg *config.Config, db *pgxpool.Pool, 
 		storageInterface = NewLocalStorageRepository()
 	}
 	return &Repositories{
-		UserRepository:         NewUserRepository(db),
-		NoteRepository:         NewNoteRepository(db),
-		NoteCategoryRepository: NewNoteCategoryRepository(db),
-		BlockIPRepository:      NewBlockIpRepository(db),
-		BlockEventRepository:   NewBlockEventRepository(db),
-		RateLimiterRepository:  NewRateLimiterRepository(db),
-		FileRepository:         NewFileRepository(db),
-		StorageRepository:      storageInterface,
-		FileNoteLinkRepository: NewFileNoteLinkRepository(db),
-		TransactionRepository:  &transactionRepository{db: db},
-		DriveStructRepository:  NewDriveStructRepository(db),
-		DriveFileRepository:    NewDriveFileRepository(db),
+		UserRepository:           NewUserRepository(db),
+		NoteRepository:           NewNoteRepository(db),
+		NoteCategoryRepository:   NewNoteCategoryRepository(db),
+		BlockIPRepository:        NewBlockIpRepository(db),
+		BlockEventRepository:     NewBlockEventRepository(db),
+		RateLimiterRepository:    NewRateLimiterRepository(db),
+		FileRepository:           NewFileRepository(db),
+		StorageRepository:        storageInterface,
+		FileNoteLinkRepository:   NewFileNoteLinkRepository(db),
+		TransactionRepository:    &transactionRepository{db: db},
+		DriveStructRepository:    NewDriveStructRepository(db),
+		DriveFileRepository:      NewDriveFileRepository(db),
+		DriveFileChunkRepository: NewDriveFileChunkRepository(db),
 	}
 }
 
@@ -84,7 +86,6 @@ func WithTransaction(ctx context.Context, tr TransactionRepository, fn func(tx p
 	return tx.Commit(ctx)
 }
 
-// TODO: еще не тестировался
 func WithTransactionResult[T any](
 	ctx context.Context,
 	tr TransactionRepository,

@@ -414,7 +414,7 @@ func (h *DriveHandler) UploadChunk(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	file, header, err := r.FormFile("file")
+	file, _, err := r.FormFile("file")
 	if err != nil {
 		logging.GetLogger(r.Context()).Error(err)
 		BlockEventHandle(r, BlockEventDecodeBodyType)
@@ -422,18 +422,40 @@ func (h *DriveHandler) UploadChunk(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var fileID *int
-	fileIDStr := r.URL.Query().Get("fileId")
+	var structID *int
+	structIDStr := r.URL.Query().Get("structId")
 
-	if fileIDStr != "" {
-		parentIDInt, err := strconv.Atoi(fileIDStr)
+	if structIDStr != "" {
+		structIDInt, err := strconv.Atoi(structIDStr)
 
 		if err != nil {
 			BlockEventHandle(r, BlockEventInputDataType)
 			SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
 			return
 		}
-		fileID = &parentIDInt
+		structID = &structIDInt
+	} else {
+		BlockEventHandle(r, BlockEventInputDataType)
+		SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
+		return
+	}
+
+	var chunkNumber *int
+	chunkNumberStr := r.URL.Query().Get("chunkNumber")
+
+	if chunkNumberStr != "" {
+		chunkNumberInt, err := strconv.Atoi(chunkNumberStr)
+
+		if err != nil {
+			BlockEventHandle(r, BlockEventInputDataType)
+			SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
+			return
+		}
+		chunkNumber = &chunkNumberInt
+	} else {
+		BlockEventHandle(r, BlockEventInputDataType)
+		SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
+		return
 	}
 
 	defer func(file multipart.File) {
@@ -444,4 +466,57 @@ func (h *DriveHandler) UploadChunk(w http.ResponseWriter, r *http.Request) {
 		}
 	}(file)
 
+	uploadChunkDTO := dto.DriveUploadChunk{
+		File:                  file,
+		StructID:              *structID,
+		ChunkNumber:           *chunkNumber,
+		MaxSizeBytes:          appConf.Drive.UploadMaxSize << 20,
+		StorageMaxSizePerUser: appConf.Drive.LimitPerUser << 20,
+		SavePath:              appConf.Drive.SavePath,
+	}
+
+	err = h.useCase.ChunkUpload(authUser, uploadChunkDTO)
+	if err != nil {
+		switch {
+		case errors.Is(err, ucase.ErrDriveStructNotFound),
+			errors.Is(err, ucase.ErrDriveFileTooLarge),
+			errors.Is(err, ucase.ErrDriveFileTooLargeUseChunks):
+			BlockEventHandle(r, BlockEventInputDataType)
+		default:
+			BlockEventHandle(r, BlockEventOtherType)
+		}
+
+		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
+		return
+	}
+
+	SendResponse(w, http.StatusCreated, nil)
+	return
+}
+
+func (h *DriveHandler) ChunkEnd(w http.ResponseWriter, r *http.Request) {
+	langRequest := locale.GetLangFromContext(r.Context())
+	var chunkEndDTO dto.DriveChunkEnd
+
+	err := json.NewDecoder(r.Body).Decode(&chunkEndDTO)
+	if err != nil {
+		BlockEventHandle(r, BlockEventDecodeBodyType)
+		SendErrorResponse(w, locale.T(langRequest, "error_reading_request_body"), http.StatusBadRequest, 0)
+		return
+	}
+
+	if err = chunkEndDTO.Validate(langRequest); err != nil {
+		BlockEventHandle(r, BlockEventInputDataType)
+		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
+		return
+	}
+
+	err = h.useCase.ChunkEnd(chunkEndDTO.StructID)
+	if err != nil {
+		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
+		return
+	}
+
+	SendResponse(w, http.StatusOK, nil)
+	return
 }

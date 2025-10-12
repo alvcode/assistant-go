@@ -11,6 +11,8 @@ type DriveFileRepository interface {
 	GetLastID(ctx context.Context) (int, error)
 	Create(ctx context.Context, in *entity.DriveFile) (*entity.DriveFile, error)
 	GetAllRecursive(ctx context.Context, structID int, userID int) ([]*entity.DriveFile, error)
+	CheckFileOwner(ctx context.Context, fileID int, userID int) (bool, error)
+	UpdateSize(ctx context.Context, fileID int, size int64) error
 }
 
 type driveFileRepository struct {
@@ -131,4 +133,31 @@ func (r *driveFileRepository) GetAllRecursive(ctx context.Context, structID int,
 		return nil, err
 	}
 	return result, nil
+}
+
+func (r *driveFileRepository) CheckFileOwner(ctx context.Context, fileID int, userID int) (bool, error) {
+	query := `
+		SELECT EXISTS(
+			SELECT 1 FROM drive_files df
+		 	LEFT JOIN drive_structs ds ON ds.id = df.drive_struct_id
+		 	WHERE df.id = $1 and ds.user_id = $2
+	  	)
+	`
+
+	var exists bool
+	err := r.db.QueryRow(ctx, query, fileID, userID).Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
+}
+
+func (r *driveFileRepository) UpdateSize(ctx context.Context, fileID int, size int64) error {
+	query := `UPDATE drive_files SET size = $1 WHERE id = $2`
+
+	_, err := r.db.Exec(ctx, query, size, fileID)
+	if err != nil {
+		return err
+	}
+	return nil
 }

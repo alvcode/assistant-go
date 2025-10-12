@@ -1,0 +1,21 @@
+meta {
+  name: chunk-end
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{domain}}/api/drive/chunk-end
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "file_id": 35
+  }
+}
+
+settings {
+  encodeUrl: true
+}

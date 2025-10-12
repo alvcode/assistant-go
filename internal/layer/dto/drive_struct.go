@@ -78,7 +78,7 @@ func (dto *DriveRenMov) Validate(lang string) error {
 }
 
 type DriveChunkPrepare struct {
-	Filename string `json:"filename" validate:"required"`
+	Filename string `json:"filename" validate:"required,min=1,max=300"`
 	FullSize int64  `json:"full_size" validate:"required"`
 	ParentID *int   `json:"parent_id"`
 }
@@ -98,5 +98,26 @@ type DriveChunkPrepareIn struct {
 }
 
 type DriveChunkPrepareResponse struct {
-	FileID int `json:"file_id"`
+	StructID int `json:"struct_id"`
+}
+
+type DriveUploadChunk struct {
+	File                  multipart.File
+	StructID              int
+	ChunkNumber           int
+	MaxSizeBytes          int64
+	StorageMaxSizePerUser int64
+	SavePath              string
+}
+
+type DriveChunkEnd struct {
+	StructID int `json:"struct_id" validate:"required"`
+}
+
+func (dto *DriveChunkEnd) Validate(lang string) error {
+	err := vld.Validate.Struct(dto)
+	if err != nil {
+		return vld.TextFromFirstError(err, lang)
+	}
+	return nil
 }

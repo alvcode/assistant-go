@@ -228,6 +228,11 @@ func (controller *Init) setDrive(ctx context.Context, repositories *repository.R
 	controller.router.Handler(
 		http.MethodPost,
 		"/api/drive/upload-chunk",
-		handler.BuildHandler(driveHandler.ChunkPrepare, handler.AuthMW),
+		handler.BuildHandler(driveHandler.UploadChunk, handler.AuthMW),
+	)
+	controller.router.Handler(
+		http.MethodPost,
+		"/api/drive/chunk-end",
+		handler.BuildHandler(driveHandler.ChunkEnd, handler.AuthMW),
 	)
 }
