@@ -37,6 +37,7 @@ var (
 	ErrDriveRelocatableStructureNotFound    = errors.New("drive relocatable structure not found")
 	ErrDriveMovingIntoOneself               = errors.New("drive moving into oneself")
 	ErrDriveParentRefOfTheRelocatableStruct = errors.New("drive parent ref of the relocatable struct")
+	ErrDriveUnavailableForChunks            = errors.New("drive unavailable for chunks")
 )
 
 type DriveUseCase interface {
@@ -51,6 +52,8 @@ type DriveUseCase interface {
 	ChunkPrepare(user *entity.User, in dto.DriveChunkPrepareIn) (*dto.DriveChunkPrepareResponse, error)
 	ChunkUpload(user *entity.User, in dto.DriveUploadChunk) error
 	ChunkEnd(structID int) error
+	ChunksInfo(structID int) (*dto.DriveChunksInfo, error)
+	GetChunkBytes(structID int, chunkNumber int, savePath string, user *entity.User) (*dto.FileResponse, error)
 }
 
 type driveUseCase struct {
@@ -284,6 +287,9 @@ func (uc *driveUseCase) GetFile(structID int, savePath string, user *entity.User
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrFileNotFound
 		}
+	}
+	if driveFile.IsChunk {
+		return nil, ErrDriveUnavailableForChunks
 	}
 
 	fullPath := filepath.Join(savePath, *driveFile.Path)
@@ -585,6 +591,72 @@ func (uc *driveUseCase) ChunkEnd(structID int) error {
 		return err
 	}
 	return nil
+}
+
+func (uc *driveUseCase) ChunksInfo(structID int) (*dto.DriveChunksInfo, error) {
+	fileEntity, err := uc.repositories.DriveFileRepository.GetByStructID(uc.ctx, structID)
+	if err != nil {
+		if errors.Is(pgx.ErrNoRows, err) {
+			return nil, ErrDriveStructNotFound
+		}
+		logging.GetLogger(uc.ctx).Error(err)
+		return nil, err
+	}
+
+	chunksInfo, err := uc.repositories.DriveFileChunkRepository.GetChunksInfo(uc.ctx, fileEntity.ID)
+	if err != nil {
+		if !errors.Is(pgx.ErrNoRows, err) {
+			logging.GetLogger(uc.ctx).Error(err)
+		}
+		return nil, err
+	}
+	return chunksInfo, nil
+}
+
+func (uc *driveUseCase) GetChunkBytes(structID int, chunkNumber int, savePath string, user *entity.User) (*dto.FileResponse, error) {
+	driveStruct, err := uc.repositories.DriveStructRepository.GetByID(uc.ctx, structID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrFileNotFound
+		}
+		return nil, err
+	}
+	if driveStruct.UserID != user.ID {
+		return nil, ErrFileNotFound
+	}
+	if driveStruct.Type != typeFile {
+		return nil, ErrFileNotFound
+	}
+
+	driveFile, err := uc.repositories.DriveFileRepository.GetByStructID(uc.ctx, driveStruct.ID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrFileNotFound
+		}
+		return nil, err
+	}
+
+	driveFileChunk, err := uc.repositories.DriveFileChunkRepository.GetByFileIDAndNumber(uc.ctx, driveFile.ID, chunkNumber)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrFileNotFound
+		}
+		return nil, err
+	}
+
+	fullPath := filepath.Join(savePath, driveFileChunk.Path)
+	fileReader, err := uc.repositories.StorageRepository.GetFile(uc.ctx, fullPath)
+	if err != nil {
+		logging.GetLogger(uc.ctx).Error(err)
+		return nil, err
+	}
+
+	fileResponse := &dto.FileResponse{
+		File:             fileReader,
+		OriginalFilename: driveStruct.Name,
+		SizeBytes:        driveFileChunk.Size,
+	}
+	return fileResponse, nil
 }
 
 func (uc *driveUseCase) getFileSize(file multipart.File, maxSize int64) (int64, error) {

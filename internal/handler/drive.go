@@ -520,3 +520,105 @@ func (h *DriveHandler) ChunkEnd(w http.ResponseWriter, r *http.Request) {
 	SendResponse(w, http.StatusOK, nil)
 	return
 }
+
+func (h *DriveHandler) GetChunksInfo(w http.ResponseWriter, r *http.Request) {
+	langRequest := locale.GetLangFromContext(r.Context())
+
+	var structID int
+	params := httprouter.ParamsFromContext(r.Context())
+	if structIDStr := params.ByName("id"); structIDStr != "" {
+		structIDInt, err := strconv.Atoi(structIDStr)
+
+		if err != nil {
+			BlockEventHandle(r, BlockEventInputDataType)
+			SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
+			return
+		}
+		structID = structIDInt
+	}
+
+	driveChunksInfo, err := h.useCase.ChunksInfo(structID)
+	if err != nil {
+		fmt.Println(err)
+		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
+		return
+	}
+
+	SendResponse(w, http.StatusOK, driveChunksInfo)
+	return
+}
+
+func (h *DriveHandler) GetChunkBytes(w http.ResponseWriter, r *http.Request) {
+	langRequest := locale.GetLangFromContext(r.Context())
+
+	authUser, err := GetAuthUser(r)
+	if err != nil {
+		BlockEventHandle(r, BlockEventUnauthorizedType)
+		SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
+		return
+	}
+
+	params := httprouter.ParamsFromContext(r.Context())
+
+	var structID int
+	if structIDStr := params.ByName("id"); structIDStr != "" {
+		structIDInt, err := strconv.Atoi(structIDStr)
+
+		if err != nil {
+			BlockEventHandle(r, BlockEventInputDataType)
+			SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
+			return
+		}
+		structID = structIDInt
+	}
+
+	var chunkNumber int
+	if chunkNumberStr := params.ByName("chunkNumber"); chunkNumberStr != "" {
+		chunkNumberInt, err := strconv.Atoi(chunkNumberStr)
+
+		if err != nil {
+			BlockEventHandle(r, BlockEventInputDataType)
+			SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
+			return
+		}
+		chunkNumber = chunkNumberInt
+	}
+
+	fileDto, err := h.useCase.GetChunkBytes(structID, chunkNumber, appConf.Drive.SavePath, authUser)
+	if err != nil {
+		var responseStatus int
+		if errors.Is(err, ucase.ErrFileNotFound) {
+			responseStatus = http.StatusNotFound
+			BlockEventHandle(r, BlockEventFileNotFoundType)
+		} else if errors.Is(err, repository.ErrFileNotFoundInFilesystem) {
+			responseStatus = http.StatusNotFound
+		} else {
+			responseStatus = http.StatusUnprocessableEntity
+		}
+		SendErrorResponse(w, buildErrorMessage(langRequest, err), responseStatus, 0)
+		return
+	}
+	defer func() {
+		if closer, ok := fileDto.File.(io.Closer); ok {
+			_ = closer.Close()
+		}
+	}()
+
+	filename := url.PathEscape(fileDto.OriginalFilename)
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename*=UTF-8''%s", filename))
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set("Content-Length", strconv.FormatInt(fileDto.SizeBytes, 10))
+	w.WriteHeader(http.StatusOK)
+
+	_, err = io.Copy(w, fileDto.File)
+	if err != nil {
+		SendErrorResponse(
+			w,
+			fmt.Sprintf("%s: %v", locale.T(langRequest, "file_failed_to_send"), err),
+			http.StatusInternalServerError,
+			0,
+		)
+		return
+	}
+	return
+}

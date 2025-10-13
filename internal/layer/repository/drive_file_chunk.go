@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"assistant-go/internal/layer/dto"
 	"assistant-go/internal/layer/entity"
 	"context"
 )
@@ -13,6 +14,8 @@ type DriveFileChunkRepository interface {
 		structID int,
 		userID int,
 	) ([]*entity.DriveFileChunk, error)
+	GetChunksInfo(ctx context.Context, fileID int) (*dto.DriveChunksInfo, error)
+	GetByFileIDAndNumber(ctx context.Context, fileID int, chunkNumber int) (*entity.DriveFileChunk, error)
 }
 
 type driveFileChunkRepository struct {
@@ -107,4 +110,45 @@ func (r *driveFileChunkRepository) GetAllRecursive(
 		return nil, err
 	}
 	return result, nil
+}
+
+func (r *driveFileChunkRepository) GetChunksInfo(ctx context.Context, fileID int) (*dto.DriveChunksInfo, error) {
+	query := `
+		select  
+			(select min(chunk_number) from drive_file_chunks dfc where drive_file_id = $1) as min_chunk_number,
+			(select max(chunk_number) from drive_file_chunks dfc where drive_file_id = $1) as max_chunk_number
+	`
+
+	var result dto.DriveChunksInfo
+	err := r.db.QueryRow(ctx, query, fileID).Scan(
+		&result.StartNumber,
+		&result.EndNumber,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+func (r *driveFileChunkRepository) GetByFileIDAndNumber(
+	ctx context.Context,
+	fileID int,
+	chunkNumber int,
+) (*entity.DriveFileChunk, error) {
+	query := `select * from drive_file_chunks where drive_file_id = $1 and chunk_number = $2`
+
+	var result entity.DriveFileChunk
+	err := r.db.QueryRow(ctx, query, fileID, chunkNumber).Scan(
+		&result.ID,
+		&result.DriveFileID,
+		&result.Path,
+		&result.Size,
+		&result.ChunkNumber,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &result, nil
 }

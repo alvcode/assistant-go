@@ -261,6 +261,8 @@ func buildErrorMessage(lang string, err error) string {
 		return locale.T(lang, "file_too_large")
 	case errors.Is(err, ucase.ErrDriveFileTooLargeUseChunks):
 		return locale.T(lang, "file_too_large_use_chunks")
+	case errors.Is(err, ucase.ErrDriveUnavailableForChunks):
+		return locale.T(lang, "drive_method_unavailable_for_chunks")
 	case errors.Is(err, ucase.ErrDriveFileSystemIsFull):
 		return locale.T(lang, "file_system_is_full")
 	case errors.Is(err, ucase.ErrDriveFileNotSafeFilename):

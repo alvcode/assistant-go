@@ -121,3 +121,8 @@ func (dto *DriveChunkEnd) Validate(lang string) error {
 	}
 	return nil
 }
+
+type DriveChunksInfo struct {
+	StartNumber int `json:"start_number"`
+	EndNumber   int `json:"end_number"`
+}

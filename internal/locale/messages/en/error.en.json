@@ -35,5 +35,6 @@
   "drive_struct_not_found": "Disk structure not found",
   "drive_relocatable_structure_not_found": "Relocatable structure not found",
   "drive_moving_into_oneself": "You can't move a structure into itself",
-  "drive_parent_references_one_of_the_relocatable_struct": "The parent structure references one of the relocatable structures"
+  "drive_parent_references_one_of_the_relocatable_struct": "The parent structure references one of the relocatable structures",
+  "drive_method_unavailable_for_chunks": "You cannot download chunks using this method"
 }
