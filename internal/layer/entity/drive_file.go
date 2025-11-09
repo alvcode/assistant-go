@@ -10,4 +10,5 @@ type DriveFile struct {
 	Size          int64     `db:"size"`
 	CreatedAt     time.Time `db:"created_at"`
 	IsChunk       bool      `db:"is_chunk"`
+	SHA256        *string   `db:"sha256"`
 }

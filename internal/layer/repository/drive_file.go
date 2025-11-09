@@ -13,6 +13,7 @@ type DriveFileRepository interface {
 	GetAllRecursive(ctx context.Context, structID int, userID int) ([]*entity.DriveFile, error)
 	CheckFileOwner(ctx context.Context, fileID int, userID int) (bool, error)
 	UpdateSize(ctx context.Context, fileID int, size int64) error
+	UpdateHash(ctx context.Context, fileID int, hash string) error
 }
 
 type driveFileRepository struct {
@@ -51,6 +52,7 @@ func (r *driveFileRepository) GetByStructID(ctx context.Context, structID int) (
 		&result.Size,
 		&result.CreatedAt,
 		&result.IsChunk,
+		&result.SHA256,
 	)
 	if err != nil {
 		return nil, err
@@ -71,21 +73,26 @@ func (r *driveFileRepository) GetLastID(ctx context.Context) (int, error) {
 }
 
 func (r *driveFileRepository) Create(ctx context.Context, in *entity.DriveFile) (*entity.DriveFile, error) {
-	query := `
-		INSERT INTO drive_files (drive_struct_id, path, ext, size, created_at, is_chunk) 
-		VALUES ($1, $2, $3, $4, $5, $6) RETURNING id
-	`
-
-	row := r.db.QueryRow(
-		ctx,
-		query,
-		in.DriveStructID,
-		in.Path,
-		in.Ext,
-		in.Size,
-		in.CreatedAt,
-		in.IsChunk,
+	var (
+		query string
+		args  []any
 	)
+
+	if in.SHA256 == nil {
+		query = `
+			INSERT INTO drive_files (drive_struct_id, path, ext, size, created_at, is_chunk) 
+			VALUES ($1, $2, $3, $4, $5, $6) RETURNING id
+		`
+		args = []any{in.DriveStructID, in.Path, in.Ext, in.Size, in.CreatedAt, in.IsChunk}
+	} else {
+		query = `
+			INSERT INTO drive_files (drive_struct_id, path, ext, size, created_at, is_chunk, sha256) 
+			VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id
+		`
+		args = []any{in.DriveStructID, in.Path, in.Ext, in.Size, in.CreatedAt, in.IsChunk, in.SHA256}
+	}
+
+	row := r.db.QueryRow(ctx, query, args...)
 
 	if err := row.Scan(&in.ID); err != nil {
 		return nil, err
@@ -123,7 +130,16 @@ func (r *driveFileRepository) GetAllRecursive(ctx context.Context, structID int,
 
 	for rows.Next() {
 		df := &entity.DriveFile{}
-		if err := rows.Scan(&df.ID, &df.DriveStructID, &df.Path, &df.Ext, &df.Size, &df.CreatedAt, &df.IsChunk); err != nil {
+		if err := rows.Scan(
+			&df.ID,
+			&df.DriveStructID,
+			&df.Path,
+			&df.Ext,
+			&df.Size,
+			&df.CreatedAt,
+			&df.IsChunk,
+			&df.SHA256,
+		); err != nil {
 			return nil, err
 		}
 		result = append(result, df)
@@ -156,6 +172,16 @@ func (r *driveFileRepository) UpdateSize(ctx context.Context, fileID int, size i
 	query := `UPDATE drive_files SET size = $1 WHERE id = $2`
 
 	_, err := r.db.Exec(ctx, query, size, fileID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *driveFileRepository) UpdateHash(ctx context.Context, fileID int, hash string) error {
+	query := `UPDATE drive_files SET sha256 = $1 WHERE id = $2`
+
+	_, err := r.db.Exec(ctx, query, hash, fileID)
 	if err != nil {
 		return err
 	}

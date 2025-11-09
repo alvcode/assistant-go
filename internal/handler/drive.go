@@ -125,6 +125,12 @@ func (h *DriveHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
 		parentID = &parentIDInt
 	}
 
+	var sha256 *string
+	sha256Param := r.URL.Query().Get("sha256")
+	if sha256Param != "" {
+		sha256 = &sha256Param
+	}
+
 	defer func(file multipart.File) {
 		err := file.Close()
 		if err != nil {
@@ -140,6 +146,7 @@ func (h *DriveHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
 		StorageMaxSizePerUser: appConf.Drive.LimitPerUser << 20,
 		SavePath:              appConf.Drive.SavePath,
 		ParentID:              parentID,
+		SHA256:                sha256,
 	}
 
 	driveTreeList, err := h.useCase.UploadFile(uploadFileDto, authUser)
@@ -620,5 +627,40 @@ func (h *DriveHandler) GetChunkBytes(w http.ResponseWriter, r *http.Request) {
 		)
 		return
 	}
+	return
+}
+
+func (h *DriveHandler) UpdateFileHash(w http.ResponseWriter, r *http.Request) {
+	langRequest := locale.GetLangFromContext(r.Context())
+	authUser, err := GetAuthUser(r)
+	if err != nil {
+		BlockEventHandle(r, BlockEventUnauthorizedType)
+		SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
+		return
+	}
+
+	var structID int
+	params := httprouter.ParamsFromContext(r.Context())
+	if structIDStr := params.ByName("id"); structIDStr != "" {
+		structIDInt, err := strconv.Atoi(structIDStr)
+
+		if err != nil {
+			BlockEventHandle(r, BlockEventInputDataType)
+			SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
+			return
+		}
+		structID = structIDInt
+	}
+
+	fileHashSHA256 := params.ByName("hash")
+
+	err = h.useCase.UpdateFileHash(structID, fileHashSHA256, authUser)
+	if err != nil {
+		fmt.Println(err)
+		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
+		return
+	}
+
+	SendResponse(w, http.StatusCreated, nil)
 	return
 }

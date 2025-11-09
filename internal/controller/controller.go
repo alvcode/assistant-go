@@ -245,4 +245,9 @@ func (controller *Init) setDrive(ctx context.Context, repositories *repository.R
 		"/api/drive/files/:id/chunks/:chunkNumber",
 		handler.BuildHandler(driveHandler.GetChunkBytes, handler.AuthMW),
 	)
+	controller.router.Handler(
+		http.MethodPatch,
+		"/api/drive/files/:id/sha256/:hash",
+		handler.BuildHandler(driveHandler.UpdateFileHash, handler.AuthMW),
+	)
 }

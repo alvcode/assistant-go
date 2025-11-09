@@ -122,7 +122,8 @@ func (r *driveStructRepository) TreeByUserID(ctx context.Context, userID int, pa
 			select 
 			    ds.id, ds.user_id, ds.name, ds.type, ds.created_at, ds.updated_at,
 			    coalesce(df.size, 0) as size,
-				coalesce(df.is_chunk, false) as is_chunk
+				coalesce(df.is_chunk, false) as is_chunk,
+				df.sha256
 			from drive_structs ds 
 			left join drive_files df on ds.id = df.drive_struct_id
 			where user_id = $1 and parent_id is null
@@ -133,7 +134,8 @@ func (r *driveStructRepository) TreeByUserID(ctx context.Context, userID int, pa
 			select 
 			    ds.id, ds.user_id, ds.name, ds.type, ds.created_at, ds.updated_at,
 			    coalesce(df.size, 0) as size,
-				coalesce(df.is_chunk, false) as is_chunk
+				coalesce(df.is_chunk, false) as is_chunk,
+				df.sha256
 			from drive_structs ds
 			left join drive_files df on ds.id = df.drive_struct_id
 			where user_id = $1 and parent_id = $2
@@ -159,6 +161,7 @@ func (r *driveStructRepository) TreeByUserID(ctx context.Context, userID int, pa
 			&ds.UpdatedAt,
 			&ds.Size,
 			&ds.IsChunk,
+			&ds.SHA256,
 		); err != nil {
 			return nil, err
 		}

@@ -54,6 +54,7 @@ type DriveUseCase interface {
 	ChunkEnd(structID int) error
 	ChunksInfo(structID int) (*dto.DriveChunksInfo, error)
 	GetChunkBytes(structID int, chunkNumber int, savePath string, user *entity.User) (*dto.FileResponse, error)
+	UpdateFileHash(structID int, hash string, user *entity.User) error
 }
 
 type driveUseCase struct {
@@ -199,6 +200,7 @@ func (uc *driveUseCase) UploadFile(in dto.DriveUploadFile, user *entity.User) ([
 		Size:          size,
 		CreatedAt:     time.Now().UTC(),
 		IsChunk:       false,
+		SHA256:        in.SHA256,
 	}
 
 	_, err = uc.repositories.DriveFileRepository.Create(uc.ctx, driveFile)
@@ -470,6 +472,7 @@ func (uc *driveUseCase) ChunkPrepare(user *entity.User, in dto.DriveChunkPrepare
 				Size:          0,
 				CreatedAt:     time.Now().UTC(),
 				IsChunk:       true,
+				SHA256:        in.DriveChunkPrepare.SHA256,
 			}
 
 			driveFileRepo := repository.NewDriveFileRepository(tx)
@@ -657,6 +660,37 @@ func (uc *driveUseCase) GetChunkBytes(structID int, chunkNumber int, savePath st
 		SizeBytes:        driveFileChunk.Size,
 	}
 	return fileResponse, nil
+}
+
+func (uc *driveUseCase) UpdateFileHash(structID int, hash string, user *entity.User) error {
+	driveStruct, err := uc.repositories.DriveStructRepository.GetByID(uc.ctx, structID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrFileNotFound
+		}
+		return err
+	}
+	if driveStruct.UserID != user.ID {
+		return ErrFileNotFound
+	}
+	if driveStruct.Type != typeFile {
+		return ErrFileNotFound
+	}
+
+	driveFile, err := uc.repositories.DriveFileRepository.GetByStructID(uc.ctx, driveStruct.ID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrFileNotFound
+		}
+		return err
+	}
+
+	err = uc.repositories.DriveFileRepository.UpdateHash(uc.ctx, driveFile.ID, hash)
+	if err != nil {
+		logging.GetLogger(uc.ctx).Error(err)
+		return err
+	}
+	return nil
 }
 
 func (uc *driveUseCase) getFileSize(file multipart.File, maxSize int64) (int64, error) {

@@ -26,6 +26,7 @@ type DriveUploadFile struct {
 	StorageMaxSizePerUser int64
 	SavePath              string
 	ParentID              *int
+	SHA256                *string
 }
 
 func (dto *DriveUploadFile) Validate(lang string) error {
@@ -62,6 +63,7 @@ type DriveTree struct {
 	CreatedAt time.Time `db:"created_at" json:"created_at"`
 	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 	IsChunk   bool      `db:"is_chunk" json:"is_chunk"`
+	SHA256    *string   `db:"sha256" json:"sha256"`
 }
 
 type DriveRenMov struct {
@@ -78,9 +80,10 @@ func (dto *DriveRenMov) Validate(lang string) error {
 }
 
 type DriveChunkPrepare struct {
-	Filename string `json:"filename" validate:"required,min=1,max=300"`
-	FullSize int64  `json:"full_size" validate:"required"`
-	ParentID *int   `json:"parent_id"`
+	Filename string  `json:"filename" validate:"required,min=1,max=300"`
+	FullSize int64   `json:"full_size" validate:"required"`
+	ParentID *int    `json:"parent_id"`
+	SHA256   *string `json:"sha256"`
 }
 
 func (dto *DriveChunkPrepare) Validate(lang string) error {
@@ -95,6 +98,7 @@ type DriveChunkPrepareIn struct {
 	DriveChunkPrepare
 	MaxSizeBytes          int64
 	StorageMaxSizePerUser int64
+	SHA256                *string
 }
 
 type DriveChunkPrepareResponse struct {
