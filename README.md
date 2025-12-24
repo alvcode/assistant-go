@@ -6,12 +6,6 @@ frontend: <a href="https://github.com/alvcode/assistant-front" target="_blank">h
 
 - copy .env.example to .env
 
-- install packages
-
-~~~
-go install github.com/spf13/cobra-cli@latest
-~~~
-
 - run commands
 ```
 // launch when deploying a project for the first time
@@ -19,6 +13,9 @@ make install
 
 // for development
 make start
+
+// migrations
+make m
 
 // for stop development
 make stop

@@ -3,6 +3,7 @@
 *.log
 /cmd/build
 uploads/user_files
+uploads/drive
 .DS_Store
 
 .env
