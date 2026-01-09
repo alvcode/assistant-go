@@ -25,4 +25,14 @@ func InitCliCommands(rootCmd *cobra.Command, ctx context.Context, cfg *config.Co
 			password := args[1]
 			UserResetPassword(ctx, cfg, db, minio, login, password)
 		}})
+
+	rootCmd.AddCommand(&cobra.Command{
+		Use:   "user-register <login> <password>",
+		Short: "Register a user",
+		Args:  cobra.ExactArgs(2),
+		Run: func(cmd *cobra.Command, args []string) {
+			login := args[0]
+			password := args[1]
+			UserRegister(ctx, cfg, db, minio, login, password)
+		}})
 }
