@@ -60,11 +60,13 @@ func (controller *Init) setUserRoutes(ctx context.Context, repositories *reposit
 	userUseCase := ucase.NewUserUseCase(ctx, repositories)
 	userHandler := handler.NewUserHandler(userUseCase)
 
-	controller.router.Handler(
-		http.MethodPost,
-		"/api/auth/register",
-		handler.BuildHandler(userHandler.Create),
-	)
+	if controller.cfg.RegisteringNewUsersViaAPI {
+		controller.router.Handler(
+			http.MethodPost,
+			"/api/auth/register",
+			handler.BuildHandler(userHandler.Create),
+		)
+	}
 	controller.router.Handler(
 		http.MethodPost,
 		"/api/auth/login",

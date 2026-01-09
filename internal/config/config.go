@@ -15,17 +15,18 @@ const (
 )
 
 type Config struct {
-	Env               string `env:"ENV" env-required:"true"`
-	BlockingParanoia  int    `env:"BLOCKING_PARANOIA" env-default:"2"`
-	ThisServiceDomain string `env:"THIS_SERVICE_DOMAIN" env-required:"true"`
-	UploadPlace       string `env:"FILE_UPLOAD_PLACE" env-required:"true"`
-	HTTP              HTTPServer
-	DB                Database
-	Cors              Cors
-	File              File
-	Drive             Drive
-	S3                S3
-	RateLimiter       RateLimiter
+	Env                       string `env:"ENV" env-required:"true"`
+	BlockingParanoia          int    `env:"BLOCKING_PARANOIA" env-default:"2"`
+	ThisServiceDomain         string `env:"THIS_SERVICE_DOMAIN" env-required:"true"`
+	UploadPlace               string `env:"UPLOAD_PLACE" env-required:"true"`
+	RegisteringNewUsersViaAPI bool   `env:"REGISTERING_NEW_USERS_VIA_API" env-default:"true"`
+	HTTP                      HTTPServer
+	DB                        Database
+	Cors                      Cors
+	File                      File
+	Drive                     Drive
+	S3                        S3
+	RateLimiter               RateLimiter
 }
 
 type HTTPServer struct {
