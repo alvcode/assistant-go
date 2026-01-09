@@ -27,6 +27,8 @@ type DriveUploadFile struct {
 	SavePath              string
 	ParentID              *int
 	SHA256                *string
+	UseEncryption         bool
+	EncryptionKey         string
 }
 
 func (dto *DriveUploadFile) Validate(lang string) error {
@@ -112,6 +114,8 @@ type DriveUploadChunk struct {
 	MaxSizeBytes          int64
 	StorageMaxSizePerUser int64
 	SavePath              string
+	UseEncryption         bool
+	EncryptionKey         string
 }
 
 type DriveChunkEnd struct {

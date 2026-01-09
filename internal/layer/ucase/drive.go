@@ -38,6 +38,8 @@ var (
 	ErrDriveMovingIntoOneself               = errors.New("drive moving into oneself")
 	ErrDriveParentRefOfTheRelocatableStruct = errors.New("drive parent ref of the relocatable struct")
 	ErrDriveUnavailableForChunks            = errors.New("drive unavailable for chunks")
+	ErrDriveEncrypting                      = errors.New("error encrypting file")
+	ErrDriveDecrypting                      = errors.New("error decrypting file")
 )
 
 type DriveUseCase interface {
@@ -45,7 +47,7 @@ type DriveUseCase interface {
 	GetTree(parentID *int, user *entity.User) ([]*dto.DriveTree, error)
 	UploadFile(in dto.DriveUploadFile, user *entity.User) ([]*dto.DriveTree, error)
 	Delete(structID int, savePath string, user *entity.User) error
-	GetFile(structID int, savePath string, user *entity.User) (*dto.FileResponse, error)
+	GetFile(in *dto.GetFile, user *entity.User) (*dto.FileResponse, error)
 	Rename(structID int, newName string, user *entity.User) error
 	Space(user *entity.User, totalSpace int64) (*dto.DriveSpace, error)
 	RenMov(user *entity.User, in dto.DriveRenMov) error
@@ -53,7 +55,7 @@ type DriveUseCase interface {
 	ChunkUpload(user *entity.User, in dto.DriveUploadChunk) error
 	ChunkEnd(structID int) error
 	ChunksInfo(structID int) (*dto.DriveChunksInfo, error)
-	GetChunkBytes(structID int, chunkNumber int, savePath string, user *entity.User) (*dto.FileResponse, error)
+	GetChunkBytes(in *dto.GetChunk, user *entity.User) (*dto.FileResponse, error)
 	UpdateFileHash(structID int, hash string, user *entity.User) error
 }
 
@@ -114,6 +116,15 @@ func (uc *driveUseCase) CreateDirectory(dto *dto.DriveCreateDirectory, user *ent
 
 func (uc *driveUseCase) UploadFile(in dto.DriveUploadFile, user *entity.User) ([]*dto.DriveTree, error) {
 	fileService := service.NewFile().FileService()
+
+	if in.UseEncryption {
+		var encryptErr error
+		in.File, encryptErr = fileService.EncryptFile(in.File, in.EncryptionKey)
+		if encryptErr != nil {
+			logging.GetLogger(uc.ctx).Error(fmt.Errorf("%w: %w", ErrDriveEncrypting, encryptErr))
+			return nil, ErrDriveEncrypting
+		}
+	}
 
 	size, err := uc.getFileSize(in.File, in.MaxSizeBytes)
 	if err != nil {
@@ -269,8 +280,8 @@ func (uc *driveUseCase) Delete(structID int, savePath string, user *entity.User)
 	return nil
 }
 
-func (uc *driveUseCase) GetFile(structID int, savePath string, user *entity.User) (*dto.FileResponse, error) {
-	driveStruct, err := uc.repositories.DriveStructRepository.GetByID(uc.ctx, structID)
+func (uc *driveUseCase) GetFile(in *dto.GetFile, user *entity.User) (*dto.FileResponse, error) {
+	driveStruct, err := uc.repositories.DriveStructRepository.GetByID(uc.ctx, in.StructID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrFileNotFound
@@ -294,17 +305,32 @@ func (uc *driveUseCase) GetFile(structID int, savePath string, user *entity.User
 		return nil, ErrDriveUnavailableForChunks
 	}
 
-	fullPath := filepath.Join(savePath, *driveFile.Path)
+	fullPath := filepath.Join(in.SavePath, *driveFile.Path)
 	fileReader, err := uc.repositories.StorageRepository.GetFile(uc.ctx, fullPath)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
 		return nil, err
 	}
 
+	realSize := driveFile.Size
+	if in.UseEncryption {
+		fileService := service.NewFile().FileService()
+		fileReader, err = fileService.DecryptFile(fileReader, in.EncryptionKey)
+		if err != nil {
+			logging.GetLogger(uc.ctx).Error(fmt.Errorf("%w: %w", ErrDriveDecrypting, err))
+			return nil, ErrDriveDecrypting
+		}
+
+		realSize, err = uc.getFileSizeInReader(fileReader, in.MaxSizeBytes)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	fileResponse := &dto.FileResponse{
 		File:             fileReader,
 		OriginalFilename: driveStruct.Name,
-		SizeBytes:        driveFile.Size,
+		SizeBytes:        realSize,
 	}
 	return fileResponse, nil
 }
@@ -497,6 +523,15 @@ func (uc *driveUseCase) ChunkPrepare(user *entity.User, in dto.DriveChunkPrepare
 func (uc *driveUseCase) ChunkUpload(user *entity.User, in dto.DriveUploadChunk) error {
 	fileService := service.NewFile().FileService()
 
+	if in.UseEncryption {
+		var encryptErr error
+		in.File, encryptErr = fileService.EncryptFile(in.File, in.EncryptionKey)
+		if encryptErr != nil {
+			logging.GetLogger(uc.ctx).Error(fmt.Errorf("%w: %w", ErrDriveEncrypting, encryptErr))
+			return ErrDriveEncrypting
+		}
+	}
+
 	size, err := uc.getFileSize(in.File, in.MaxSizeBytes)
 	if err != nil {
 		return err
@@ -616,8 +651,8 @@ func (uc *driveUseCase) ChunksInfo(structID int) (*dto.DriveChunksInfo, error) {
 	return chunksInfo, nil
 }
 
-func (uc *driveUseCase) GetChunkBytes(structID int, chunkNumber int, savePath string, user *entity.User) (*dto.FileResponse, error) {
-	driveStruct, err := uc.repositories.DriveStructRepository.GetByID(uc.ctx, structID)
+func (uc *driveUseCase) GetChunkBytes(in *dto.GetChunk, user *entity.User) (*dto.FileResponse, error) {
+	driveStruct, err := uc.repositories.DriveStructRepository.GetByID(uc.ctx, in.StructID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrFileNotFound
@@ -639,7 +674,7 @@ func (uc *driveUseCase) GetChunkBytes(structID int, chunkNumber int, savePath st
 		return nil, err
 	}
 
-	driveFileChunk, err := uc.repositories.DriveFileChunkRepository.GetByFileIDAndNumber(uc.ctx, driveFile.ID, chunkNumber)
+	driveFileChunk, err := uc.repositories.DriveFileChunkRepository.GetByFileIDAndNumber(uc.ctx, driveFile.ID, in.ChunkNumber)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrFileNotFound
@@ -647,17 +682,32 @@ func (uc *driveUseCase) GetChunkBytes(structID int, chunkNumber int, savePath st
 		return nil, err
 	}
 
-	fullPath := filepath.Join(savePath, driveFileChunk.Path)
+	fullPath := filepath.Join(in.SavePath, driveFileChunk.Path)
 	fileReader, err := uc.repositories.StorageRepository.GetFile(uc.ctx, fullPath)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
 		return nil, err
 	}
 
+	realSize := driveFileChunk.Size
+	if in.UseEncryption {
+		fileService := service.NewFile().FileService()
+		fileReader, err = fileService.DecryptFile(fileReader, in.EncryptionKey)
+		if err != nil {
+			logging.GetLogger(uc.ctx).Error(fmt.Errorf("%w: %w", ErrDriveDecrypting, err))
+			return nil, ErrDriveDecrypting
+		}
+
+		realSize, err = uc.getFileSizeInReader(fileReader, in.MaxSizeBytes)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	fileResponse := &dto.FileResponse{
 		File:             fileReader,
 		OriginalFilename: driveStruct.Name,
-		SizeBytes:        driveFileChunk.Size,
+		SizeBytes:        realSize,
 	}
 	return fileResponse, nil
 }
@@ -711,6 +761,28 @@ func (uc *driveUseCase) getFileSize(file multipart.File, maxSize int64) (int64, 
 		}
 		size = n
 	}
+
+	if seeker, ok := file.(io.Seeker); ok {
+		_, err := seeker.Seek(0, io.SeekStart)
+		if err != nil {
+			return 0, ErrFileResettingPointer
+		}
+	} else {
+		return 0, ErrFileUnableToSeek
+	}
+
+	return size, nil
+}
+
+func (uc *driveUseCase) getFileSizeInReader(file io.Reader, maxSize int64) (int64, error) {
+	var size int64
+
+	lr := io.LimitReader(file, maxSize+1)
+	n, err := io.Copy(io.Discard, lr)
+	if err != nil {
+		return 0, err
+	}
+	size = n
 
 	if seeker, ok := file.(io.Seeker); ok {
 		_, err := seeker.Seek(0, io.SeekStart)

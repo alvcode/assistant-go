@@ -2,6 +2,7 @@ package dto
 
 import (
 	"assistant-go/pkg/vld"
+	"bytes"
 	"io"
 	"mime/multipart"
 )
@@ -41,8 +42,33 @@ func (dto *GetFileByHash) Validate(lang string) error {
 	return nil
 }
 
+type GetFile struct {
+	StructID      int
+	SavePath      string
+	MaxSizeBytes  int64
+	UseEncryption bool
+	EncryptionKey string
+}
+
+type GetChunk struct {
+	StructID      int
+	SavePath      string
+	ChunkNumber   int
+	MaxSizeBytes  int64
+	UseEncryption bool
+	EncryptionKey string
+}
+
 type FileResponse struct {
 	File             io.Reader
 	OriginalFilename string
 	SizeBytes        int64
+}
+
+type MemoryMultipartFile struct {
+	*bytes.Reader
+}
+
+func (m *MemoryMultipartFile) Close() error {
+	return nil
 }

@@ -95,7 +95,7 @@ func (uc *fileUseCase) Upload(in dto.UploadFile, userEntity *entity.User) (*enti
 		return nil, ErrFileTooLarge
 	}
 
-	allFilesSize, err := uc.repositories.FileRepository.GetAllFilesSize(uc.ctx)
+	allFilesSize, err := uc.repositories.FileRepository.GetFilesSizeByUser(uc.ctx, userEntity.ID)
 	if err != nil {
 		logging.GetLogger(uc.ctx).Error(err)
 		return nil, postgres.ErrUnexpectedDBError

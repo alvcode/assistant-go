@@ -61,15 +61,17 @@ type RateLimiter struct {
 }
 
 type File struct {
-	UploadMaxSize    int64  `env:"FILE_UPLOAD_MAX_SIZE" env-required:"true"`
-	LimitFileStorage int64  `env:"FILE_LIMIT_FILE_STORAGE" env-required:"true"`
-	SavePath         string `env:"FILE_SAVE_PATH" env-default:"./uploads/user_files"`
+	UploadMaxSize       int64  `env:"FILE_UPLOAD_MAX_SIZE" env-required:"true"`
+	LimitStoragePerUser int64  `env:"FILE_LIMIT_STORAGE_PER_USER" env-required:"true"`
+	SavePath            string `env:"FILE_SAVE_PATH" env-default:"./uploads/user_files"`
 }
 
 type Drive struct {
 	UploadMaxSize int64  `env:"DRIVE_UPLOAD_MAX_SIZE"`
 	LimitPerUser  int64  `env:"DRIVE_LIMIT_STORAGE_PER_USER"`
 	SavePath      string `env:"FILE_SAVE_PATH" env-default:"./uploads/drive"`
+	UseEncryption bool   `env:"DRIVE_USE_FILE_ENCRYPTION" env-default:"false"`
+	EncryptionKey string `env:"DRIVE_ENCRYPTION_KEY" env-default:""`
 }
 
 type S3 struct {

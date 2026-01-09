@@ -11,6 +11,7 @@ type FileRepository interface {
 	Create(ctx context.Context, in *entity.File) (*entity.File, error)
 	GetLastID(ctx context.Context) (int, error)
 	GetAllFilesSize(ctx context.Context) (int64, error)
+	GetFilesSizeByUser(ctx context.Context, userID int) (int64, error)
 	GetByHash(ctx context.Context, hash string) (*entity.File, error)
 	GetByID(ctx context.Context, fileID int) (*entity.File, error)
 	GetUnusedFileIDs(ctx context.Context) (<-chan int, error)
@@ -65,6 +66,17 @@ func (r *fileRepository) GetAllFilesSize(ctx context.Context) (int64, error) {
 
 	var result int64
 	err := r.db.QueryRow(ctx, query).Scan(&result)
+	if err != nil {
+		return 0, err
+	}
+	return result, nil
+}
+
+func (r *fileRepository) GetFilesSizeByUser(ctx context.Context, userID int) (int64, error) {
+	query := `SELECT coalesce(sum(size), 0) FROM files where user_id = $1`
+
+	var result int64
+	err := r.db.QueryRow(ctx, query, userID).Scan(&result)
 	if err != nil {
 		return 0, err
 	}

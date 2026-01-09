@@ -59,7 +59,7 @@ func (h *FileHandler) Upload(w http.ResponseWriter, r *http.Request) {
 		File:             file,
 		OriginalFilename: header.Filename,
 		MaxSizeBytes:     appConf.File.UploadMaxSize << 20,
-		StorageMaxSize:   appConf.File.LimitFileStorage << 20,
+		StorageMaxSize:   appConf.File.LimitStoragePerUser << 20,
 		SavePath:         appConf.File.SavePath,
 	}
 

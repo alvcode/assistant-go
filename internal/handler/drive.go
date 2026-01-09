@@ -147,6 +147,8 @@ func (h *DriveHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
 		SavePath:              appConf.Drive.SavePath,
 		ParentID:              parentID,
 		SHA256:                sha256,
+		UseEncryption:         appConf.Drive.UseEncryption,
+		EncryptionKey:         appConf.Drive.EncryptionKey,
 	}
 
 	driveTreeList, err := h.useCase.UploadFile(uploadFileDto, authUser)
@@ -231,7 +233,15 @@ func (h *DriveHandler) GetFile(w http.ResponseWriter, r *http.Request) {
 		structID = structIDInt
 	}
 
-	fileDto, err := h.useCase.GetFile(structID, appConf.Drive.SavePath, authUser)
+	getFileDTO := &dto.GetFile{
+		StructID:      structID,
+		SavePath:      appConf.Drive.SavePath,
+		MaxSizeBytes:  appConf.Drive.UploadMaxSize << 20,
+		UseEncryption: appConf.Drive.UseEncryption,
+		EncryptionKey: appConf.Drive.EncryptionKey,
+	}
+
+	fileDto, err := h.useCase.GetFile(getFileDTO, authUser)
 	if err != nil {
 		var responseStatus int
 		if errors.Is(err, ucase.ErrFileNotFound) {
@@ -480,6 +490,8 @@ func (h *DriveHandler) UploadChunk(w http.ResponseWriter, r *http.Request) {
 		MaxSizeBytes:          appConf.Drive.UploadMaxSize << 20,
 		StorageMaxSizePerUser: appConf.Drive.LimitPerUser << 20,
 		SavePath:              appConf.Drive.SavePath,
+		UseEncryption:         appConf.Drive.UseEncryption,
+		EncryptionKey:         appConf.Drive.EncryptionKey,
 	}
 
 	err = h.useCase.ChunkUpload(authUser, uploadChunkDTO)
@@ -591,7 +603,16 @@ func (h *DriveHandler) GetChunkBytes(w http.ResponseWriter, r *http.Request) {
 		chunkNumber = chunkNumberInt
 	}
 
-	fileDto, err := h.useCase.GetChunkBytes(structID, chunkNumber, appConf.Drive.SavePath, authUser)
+	getChunkDto := &dto.GetChunk{
+		StructID:      structID,
+		SavePath:      appConf.Drive.SavePath,
+		ChunkNumber:   chunkNumber,
+		MaxSizeBytes:  appConf.Drive.UploadMaxSize << 20,
+		UseEncryption: appConf.Drive.UseEncryption,
+		EncryptionKey: appConf.Drive.EncryptionKey,
+	}
+
+	fileDto, err := h.useCase.GetChunkBytes(getChunkDto, authUser)
 	if err != nil {
 		var responseStatus int
 		if errors.Is(err, ucase.ErrFileNotFound) {
