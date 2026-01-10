@@ -7,7 +7,7 @@ services:
       dockerfile: _docker/app/Dockerfile
     container_name: ast-app
     ports:
-      - "8075:8083"
+      - "127.0.0.1:8075:8083"
     volumes:
       - ./logs:/app/logs
       - ./uploads:/app/uploads
@@ -26,7 +26,7 @@ services:
     env_file:
       - .env
     ports:
-      - "5489:5432"
+      - "127.0.0.1:5489:5432"
     volumes:
       - /var/lib/ast-pg:/var/lib/postgresql/data:rw
       - ./_docker/postgres/custom-postgresql.conf:/etc/postgresql/postgresql.conf
