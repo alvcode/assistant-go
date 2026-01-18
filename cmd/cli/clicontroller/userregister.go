@@ -12,16 +12,16 @@ import (
 )
 
 func UserRegister(ctx context.Context, cfg *config.Config, db *pgxpool.Pool, minio *minio.Client, login string, password string) {
-	repos := repository.NewRepositories(ctx, cfg, db, minio)
+	repos := repository.NewRepositories(cfg, db, minio)
 
-	userUseCase := ucase.NewUserUseCase(ctx, repos)
+	userUseCase := ucase.NewUserUseCase(repos)
 
 	createDTO := dto.UserLoginAndPassword{
 		Login:    login,
 		Password: password,
 	}
 
-	_, err := userUseCase.Create(createDTO)
+	_, err := userUseCase.Create(ctx, createDTO)
 	if err != nil {
 		fmt.Printf("Error create a new user: %v", err)
 		return

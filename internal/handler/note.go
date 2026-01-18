@@ -46,7 +46,7 @@ func (h *NoteHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	note, err := h.useCase.Create(createNoteDto, authUser)
+	note, err := h.useCase.Create(r.Context(), createNoteDto, authUser)
 	if err != nil {
 		BlockEventHandle(r, BlockEventOtherType)
 		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
@@ -88,7 +88,7 @@ func (h *NoteHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	notes, err := h.useCase.GetAll(categoryID, authUser)
+	notes, err := h.useCase.GetAll(r.Context(), categoryID, authUser)
 	if err != nil {
 		BlockEventHandle(r, BlockEventOtherType)
 		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
@@ -122,7 +122,7 @@ func (h *NoteHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	note, err := h.useCase.Update(updateNoteDto, authUser)
+	note, err := h.useCase.Update(r.Context(), updateNoteDto, authUser)
 	if err != nil {
 		BlockEventHandle(r, BlockEventOtherType)
 		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
@@ -163,7 +163,7 @@ func (h *NoteHandler) GetOne(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	note, err := h.useCase.GetOne(noteID, authUser)
+	note, err := h.useCase.GetOne(r.Context(), noteID, authUser)
 	if err != nil {
 		BlockEventHandle(r, BlockEventOtherType)
 		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
@@ -203,7 +203,7 @@ func (h *NoteHandler) DeleteOne(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.useCase.DeleteOne(noteID, authUser)
+	err = h.useCase.DeleteOne(r.Context(), noteID, authUser)
 	if err != nil {
 		BlockEventHandle(r, BlockEventOtherType)
 		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
@@ -243,7 +243,7 @@ func (h *NoteHandler) Pin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.useCase.Pin(noteID, authUser)
+	err = h.useCase.Pin(r.Context(), noteID, authUser)
 	if err != nil {
 		BlockEventHandle(r, BlockEventOtherType)
 		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
@@ -283,7 +283,7 @@ func (h *NoteHandler) UnPin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.useCase.UnPin(noteID, authUser)
+	err = h.useCase.UnPin(r.Context(), noteID, authUser)
 	if err != nil {
 		BlockEventHandle(r, BlockEventOtherType)
 		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)

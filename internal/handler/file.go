@@ -63,7 +63,7 @@ func (h *FileHandler) Upload(w http.ResponseWriter, r *http.Request) {
 		SavePath:         appConf.File.SavePath,
 	}
 
-	upload, err := h.useCase.Upload(uploadFileDto, authUser)
+	upload, err := h.useCase.Upload(r.Context(), uploadFileDto, authUser)
 	if err != nil {
 		switch {
 		case errors.Is(err, ucase.ErrFileTooLarge),
@@ -110,7 +110,7 @@ func (h *FileHandler) GetByHash(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fileHashDto.SavePath = appConf.File.SavePath
-	fileDto, err := h.useCase.GetFileByHash(fileHashDto)
+	fileDto, err := h.useCase.GetFileByHash(r.Context(), fileHashDto)
 	if err != nil {
 		var responseStatus int
 		if errors.Is(err, ucase.ErrFileNotFound) {

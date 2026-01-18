@@ -31,7 +31,7 @@ type Repositories struct {
 	DriveFileChunkRepository DriveFileChunkRepository
 }
 
-func NewRepositories(ctx context.Context, cfg *config.Config, db *pgxpool.Pool, minio *minio.Client) *Repositories {
+func NewRepositories(cfg *config.Config, db *pgxpool.Pool, minio *minio.Client) *Repositories {
 	var storageInterface FileStorageRepository
 	if cfg.UploadPlace == config.FileUploadS3Place {
 		storageInterface = NewS3StorageRepository(minio, cfg.S3.BucketName)

@@ -46,7 +46,7 @@ func (h *NoteCategoryHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	entity, err := h.useCase.Create(createNoteCategoryDto, authUser)
+	entity, err := h.useCase.Create(r.Context(), createNoteCategoryDto, authUser)
 	if err != nil {
 		BlockEventHandle(r, BlockEventOtherType)
 		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
@@ -67,7 +67,7 @@ func (h *NoteCategoryHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	entities, err := h.useCase.FindAll(authUser.ID)
+	entities, err := h.useCase.FindAll(r.Context(), authUser.ID)
 	if err != nil {
 		BlockEventHandle(r, BlockEventOtherType)
 		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
@@ -108,7 +108,7 @@ func (h *NoteCategoryHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.useCase.Delete(authUser.ID, idDto.ID)
+	err = h.useCase.Delete(r.Context(), authUser.ID, idDto.ID)
 	if err != nil {
 		BlockEventHandle(r, BlockEventOtherType)
 		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
@@ -153,7 +153,7 @@ func (h *NoteCategoryHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	entity, err := h.useCase.Update(updateNoteCategoryDto, authUser.ID)
+	entity, err := h.useCase.Update(r.Context(), updateNoteCategoryDto, authUser.ID)
 	if err != nil {
 		BlockEventHandle(r, BlockEventOtherType)
 		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
@@ -188,7 +188,7 @@ func (h *NoteCategoryHandler) PositionUp(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	err = h.useCase.PositionUp(categoryIDDto, authUser.ID)
+	err = h.useCase.PositionUp(r.Context(), categoryIDDto, authUser.ID)
 	if err != nil {
 		BlockEventHandle(r, BlockEventOtherType)
 		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)

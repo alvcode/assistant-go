@@ -29,7 +29,7 @@ func New(cfg *config.Config, db *pgxpool.Pool, minio *minio.Client, router *http
 }
 
 func (controller *Init) SetRoutes(ctx context.Context) error {
-	repos := repository.NewRepositories(ctx, controller.cfg, controller.db, controller.minio)
+	repos := repository.NewRepositories(controller.cfg, controller.db, controller.minio)
 
 	handler.InitHandler(repos, controller.cfg)
 
@@ -47,17 +47,17 @@ func (controller *Init) SetRoutes(ctx context.Context) error {
 		handler.BuildHandler(heartbeatHandler.Heartbeat),
 	)
 
-	controller.setUserRoutes(ctx, repos)
-	controller.setNotesCategories(ctx, repos)
-	controller.setNotes(ctx, repos)
-	controller.setFiles(ctx, repos)
-	controller.setDrive(ctx, repos)
+	controller.setUserRoutes(repos)
+	controller.setNotesCategories(repos)
+	controller.setNotes(repos)
+	controller.setFiles(repos)
+	controller.setDrive(repos)
 
 	return nil
 }
 
-func (controller *Init) setUserRoutes(ctx context.Context, repositories *repository.Repositories) {
-	userUseCase := ucase.NewUserUseCase(ctx, repositories)
+func (controller *Init) setUserRoutes(repositories *repository.Repositories) {
+	userUseCase := ucase.NewUserUseCase(repositories)
 	userHandler := handler.NewUserHandler(userUseCase)
 
 	if controller.cfg.RegisteringNewUsersViaAPI {
@@ -89,8 +89,8 @@ func (controller *Init) setUserRoutes(ctx context.Context, repositories *reposit
 	)
 }
 
-func (controller *Init) setNotesCategories(ctx context.Context, repositories *repository.Repositories) {
-	noteCategoryUseCase := ucase.NewNoteCategoryUseCase(ctx, repositories)
+func (controller *Init) setNotesCategories(repositories *repository.Repositories) {
+	noteCategoryUseCase := ucase.NewNoteCategoryUseCase(repositories)
 	noteCategoryHandler := handler.NewNoteCategoryHandler(noteCategoryUseCase)
 
 	controller.router.Handler(
@@ -120,8 +120,8 @@ func (controller *Init) setNotesCategories(ctx context.Context, repositories *re
 	)
 }
 
-func (controller *Init) setNotes(ctx context.Context, repositories *repository.Repositories) {
-	noteUseCase := ucase.NewNoteUseCase(ctx, repositories)
+func (controller *Init) setNotes(repositories *repository.Repositories) {
+	noteUseCase := ucase.NewNoteUseCase(repositories)
 	noteHandler := handler.NewNoteHandler(noteUseCase)
 
 	controller.router.Handler(
@@ -161,8 +161,8 @@ func (controller *Init) setNotes(ctx context.Context, repositories *repository.R
 	)
 }
 
-func (controller *Init) setFiles(ctx context.Context, repositories *repository.Repositories) {
-	fileUseCase := ucase.NewFileUseCase(ctx, repositories)
+func (controller *Init) setFiles(repositories *repository.Repositories) {
+	fileUseCase := ucase.NewFileUseCase(repositories)
 	fileHandler := handler.NewFileHandler(fileUseCase)
 
 	controller.router.Handler(
@@ -177,8 +177,8 @@ func (controller *Init) setFiles(ctx context.Context, repositories *repository.R
 	)
 }
 
-func (controller *Init) setDrive(ctx context.Context, repositories *repository.Repositories) {
-	driveUseCase := ucase.NewDriveUseCase(ctx, repositories)
+func (controller *Init) setDrive(repositories *repository.Repositories) {
+	driveUseCase := ucase.NewDriveUseCase(repositories)
 	driveHandler := handler.NewDriveHandler(driveUseCase)
 
 	controller.router.Handler(

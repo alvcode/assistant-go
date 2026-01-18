@@ -43,53 +43,51 @@ var (
 )
 
 type DriveUseCase interface {
-	CreateDirectory(dto *dto.DriveCreateDirectory, user *entity.User) ([]*dto.DriveTree, error)
-	GetTree(parentID *int, user *entity.User) ([]*dto.DriveTree, error)
-	UploadFile(in dto.DriveUploadFile, user *entity.User) ([]*dto.DriveTree, error)
-	Delete(structID int, savePath string, user *entity.User) error
-	GetFile(in *dto.GetFile, user *entity.User) (*dto.FileResponse, error)
-	Rename(structID int, newName string, user *entity.User) error
-	Space(user *entity.User, totalSpace int64) (*dto.DriveSpace, error)
-	RenMov(user *entity.User, in dto.DriveRenMov) error
-	ChunkPrepare(user *entity.User, in dto.DriveChunkPrepareIn) (*dto.DriveChunkPrepareResponse, error)
-	ChunkUpload(user *entity.User, in dto.DriveUploadChunk) error
-	ChunkEnd(structID int) error
-	ChunksInfo(structID int) (*dto.DriveChunksInfo, error)
-	GetChunkBytes(in *dto.GetChunk, user *entity.User) (*dto.FileResponse, error)
-	UpdateFileHash(structID int, hash string, user *entity.User) error
+	CreateDirectory(ctx context.Context, dto *dto.DriveCreateDirectory, user *entity.User) ([]*dto.DriveTree, error)
+	GetTree(ctx context.Context, parentID *int, user *entity.User) ([]*dto.DriveTree, error)
+	UploadFile(ctx context.Context, in dto.DriveUploadFile, user *entity.User) ([]*dto.DriveTree, error)
+	Delete(ctx context.Context, structID int, savePath string, user *entity.User) error
+	GetFile(ctx context.Context, in *dto.GetFile, user *entity.User) (*dto.FileResponse, error)
+	Rename(ctx context.Context, structID int, newName string, user *entity.User) error
+	Space(ctx context.Context, user *entity.User, totalSpace int64) (*dto.DriveSpace, error)
+	RenMov(ctx context.Context, user *entity.User, in dto.DriveRenMov) error
+	ChunkPrepare(ctx context.Context, user *entity.User, in dto.DriveChunkPrepareIn) (*dto.DriveChunkPrepareResponse, error)
+	ChunkUpload(ctx context.Context, user *entity.User, in dto.DriveUploadChunk) error
+	ChunkEnd(ctx context.Context, structID int) error
+	ChunksInfo(ctx context.Context, structID int) (*dto.DriveChunksInfo, error)
+	GetChunkBytes(ctx context.Context, in *dto.GetChunk, user *entity.User) (*dto.FileResponse, error)
+	UpdateFileHash(ctx context.Context, structID int, hash string, user *entity.User) error
 }
 
 type driveUseCase struct {
-	ctx          context.Context
 	repositories *repository.Repositories
 }
 
-func NewDriveUseCase(ctx context.Context, repositories *repository.Repositories) DriveUseCase {
+func NewDriveUseCase(repositories *repository.Repositories) DriveUseCase {
 	return &driveUseCase{
-		ctx:          ctx,
 		repositories: repositories,
 	}
 }
 
-func (uc *driveUseCase) GetTree(parentID *int, user *entity.User) ([]*dto.DriveTree, error) {
-	list, err := uc.repositories.DriveStructRepository.TreeByUserID(uc.ctx, user.ID, parentID)
+func (uc *driveUseCase) GetTree(ctx context.Context, parentID *int, user *entity.User) ([]*dto.DriveTree, error) {
+	list, err := uc.repositories.DriveStructRepository.TreeByUserID(ctx, user.ID, parentID)
 	if err != nil {
 		if !errors.Is(err, pgx.ErrNoRows) {
-			logging.GetLogger(uc.ctx).Error(err)
+			logging.GetLogger(ctx).Error(err)
 			return nil, postgres.ErrUnexpectedDBError
 		}
 	}
 	return list, nil
 }
 
-func (uc *driveUseCase) CreateDirectory(dto *dto.DriveCreateDirectory, user *entity.User) ([]*dto.DriveTree, error) {
+func (uc *driveUseCase) CreateDirectory(ctx context.Context, dto *dto.DriveCreateDirectory, user *entity.User) ([]*dto.DriveTree, error) {
 	if dto.ParentID != nil {
-		err := uc.checkParentOwner(*dto.ParentID, user.ID)
+		err := uc.checkParentOwner(ctx, *dto.ParentID, user.ID)
 		if err != nil {
 			return nil, err
 		}
 	}
-	_, err := uc.repositories.DriveStructRepository.FindRow(uc.ctx, user.ID, dto.Name, typeDirectory, dto.ParentID)
+	_, err := uc.repositories.DriveStructRepository.FindRow(ctx, user.ID, dto.Name, typeDirectory, dto.ParentID)
 
 	if err == nil {
 		return nil, ErrDriveDirectoryExists
@@ -102,26 +100,26 @@ func (uc *driveUseCase) CreateDirectory(dto *dto.DriveCreateDirectory, user *ent
 		CreatedAt: time.Now().UTC(),
 		UpdatedAt: time.Now().UTC(),
 	}
-	_, err = uc.repositories.DriveStructRepository.Create(uc.ctx, createEntity)
+	_, err = uc.repositories.DriveStructRepository.Create(ctx, createEntity)
 	if err != nil {
 		return nil, err
 	}
 
-	treeList, err := uc.GetTree(dto.ParentID, user)
+	treeList, err := uc.GetTree(ctx, dto.ParentID, user)
 	if err != nil {
 		return nil, err
 	}
 	return treeList, nil
 }
 
-func (uc *driveUseCase) UploadFile(in dto.DriveUploadFile, user *entity.User) ([]*dto.DriveTree, error) {
+func (uc *driveUseCase) UploadFile(ctx context.Context, in dto.DriveUploadFile, user *entity.User) ([]*dto.DriveTree, error) {
 	fileService := service.NewFile().FileService()
 
 	if in.UseEncryption {
 		var encryptErr error
 		in.File, encryptErr = fileService.EncryptFile(in.File, in.EncryptionKey)
 		if encryptErr != nil {
-			logging.GetLogger(uc.ctx).Error(fmt.Errorf("%w: %w", ErrDriveEncrypting, encryptErr))
+			logging.GetLogger(ctx).Error(fmt.Errorf("%w: %w", ErrDriveEncrypting, encryptErr))
 			return nil, ErrDriveEncrypting
 		}
 	}
@@ -139,9 +137,9 @@ func (uc *driveUseCase) UploadFile(in dto.DriveUploadFile, user *entity.User) ([
 		return nil, ErrDriveFileTooLarge
 	}
 
-	allStorageSize, err := uc.repositories.DriveFileRepository.GetStorageSize(uc.ctx, user.ID)
+	allStorageSize, err := uc.repositories.DriveFileRepository.GetStorageSize(ctx, user.ID)
 	if err != nil {
-		logging.GetLogger(uc.ctx).Error(err)
+		logging.GetLogger(ctx).Error(err)
 		return nil, postgres.ErrUnexpectedDBError
 	}
 
@@ -157,7 +155,7 @@ func (uc *driveUseCase) UploadFile(in dto.DriveUploadFile, user *entity.User) ([
 		return nil, ErrDriveFileNotSafeFilename
 	}
 
-	_, err = uc.repositories.DriveStructRepository.FindRow(uc.ctx, user.ID, in.OriginalFilename, typeFile, in.ParentID)
+	_, err = uc.repositories.DriveStructRepository.FindRow(ctx, user.ID, in.OriginalFilename, typeFile, in.ParentID)
 
 	if err == nil {
 		return nil, ErrDriveFilenameExists
@@ -168,9 +166,9 @@ func (uc *driveUseCase) UploadFile(in dto.DriveUploadFile, user *entity.User) ([
 		return nil, err
 	}
 
-	maxFileID, err := uc.repositories.DriveFileRepository.GetLastID(uc.ctx)
+	maxFileID, err := uc.repositories.DriveFileRepository.GetLastID(ctx)
 	if err != nil {
-		logging.GetLogger(uc.ctx).Error(err)
+		logging.GetLogger(ctx).Error(err)
 		return nil, postgres.ErrUnexpectedDBError
 	}
 
@@ -184,7 +182,7 @@ func (uc *driveUseCase) UploadFile(in dto.DriveUploadFile, user *entity.User) ([
 		SizeBytes: size,
 	}
 
-	saveErr := uc.repositories.StorageRepository.Save(uc.ctx, saveDto)
+	saveErr := uc.repositories.StorageRepository.Save(ctx, saveDto)
 	if saveErr != nil {
 		return nil, ErrDriveFileSave
 	}
@@ -199,7 +197,7 @@ func (uc *driveUseCase) UploadFile(in dto.DriveUploadFile, user *entity.User) ([
 		UpdatedAt: time.Now().UTC(),
 	}
 
-	driveStruct, err = uc.repositories.DriveStructRepository.Create(uc.ctx, driveStruct)
+	driveStruct, err = uc.repositories.DriveStructRepository.Create(ctx, driveStruct)
 	if err != nil {
 		return nil, err
 	}
@@ -214,13 +212,13 @@ func (uc *driveUseCase) UploadFile(in dto.DriveUploadFile, user *entity.User) ([
 		SHA256:        in.SHA256,
 	}
 
-	_, err = uc.repositories.DriveFileRepository.Create(uc.ctx, driveFile)
+	_, err = uc.repositories.DriveFileRepository.Create(ctx, driveFile)
 	if err != nil {
-		logging.GetLogger(uc.ctx).Error(err)
+		logging.GetLogger(ctx).Error(err)
 		return nil, postgres.ErrUnexpectedDBError
 	}
 
-	treeList, err := uc.GetTree(in.ParentID, user)
+	treeList, err := uc.GetTree(ctx, in.ParentID, user)
 	if err != nil {
 		return nil, err
 	}
@@ -228,8 +226,8 @@ func (uc *driveUseCase) UploadFile(in dto.DriveUploadFile, user *entity.User) ([
 	return treeList, nil
 }
 
-func (uc *driveUseCase) Delete(structID int, savePath string, user *entity.User) error {
-	driveStruct, err := uc.repositories.DriveStructRepository.GetByID(uc.ctx, structID)
+func (uc *driveUseCase) Delete(ctx context.Context, structID int, savePath string, user *entity.User) error {
+	driveStruct, err := uc.repositories.DriveStructRepository.GetByID(ctx, structID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrDriveStructNotFound
@@ -239,14 +237,14 @@ func (uc *driveUseCase) Delete(structID int, savePath string, user *entity.User)
 		return ErrDriveStructNotFound
 	}
 
-	deleteChunkList, err := uc.repositories.DriveFileChunkRepository.GetAllRecursive(uc.ctx, structID, user.ID)
+	deleteChunkList, err := uc.repositories.DriveFileChunkRepository.GetAllRecursive(ctx, structID, user.ID)
 	if err != nil {
 		if !errors.Is(err, pgx.ErrNoRows) {
 			return err
 		}
 	}
 
-	deleteFileList, err := uc.repositories.DriveFileRepository.GetAllRecursive(uc.ctx, structID, user.ID)
+	deleteFileList, err := uc.repositories.DriveFileRepository.GetAllRecursive(ctx, structID, user.ID)
 	if err != nil {
 		if !errors.Is(err, pgx.ErrNoRows) {
 			return err
@@ -268,11 +266,11 @@ func (uc *driveUseCase) Delete(structID int, savePath string, user *entity.User)
 	}
 
 	if len(keys) > 0 {
-		_ = uc.repositories.StorageRepository.DeleteAll(uc.ctx, keys)
+		_ = uc.repositories.StorageRepository.DeleteAll(ctx, keys)
 	}
 
 	// удаление записей из БД из трех таблиц (через cascade fk)
-	err = uc.repositories.DriveStructRepository.DeleteRecursive(uc.ctx, user.ID, structID)
+	err = uc.repositories.DriveStructRepository.DeleteRecursive(ctx, user.ID, structID)
 	if err != nil {
 		return err
 	}
@@ -280,8 +278,8 @@ func (uc *driveUseCase) Delete(structID int, savePath string, user *entity.User)
 	return nil
 }
 
-func (uc *driveUseCase) GetFile(in *dto.GetFile, user *entity.User) (*dto.FileResponse, error) {
-	driveStruct, err := uc.repositories.DriveStructRepository.GetByID(uc.ctx, in.StructID)
+func (uc *driveUseCase) GetFile(ctx context.Context, in *dto.GetFile, user *entity.User) (*dto.FileResponse, error) {
+	driveStruct, err := uc.repositories.DriveStructRepository.GetByID(ctx, in.StructID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrFileNotFound
@@ -295,7 +293,7 @@ func (uc *driveUseCase) GetFile(in *dto.GetFile, user *entity.User) (*dto.FileRe
 		return nil, ErrFileNotFound
 	}
 
-	driveFile, err := uc.repositories.DriveFileRepository.GetByStructID(uc.ctx, driveStruct.ID)
+	driveFile, err := uc.repositories.DriveFileRepository.GetByStructID(ctx, driveStruct.ID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrFileNotFound
@@ -306,9 +304,9 @@ func (uc *driveUseCase) GetFile(in *dto.GetFile, user *entity.User) (*dto.FileRe
 	}
 
 	fullPath := filepath.Join(in.SavePath, *driveFile.Path)
-	fileReader, err := uc.repositories.StorageRepository.GetFile(uc.ctx, fullPath)
+	fileReader, err := uc.repositories.StorageRepository.GetFile(ctx, fullPath)
 	if err != nil {
-		logging.GetLogger(uc.ctx).Error(err)
+		logging.GetLogger(ctx).Error(err)
 		return nil, err
 	}
 
@@ -317,7 +315,7 @@ func (uc *driveUseCase) GetFile(in *dto.GetFile, user *entity.User) (*dto.FileRe
 		fileService := service.NewFile().FileService()
 		fileReader, err = fileService.DecryptFile(fileReader, in.EncryptionKey)
 		if err != nil {
-			logging.GetLogger(uc.ctx).Error(fmt.Errorf("%w: %w", ErrDriveDecrypting, err))
+			logging.GetLogger(ctx).Error(fmt.Errorf("%w: %w", ErrDriveDecrypting, err))
 			return nil, ErrDriveDecrypting
 		}
 
@@ -335,8 +333,8 @@ func (uc *driveUseCase) GetFile(in *dto.GetFile, user *entity.User) (*dto.FileRe
 	return fileResponse, nil
 }
 
-func (uc *driveUseCase) Rename(structID int, newName string, user *entity.User) error {
-	driveStruct, err := uc.repositories.DriveStructRepository.GetByID(uc.ctx, structID)
+func (uc *driveUseCase) Rename(ctx context.Context, structID int, newName string, user *entity.User) error {
+	driveStruct, err := uc.repositories.DriveStructRepository.GetByID(ctx, structID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrFileNotFound
@@ -348,7 +346,7 @@ func (uc *driveUseCase) Rename(structID int, newName string, user *entity.User) 
 	}
 
 	driveStruct.Name = newName
-	err = uc.repositories.DriveStructRepository.Update(uc.ctx, driveStruct)
+	err = uc.repositories.DriveStructRepository.Update(ctx, driveStruct)
 	if err != nil {
 		return err
 	}
@@ -356,11 +354,11 @@ func (uc *driveUseCase) Rename(structID int, newName string, user *entity.User) 
 	return nil
 }
 
-func (uc *driveUseCase) Space(user *entity.User, totalSpace int64) (*dto.DriveSpace, error) {
+func (uc *driveUseCase) Space(ctx context.Context, user *entity.User, totalSpace int64) (*dto.DriveSpace, error) {
 	result := &dto.DriveSpace{}
 	result.Total = totalSpace
 
-	usedSpace, err := uc.repositories.DriveFileRepository.GetStorageSize(uc.ctx, user.ID)
+	usedSpace, err := uc.repositories.DriveFileRepository.GetStorageSize(ctx, user.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -369,9 +367,9 @@ func (uc *driveUseCase) Space(user *entity.User, totalSpace int64) (*dto.DriveSp
 	return result, nil
 }
 
-func (uc *driveUseCase) RenMov(user *entity.User, in dto.DriveRenMov) error {
+func (uc *driveUseCase) RenMov(ctx context.Context, user *entity.User, in dto.DriveRenMov) error {
 	if in.ParentID != nil {
-		parentStruct, err := uc.repositories.DriveStructRepository.GetByID(uc.ctx, *in.ParentID)
+		parentStruct, err := uc.repositories.DriveStructRepository.GetByID(ctx, *in.ParentID)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return ErrDriveParentIdNotFound
@@ -408,7 +406,7 @@ func (uc *driveUseCase) RenMov(user *entity.User, in dto.DriveRenMov) error {
 	}
 
 	for _, batch := range batches {
-		structCount, err := uc.repositories.DriveStructRepository.StructCountByUserAndIDs(uc.ctx, user.ID, batch)
+		structCount, err := uc.repositories.DriveStructRepository.StructCountByUserAndIDs(ctx, user.ID, batch)
 		if err != nil {
 			return err
 		}
@@ -417,11 +415,11 @@ func (uc *driveUseCase) RenMov(user *entity.User, in dto.DriveRenMov) error {
 		}
 	}
 
-	err := repository.WithTransaction(uc.ctx, uc.repositories.TransactionRepository, func(tx pgx.Tx) error {
+	err := repository.WithTransaction(ctx, uc.repositories.TransactionRepository, func(tx pgx.Tx) error {
 		driveStructRepoTx := repository.NewDriveStructRepository(tx)
 
 		for _, batch := range batches {
-			err := driveStructRepoTx.MassUpdateParentID(uc.ctx, in.ParentID, batch)
+			err := driveStructRepoTx.MassUpdateParentID(ctx, in.ParentID, batch)
 			if err != nil {
 				return err
 			}
@@ -429,20 +427,20 @@ func (uc *driveUseCase) RenMov(user *entity.User, in dto.DriveRenMov) error {
 		return nil
 	})
 	if err != nil {
-		logging.GetLogger(uc.ctx).Error(err)
+		logging.GetLogger(ctx).Error(err)
 		return err
 	}
 	return nil
 }
 
-func (uc *driveUseCase) ChunkPrepare(user *entity.User, in dto.DriveChunkPrepareIn) (*dto.DriveChunkPrepareResponse, error) {
+func (uc *driveUseCase) ChunkPrepare(ctx context.Context, user *entity.User, in dto.DriveChunkPrepareIn) (*dto.DriveChunkPrepareResponse, error) {
 	if in.FullSize > in.MaxSizeBytes {
 		return nil, ErrDriveFileTooLarge
 	}
 
-	allStorageSize, err := uc.repositories.DriveFileRepository.GetStorageSize(uc.ctx, user.ID)
+	allStorageSize, err := uc.repositories.DriveFileRepository.GetStorageSize(ctx, user.ID)
 	if err != nil {
-		logging.GetLogger(uc.ctx).Error(err)
+		logging.GetLogger(ctx).Error(err)
 		return nil, postgres.ErrUnexpectedDBError
 	}
 
@@ -451,7 +449,7 @@ func (uc *driveUseCase) ChunkPrepare(user *entity.User, in dto.DriveChunkPrepare
 	}
 
 	if in.ParentID != nil {
-		err := uc.checkParentOwner(*in.ParentID, user.ID)
+		err := uc.checkParentOwner(ctx, *in.ParentID, user.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -465,7 +463,7 @@ func (uc *driveUseCase) ChunkPrepare(user *entity.User, in dto.DriveChunkPrepare
 		return nil, ErrDriveFileNotSafeFilename
 	}
 
-	_, err = uc.repositories.DriveStructRepository.FindRow(uc.ctx, user.ID, in.Filename, typeFile, in.ParentID)
+	_, err = uc.repositories.DriveStructRepository.FindRow(ctx, user.ID, in.Filename, typeFile, in.ParentID)
 
 	if err == nil {
 		return nil, ErrDriveFilenameExists
@@ -481,12 +479,12 @@ func (uc *driveUseCase) ChunkPrepare(user *entity.User, in dto.DriveChunkPrepare
 	}
 
 	driveStructResult, err := repository.WithTransactionResult(
-		uc.ctx,
+		ctx,
 		uc.repositories.TransactionRepository,
 		func(tx pgx.Tx) (*entity.DriveStruct, error) {
 			driveStructRepo := repository.NewDriveStructRepository(tx)
 
-			driveStruct, err = driveStructRepo.Create(uc.ctx, driveStruct)
+			driveStruct, err = driveStructRepo.Create(ctx, driveStruct)
 			if err != nil {
 				return nil, err
 			}
@@ -503,9 +501,9 @@ func (uc *driveUseCase) ChunkPrepare(user *entity.User, in dto.DriveChunkPrepare
 
 			driveFileRepo := repository.NewDriveFileRepository(tx)
 
-			driveFile, err = driveFileRepo.Create(uc.ctx, driveFile)
+			driveFile, err = driveFileRepo.Create(ctx, driveFile)
 			if err != nil {
-				logging.GetLogger(uc.ctx).Error(err)
+				logging.GetLogger(ctx).Error(err)
 				return nil, postgres.ErrUnexpectedDBError
 			}
 
@@ -513,21 +511,21 @@ func (uc *driveUseCase) ChunkPrepare(user *entity.User, in dto.DriveChunkPrepare
 		})
 
 	if err != nil {
-		logging.GetLogger(uc.ctx).Error(err)
+		logging.GetLogger(ctx).Error(err)
 		return nil, err
 	}
 
 	return &dto.DriveChunkPrepareResponse{StructID: driveStructResult.ID}, nil
 }
 
-func (uc *driveUseCase) ChunkUpload(user *entity.User, in dto.DriveUploadChunk) error {
+func (uc *driveUseCase) ChunkUpload(ctx context.Context, user *entity.User, in dto.DriveUploadChunk) error {
 	fileService := service.NewFile().FileService()
 
 	if in.UseEncryption {
 		var encryptErr error
 		in.File, encryptErr = fileService.EncryptFile(in.File, in.EncryptionKey)
 		if encryptErr != nil {
-			logging.GetLogger(uc.ctx).Error(fmt.Errorf("%w: %w", ErrDriveEncrypting, encryptErr))
+			logging.GetLogger(ctx).Error(fmt.Errorf("%w: %w", ErrDriveEncrypting, encryptErr))
 			return ErrDriveEncrypting
 		}
 	}
@@ -541,23 +539,23 @@ func (uc *driveUseCase) ChunkUpload(user *entity.User, in dto.DriveUploadChunk) 
 		return ErrDriveFileTooLargeUseChunks
 	}
 
-	fileEntity, err := uc.repositories.DriveFileRepository.GetByStructID(uc.ctx, in.StructID)
+	fileEntity, err := uc.repositories.DriveFileRepository.GetByStructID(ctx, in.StructID)
 	if err != nil {
 		return err
 	}
 
-	checkFileOwner, err := uc.repositories.DriveFileRepository.CheckFileOwner(uc.ctx, fileEntity.ID, user.ID)
+	checkFileOwner, err := uc.repositories.DriveFileRepository.CheckFileOwner(ctx, fileEntity.ID, user.ID)
 	if err != nil {
-		logging.GetLogger(uc.ctx).Error(err)
+		logging.GetLogger(ctx).Error(err)
 		return err
 	}
 	if !checkFileOwner {
 		return ErrDriveStructNotFound
 	}
 
-	chunksSize, err := uc.repositories.DriveFileChunkRepository.GetChunksSize(uc.ctx, fileEntity.ID)
+	chunksSize, err := uc.repositories.DriveFileChunkRepository.GetChunksSize(ctx, fileEntity.ID)
 	if err != nil {
-		logging.GetLogger(uc.ctx).Error(err)
+		logging.GetLogger(ctx).Error(err)
 		return err
 	}
 
@@ -565,9 +563,9 @@ func (uc *driveUseCase) ChunkUpload(user *entity.User, in dto.DriveUploadChunk) 
 		return ErrDriveFileTooLarge
 	}
 
-	allStorageSize, err := uc.repositories.DriveFileRepository.GetStorageSize(uc.ctx, user.ID)
+	allStorageSize, err := uc.repositories.DriveFileRepository.GetStorageSize(ctx, user.ID)
 	if err != nil {
-		logging.GetLogger(uc.ctx).Error(err)
+		logging.GetLogger(ctx).Error(err)
 		return postgres.ErrUnexpectedDBError
 	}
 
@@ -590,7 +588,7 @@ func (uc *driveUseCase) ChunkUpload(user *entity.User, in dto.DriveUploadChunk) 
 		SizeBytes: size,
 	}
 
-	saveErr := uc.repositories.StorageRepository.Save(uc.ctx, saveDto)
+	saveErr := uc.repositories.StorageRepository.Save(ctx, saveDto)
 	if saveErr != nil {
 		return ErrDriveFileSave
 	}
@@ -602,57 +600,57 @@ func (uc *driveUseCase) ChunkUpload(user *entity.User, in dto.DriveUploadChunk) 
 		ChunkNumber: in.ChunkNumber,
 	}
 
-	_, err = uc.repositories.DriveFileChunkRepository.Create(uc.ctx, driveFileChunk)
+	_, err = uc.repositories.DriveFileChunkRepository.Create(ctx, driveFileChunk)
 	if err != nil {
-		logging.GetLogger(uc.ctx).Error(err)
+		logging.GetLogger(ctx).Error(err)
 		return postgres.ErrUnexpectedDBError
 	}
 
 	return nil
 }
 
-func (uc *driveUseCase) ChunkEnd(structID int) error {
-	fileEntity, err := uc.repositories.DriveFileRepository.GetByStructID(uc.ctx, structID)
+func (uc *driveUseCase) ChunkEnd(ctx context.Context, structID int) error {
+	fileEntity, err := uc.repositories.DriveFileRepository.GetByStructID(ctx, structID)
 	if err != nil {
 		return err
 	}
 
-	chunksSize, err := uc.repositories.DriveFileChunkRepository.GetChunksSize(uc.ctx, fileEntity.ID)
+	chunksSize, err := uc.repositories.DriveFileChunkRepository.GetChunksSize(ctx, fileEntity.ID)
 	if err != nil {
-		logging.GetLogger(uc.ctx).Error(err)
+		logging.GetLogger(ctx).Error(err)
 		return err
 	}
 
-	err = uc.repositories.DriveFileRepository.UpdateSize(uc.ctx, fileEntity.ID, chunksSize)
+	err = uc.repositories.DriveFileRepository.UpdateSize(ctx, fileEntity.ID, chunksSize)
 	if err != nil {
-		logging.GetLogger(uc.ctx).Error(err)
+		logging.GetLogger(ctx).Error(err)
 		return err
 	}
 	return nil
 }
 
-func (uc *driveUseCase) ChunksInfo(structID int) (*dto.DriveChunksInfo, error) {
-	fileEntity, err := uc.repositories.DriveFileRepository.GetByStructID(uc.ctx, structID)
+func (uc *driveUseCase) ChunksInfo(ctx context.Context, structID int) (*dto.DriveChunksInfo, error) {
+	fileEntity, err := uc.repositories.DriveFileRepository.GetByStructID(ctx, structID)
 	if err != nil {
 		if errors.Is(pgx.ErrNoRows, err) {
 			return nil, ErrDriveStructNotFound
 		}
-		logging.GetLogger(uc.ctx).Error(err)
+		logging.GetLogger(ctx).Error(err)
 		return nil, err
 	}
 
-	chunksInfo, err := uc.repositories.DriveFileChunkRepository.GetChunksInfo(uc.ctx, fileEntity.ID)
+	chunksInfo, err := uc.repositories.DriveFileChunkRepository.GetChunksInfo(ctx, fileEntity.ID)
 	if err != nil {
 		if !errors.Is(pgx.ErrNoRows, err) {
-			logging.GetLogger(uc.ctx).Error(err)
+			logging.GetLogger(ctx).Error(err)
 		}
 		return nil, err
 	}
 	return chunksInfo, nil
 }
 
-func (uc *driveUseCase) GetChunkBytes(in *dto.GetChunk, user *entity.User) (*dto.FileResponse, error) {
-	driveStruct, err := uc.repositories.DriveStructRepository.GetByID(uc.ctx, in.StructID)
+func (uc *driveUseCase) GetChunkBytes(ctx context.Context, in *dto.GetChunk, user *entity.User) (*dto.FileResponse, error) {
+	driveStruct, err := uc.repositories.DriveStructRepository.GetByID(ctx, in.StructID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrFileNotFound
@@ -666,7 +664,7 @@ func (uc *driveUseCase) GetChunkBytes(in *dto.GetChunk, user *entity.User) (*dto
 		return nil, ErrFileNotFound
 	}
 
-	driveFile, err := uc.repositories.DriveFileRepository.GetByStructID(uc.ctx, driveStruct.ID)
+	driveFile, err := uc.repositories.DriveFileRepository.GetByStructID(ctx, driveStruct.ID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrFileNotFound
@@ -674,7 +672,7 @@ func (uc *driveUseCase) GetChunkBytes(in *dto.GetChunk, user *entity.User) (*dto
 		return nil, err
 	}
 
-	driveFileChunk, err := uc.repositories.DriveFileChunkRepository.GetByFileIDAndNumber(uc.ctx, driveFile.ID, in.ChunkNumber)
+	driveFileChunk, err := uc.repositories.DriveFileChunkRepository.GetByFileIDAndNumber(ctx, driveFile.ID, in.ChunkNumber)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrFileNotFound
@@ -683,9 +681,9 @@ func (uc *driveUseCase) GetChunkBytes(in *dto.GetChunk, user *entity.User) (*dto
 	}
 
 	fullPath := filepath.Join(in.SavePath, driveFileChunk.Path)
-	fileReader, err := uc.repositories.StorageRepository.GetFile(uc.ctx, fullPath)
+	fileReader, err := uc.repositories.StorageRepository.GetFile(ctx, fullPath)
 	if err != nil {
-		logging.GetLogger(uc.ctx).Error(err)
+		logging.GetLogger(ctx).Error(err)
 		return nil, err
 	}
 
@@ -694,7 +692,7 @@ func (uc *driveUseCase) GetChunkBytes(in *dto.GetChunk, user *entity.User) (*dto
 		fileService := service.NewFile().FileService()
 		fileReader, err = fileService.DecryptFile(fileReader, in.EncryptionKey)
 		if err != nil {
-			logging.GetLogger(uc.ctx).Error(fmt.Errorf("%w: %w", ErrDriveDecrypting, err))
+			logging.GetLogger(ctx).Error(fmt.Errorf("%w: %w", ErrDriveDecrypting, err))
 			return nil, ErrDriveDecrypting
 		}
 
@@ -712,8 +710,8 @@ func (uc *driveUseCase) GetChunkBytes(in *dto.GetChunk, user *entity.User) (*dto
 	return fileResponse, nil
 }
 
-func (uc *driveUseCase) UpdateFileHash(structID int, hash string, user *entity.User) error {
-	driveStruct, err := uc.repositories.DriveStructRepository.GetByID(uc.ctx, structID)
+func (uc *driveUseCase) UpdateFileHash(ctx context.Context, structID int, hash string, user *entity.User) error {
+	driveStruct, err := uc.repositories.DriveStructRepository.GetByID(ctx, structID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrFileNotFound
@@ -727,7 +725,7 @@ func (uc *driveUseCase) UpdateFileHash(structID int, hash string, user *entity.U
 		return ErrFileNotFound
 	}
 
-	driveFile, err := uc.repositories.DriveFileRepository.GetByStructID(uc.ctx, driveStruct.ID)
+	driveFile, err := uc.repositories.DriveFileRepository.GetByStructID(ctx, driveStruct.ID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrFileNotFound
@@ -735,9 +733,9 @@ func (uc *driveUseCase) UpdateFileHash(structID int, hash string, user *entity.U
 		return err
 	}
 
-	err = uc.repositories.DriveFileRepository.UpdateHash(uc.ctx, driveFile.ID, hash)
+	err = uc.repositories.DriveFileRepository.UpdateHash(ctx, driveFile.ID, hash)
 	if err != nil {
-		logging.GetLogger(uc.ctx).Error(err)
+		logging.GetLogger(ctx).Error(err)
 		return err
 	}
 	return nil
@@ -796,8 +794,8 @@ func (uc *driveUseCase) getFileSizeInReader(file io.Reader, maxSize int64) (int6
 	return size, nil
 }
 
-func (uc *driveUseCase) checkParentOwner(parentID int, userID int) error {
-	parentStruct, err := uc.repositories.DriveStructRepository.GetByID(uc.ctx, parentID)
+func (uc *driveUseCase) checkParentOwner(ctx context.Context, parentID int, userID int) error {
+	parentStruct, err := uc.repositories.DriveStructRepository.GetByID(ctx, parentID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrDriveParentIdNotFound

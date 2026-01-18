@@ -50,7 +50,7 @@ func (h *DriveHandler) GetTree(w http.ResponseWriter, r *http.Request) {
 		parentID = &parentIDInt
 	}
 
-	driveTreeList, err := h.useCase.GetTree(parentID, authUser)
+	driveTreeList, err := h.useCase.GetTree(r.Context(), parentID, authUser)
 	if err != nil {
 		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
 		return
@@ -83,7 +83,7 @@ func (h *DriveHandler) CreateDirectory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	driveTreeList, err := h.useCase.CreateDirectory(&createDirectoryDTO, authUser)
+	driveTreeList, err := h.useCase.CreateDirectory(r.Context(), &createDirectoryDTO, authUser)
 	if err != nil {
 		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
 		return
@@ -151,7 +151,7 @@ func (h *DriveHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
 		EncryptionKey:         appConf.Drive.EncryptionKey,
 	}
 
-	driveTreeList, err := h.useCase.UploadFile(uploadFileDto, authUser)
+	driveTreeList, err := h.useCase.UploadFile(r.Context(), uploadFileDto, authUser)
 	if err != nil {
 		switch {
 		case errors.Is(err, ucase.ErrDriveParentIdNotFound),
@@ -199,7 +199,7 @@ func (h *DriveHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		structID = structIDInt
 	}
 
-	err = h.useCase.Delete(structID, appConf.Drive.SavePath, authUser)
+	err = h.useCase.Delete(r.Context(), structID, appConf.Drive.SavePath, authUser)
 	if err != nil {
 		//BlockEventHandle(r, BlockEventUnauthorizedType)
 		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
@@ -241,7 +241,7 @@ func (h *DriveHandler) GetFile(w http.ResponseWriter, r *http.Request) {
 		EncryptionKey: appConf.Drive.EncryptionKey,
 	}
 
-	fileDto, err := h.useCase.GetFile(getFileDTO, authUser)
+	fileDto, err := h.useCase.GetFile(r.Context(), getFileDTO, authUser)
 	if err != nil {
 		var responseStatus int
 		if errors.Is(err, ucase.ErrFileNotFound) {
@@ -317,7 +317,7 @@ func (h *DriveHandler) Rename(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.useCase.Rename(structID, renameDTO.Name, authUser)
+	err = h.useCase.Rename(r.Context(), structID, renameDTO.Name, authUser)
 	if err != nil {
 		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
 		return
@@ -337,7 +337,7 @@ func (h *DriveHandler) Space(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dtoSpace, err := h.useCase.Space(authUser, appConf.Drive.LimitPerUser<<20)
+	dtoSpace, err := h.useCase.Space(r.Context(), authUser, appConf.Drive.LimitPerUser<<20)
 	if err != nil {
 		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
 		return
@@ -371,7 +371,7 @@ func (h *DriveHandler) RenMov(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.useCase.RenMov(authUser, renMovDTO)
+	err = h.useCase.RenMov(r.Context(), authUser, renMovDTO)
 	if err != nil {
 		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
 		return
@@ -411,7 +411,7 @@ func (h *DriveHandler) ChunkPrepare(w http.ResponseWriter, r *http.Request) {
 		StorageMaxSizePerUser: appConf.Drive.LimitPerUser << 20,
 	}
 
-	responseDTO, err := h.useCase.ChunkPrepare(authUser, inDTO)
+	responseDTO, err := h.useCase.ChunkPrepare(r.Context(), authUser, inDTO)
 	if err != nil {
 		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
 		return
@@ -494,7 +494,7 @@ func (h *DriveHandler) UploadChunk(w http.ResponseWriter, r *http.Request) {
 		EncryptionKey:         appConf.Drive.EncryptionKey,
 	}
 
-	err = h.useCase.ChunkUpload(authUser, uploadChunkDTO)
+	err = h.useCase.ChunkUpload(r.Context(), authUser, uploadChunkDTO)
 	if err != nil {
 		switch {
 		case errors.Is(err, ucase.ErrDriveStructNotFound),
@@ -530,7 +530,7 @@ func (h *DriveHandler) ChunkEnd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.useCase.ChunkEnd(chunkEndDTO.StructID)
+	err = h.useCase.ChunkEnd(r.Context(), chunkEndDTO.StructID)
 	if err != nil {
 		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
 		return
@@ -556,7 +556,7 @@ func (h *DriveHandler) GetChunksInfo(w http.ResponseWriter, r *http.Request) {
 		structID = structIDInt
 	}
 
-	driveChunksInfo, err := h.useCase.ChunksInfo(structID)
+	driveChunksInfo, err := h.useCase.ChunksInfo(r.Context(), structID)
 	if err != nil {
 		fmt.Println(err)
 		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
@@ -612,7 +612,7 @@ func (h *DriveHandler) GetChunkBytes(w http.ResponseWriter, r *http.Request) {
 		EncryptionKey: appConf.Drive.EncryptionKey,
 	}
 
-	fileDto, err := h.useCase.GetChunkBytes(getChunkDto, authUser)
+	fileDto, err := h.useCase.GetChunkBytes(r.Context(), getChunkDto, authUser)
 	if err != nil {
 		var responseStatus int
 		if errors.Is(err, ucase.ErrFileNotFound) {
@@ -675,7 +675,7 @@ func (h *DriveHandler) UpdateFileHash(w http.ResponseWriter, r *http.Request) {
 
 	fileHashSHA256 := params.ByName("hash")
 
-	err = h.useCase.UpdateFileHash(structID, fileHashSHA256, authUser)
+	err = h.useCase.UpdateFileHash(r.Context(), structID, fileHashSHA256, authUser)
 	if err != nil {
 		fmt.Println(err)
 		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
