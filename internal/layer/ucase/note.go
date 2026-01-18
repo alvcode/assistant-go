@@ -20,7 +20,7 @@ var (
 
 type NoteUseCase interface {
 	Create(ctx context.Context, in dto.NoteCreate, userEntity *entity.User) (*entity.Note, error)
-	GetAll(ctx context.Context, catIdStruct dto.RequiredID, userEntity *entity.User) ([]*entity.Note, error)
+	GetAll(ctx context.Context, catIdStruct dto.RequiredID, userEntity *entity.User) ([]*entity.NoteMinimal, error)
 	Update(ctx context.Context, in dto.NoteUpdate, userEntity *entity.User) (*entity.Note, error)
 	GetOne(ctx context.Context, noteIdStruct dto.RequiredID, userEntity *entity.User) (*entity.Note, error)
 	DeleteOne(ctx context.Context, noteIdStruct dto.RequiredID, userEntity *entity.User) error
@@ -81,7 +81,7 @@ func (uc *noteUseCase) Create(ctx context.Context, in dto.NoteCreate, userEntity
 	return data, nil
 }
 
-func (uc *noteUseCase) GetAll(ctx context.Context, catIdStruct dto.RequiredID, userEntity *entity.User) ([]*entity.Note, error) {
+func (uc *noteUseCase) GetAll(ctx context.Context, catIdStruct dto.RequiredID, userEntity *entity.User) ([]*entity.NoteMinimal, error) {
 	categories, err := uc.repositories.NoteCategoryRepository.FindByIDAndUserWithChildren(ctx, userEntity.ID, catIdStruct.ID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

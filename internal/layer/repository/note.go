@@ -10,11 +10,12 @@ type NoteRepository interface {
 	Create(ctx context.Context, in entity.Note) (*entity.Note, error)
 	Update(ctx context.Context, in *entity.Note) error
 	GetById(ctx context.Context, ID int) (*entity.Note, error)
-	GetMinimalByCategoryIds(ctx context.Context, catIds []int) ([]*entity.Note, error)
+	GetMinimalByCategoryIds(ctx context.Context, catIds []int) ([]*entity.NoteMinimal, error)
 	DeleteOne(ctx context.Context, noteID int) error
 	CheckExistsByCategoryIDs(ctx context.Context, catIDs []int) (bool, error)
 	Pin(ctx context.Context, noteID int) error
 	UnPin(ctx context.Context, noteID int) error
+	BelongsToUser(ctx context.Context, noteID int, userID int) (bool, error)
 }
 
 type noteRepository struct {
@@ -56,19 +57,30 @@ func (ur *noteRepository) GetById(ctx context.Context, ID int) (*entity.Note, er
 	return &note, nil
 }
 
-func (ur *noteRepository) GetMinimalByCategoryIds(ctx context.Context, catIds []int) ([]*entity.Note, error) {
-	query := `select n.id, n.category_id, n.created_at, n.updated_at, n.title, n.pinned from notes n where n.category_id = ANY($1)`
+func (ur *noteRepository) GetMinimalByCategoryIds(ctx context.Context, catIDs []int) ([]*entity.NoteMinimal, error) {
+	query := `
+		select 
+		    n.id, 
+		    n.category_id, 
+		    n.created_at, 
+		    n.updated_at, 
+		    n.title, 
+		    n.pinned,
+		    (SELECT EXISTS(SELECT 1 FROM note_share_hashes WHERE note_id = n.id)) as shared
+		from notes n 
+		where n.category_id = ANY($1)
+	`
 
-	rows, err := ur.db.Query(ctx, query, catIds)
+	rows, err := ur.db.Query(ctx, query, catIDs)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	notes := make([]*entity.Note, 0)
+	notes := make([]*entity.NoteMinimal, 0)
 	for rows.Next() {
-		note := &entity.Note{}
-		if err := rows.Scan(&note.ID, &note.CategoryID, &note.CreatedAt, &note.UpdatedAt, &note.Title, &note.Pinned); err != nil {
+		note := &entity.NoteMinimal{}
+		if err := rows.Scan(&note.ID, &note.CategoryID, &note.CreatedAt, &note.UpdatedAt, &note.Title, &note.Pinned, &note.Shared); err != nil {
 			return nil, err
 		}
 		notes = append(notes, note)
@@ -121,4 +133,23 @@ func (ur *noteRepository) UnPin(ctx context.Context, noteID int) error {
 		return err
 	}
 	return nil
+}
+
+func (ur *noteRepository) BelongsToUser(ctx context.Context, noteID int, userID int) (bool, error) {
+	query := `
+		select EXISTS(
+			select 1 from note_categories nc 
+			left join notes n on n.category_id = nc.id 
+			where
+			n.id = $1 and nc.user_id = $2
+		)
+	`
+
+	var exists bool
+	err := ur.db.QueryRow(ctx, query, noteID, userID).Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+
+	return exists, nil
 }

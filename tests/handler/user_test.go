@@ -41,7 +41,7 @@ func setupTest() (*mocks.MockUserRepository, *handler.UserHandler, context.Conte
 	cfg := &config.Config{BlockingParanoia: 0}
 	handler.InitHandler(repos, cfg)
 
-	userUseCase := ucase.NewUserUseCase(ctx, repos)
+	userUseCase := ucase.NewUserUseCase(repos)
 	userHandler := handler.NewUserHandler(userUseCase)
 
 	return mockRepo, userHandler, ctx

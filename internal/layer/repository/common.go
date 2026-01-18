@@ -16,19 +16,20 @@ type DBExecutor interface {
 }
 
 type Repositories struct {
-	UserRepository           UserRepository
-	NoteRepository           NoteRepository
-	NoteCategoryRepository   NoteCategoryRepository
-	BlockIPRepository        BlockIPRepository
-	BlockEventRepository     BlockEventRepository
-	RateLimiterRepository    RateLimiterRepository
-	FileRepository           FileRepository
-	StorageRepository        FileStorageRepository
-	FileNoteLinkRepository   FileNoteLinkRepository
-	TransactionRepository    TransactionRepository
-	DriveStructRepository    DriveStructRepository
-	DriveFileRepository      DriveFileRepository
-	DriveFileChunkRepository DriveFileChunkRepository
+	UserRepository            UserRepository
+	NoteRepository            NoteRepository
+	NoteCategoryRepository    NoteCategoryRepository
+	BlockIPRepository         BlockIPRepository
+	BlockEventRepository      BlockEventRepository
+	RateLimiterRepository     RateLimiterRepository
+	FileRepository            FileRepository
+	StorageRepository         FileStorageRepository
+	FileNoteLinkRepository    FileNoteLinkRepository
+	TransactionRepository     TransactionRepository
+	DriveStructRepository     DriveStructRepository
+	DriveFileRepository       DriveFileRepository
+	DriveFileChunkRepository  DriveFileChunkRepository
+	NoteShareHashesRepository NoteShareHashesRepository
 }
 
 func NewRepositories(cfg *config.Config, db *pgxpool.Pool, minio *minio.Client) *Repositories {
@@ -39,19 +40,20 @@ func NewRepositories(cfg *config.Config, db *pgxpool.Pool, minio *minio.Client) 
 		storageInterface = NewLocalStorageRepository()
 	}
 	return &Repositories{
-		UserRepository:           NewUserRepository(db),
-		NoteRepository:           NewNoteRepository(db),
-		NoteCategoryRepository:   NewNoteCategoryRepository(db),
-		BlockIPRepository:        NewBlockIpRepository(db),
-		BlockEventRepository:     NewBlockEventRepository(db),
-		RateLimiterRepository:    NewRateLimiterRepository(db),
-		FileRepository:           NewFileRepository(db),
-		StorageRepository:        storageInterface,
-		FileNoteLinkRepository:   NewFileNoteLinkRepository(db),
-		TransactionRepository:    &transactionRepository{db: db},
-		DriveStructRepository:    NewDriveStructRepository(db),
-		DriveFileRepository:      NewDriveFileRepository(db),
-		DriveFileChunkRepository: NewDriveFileChunkRepository(db),
+		UserRepository:            NewUserRepository(db),
+		NoteRepository:            NewNoteRepository(db),
+		NoteCategoryRepository:    NewNoteCategoryRepository(db),
+		BlockIPRepository:         NewBlockIpRepository(db),
+		BlockEventRepository:      NewBlockEventRepository(db),
+		RateLimiterRepository:     NewRateLimiterRepository(db),
+		FileRepository:            NewFileRepository(db),
+		StorageRepository:         storageInterface,
+		FileNoteLinkRepository:    NewFileNoteLinkRepository(db),
+		TransactionRepository:     &transactionRepository{db: db},
+		DriveStructRepository:     NewDriveStructRepository(db),
+		DriveFileRepository:       NewDriveFileRepository(db),
+		DriveFileChunkRepository:  NewDriveFileChunkRepository(db),
+		NoteShareHashesRepository: NewNoteShareHashesRepository(db),
 	}
 }
 

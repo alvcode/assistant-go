@@ -49,6 +49,7 @@ func (controller *Init) SetRoutes() error {
 	controller.setUserRoutes(repos)
 	controller.setNotesCategories(repos)
 	controller.setNotes(repos)
+	controller.setShareNotes(repos)
 	controller.setFiles(repos)
 	controller.setDrive(repos)
 
@@ -157,6 +158,17 @@ func (controller *Init) setNotes(repositories *repository.Repositories) {
 		http.MethodPost,
 		"/api/notes/:id/unpin",
 		handler.BuildHandler(noteHandler.UnPin, handler.AuthMW),
+	)
+}
+
+func (controller *Init) setShareNotes(repositories *repository.Repositories) {
+	noteShareUseCase := ucase.NewNoteShareUseCase(repositories)
+	noteShareHandler := handler.NewNoteShareHandler(noteShareUseCase)
+
+	controller.router.Handler(
+		http.MethodPost,
+		"/api/notes/:id/share",
+		handler.BuildHandler(noteShareHandler.Create, handler.AuthMW),
 	)
 }
 
