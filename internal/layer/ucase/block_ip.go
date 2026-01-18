@@ -7,23 +7,21 @@ import (
 )
 
 type BlockIpUseCase interface {
-	CleanOld() error
+	CleanOld(ctx context.Context) error
 }
 
 type blockIpUseCase struct {
-	ctx          context.Context
 	repositories repository.Repositories
 }
 
-func NewBlockIpUseCase(ctx context.Context, repositories *repository.Repositories) BlockIpUseCase {
+func NewBlockIpUseCase(repositories *repository.Repositories) BlockIpUseCase {
 	return &blockIpUseCase{
-		ctx:          ctx,
 		repositories: *repositories,
 	}
 }
 
-func (uc *blockIpUseCase) CleanOld() error {
-	err := uc.repositories.BlockIPRepository.RemoveByDateExpired(uc.ctx, time.Now().UTC())
+func (uc *blockIpUseCase) CleanOld(ctx context.Context) error {
+	err := uc.repositories.BlockIPRepository.RemoveByDateExpired(ctx, time.Now().UTC())
 	if err != nil {
 		return err
 	}

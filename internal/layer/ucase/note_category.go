@@ -20,26 +20,24 @@ var (
 )
 
 type NoteCategoryUseCase interface {
-	Create(in dto.NoteCategoryCreate, userEntity *entity.User) (*entity.NoteCategory, error)
-	FindAll(userId int) ([]*entity.NoteCategory, error)
-	Delete(userId int, catId int) error
-	Update(in dto.NoteCategoryUpdate, userID int) (*entity.NoteCategory, error)
-	PositionUp(in dto.RequiredID, userID int) error
+	Create(ctx context.Context, in dto.NoteCategoryCreate, userEntity *entity.User) (*entity.NoteCategory, error)
+	FindAll(ctx context.Context, userId int) ([]*entity.NoteCategory, error)
+	Delete(ctx context.Context, userId int, catId int) error
+	Update(ctx context.Context, in dto.NoteCategoryUpdate, userID int) (*entity.NoteCategory, error)
+	PositionUp(ctx context.Context, in dto.RequiredID, userID int) error
 }
 
 type noteCategoryUseCase struct {
-	ctx          context.Context
 	repositories *repository.Repositories
 }
 
-func NewNoteCategoryUseCase(ctx context.Context, repositories *repository.Repositories) NoteCategoryUseCase {
+func NewNoteCategoryUseCase(repositories *repository.Repositories) NoteCategoryUseCase {
 	return &noteCategoryUseCase{
-		ctx:          ctx,
 		repositories: repositories,
 	}
 }
 
-func (uc *noteCategoryUseCase) Create(in dto.NoteCategoryCreate, userEntity *entity.User) (*entity.NoteCategory, error) {
+func (uc *noteCategoryUseCase) Create(ctx context.Context, in dto.NoteCategoryCreate, userEntity *entity.User) (*entity.NoteCategory, error) {
 	noteCategoryEntity := entity.NoteCategory{
 		UserId:   userEntity.ID,
 		Name:     in.Name,
@@ -47,49 +45,49 @@ func (uc *noteCategoryUseCase) Create(in dto.NoteCategoryCreate, userEntity *ent
 	}
 
 	if in.ParentId != nil {
-		_, err := uc.repositories.NoteCategoryRepository.FindByIDAndUser(uc.ctx, userEntity.ID, *in.ParentId)
+		_, err := uc.repositories.NoteCategoryRepository.FindByIDAndUser(ctx, userEntity.ID, *in.ParentId)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return nil, ErrCategoryParentIdNotFound
 			}
-			logging.GetLogger(uc.ctx).Error(err)
+			logging.GetLogger(ctx).Error(err)
 			return nil, postgres.ErrUnexpectedDBError
 		}
 	}
 
-	positionService := service.NewNoteCategory().PositionService(uc.ctx, uc.repositories)
+	positionService := service.NewNoteCategory().PositionService(ctx, uc.repositories)
 	newPosition, err := positionService.CalculateForNew(userEntity.ID, in.ParentId)
 	if err != nil {
-		logging.GetLogger(uc.ctx).Error(err)
+		logging.GetLogger(ctx).Error(err)
 		return nil, postgres.ErrUnexpectedDBError
 	}
 
 	noteCategoryEntity.Position = newPosition
 
-	data, err := uc.repositories.NoteCategoryRepository.Create(uc.ctx, noteCategoryEntity)
+	data, err := uc.repositories.NoteCategoryRepository.Create(ctx, noteCategoryEntity)
 	if err != nil {
-		logging.GetLogger(uc.ctx).Error(err)
+		logging.GetLogger(ctx).Error(err)
 		return nil, postgres.ErrUnexpectedDBError
 	}
 	return data, nil
 }
 
-func (uc *noteCategoryUseCase) FindAll(userId int) ([]*entity.NoteCategory, error) {
-	data, err := uc.repositories.NoteCategoryRepository.FindAll(uc.ctx, userId)
+func (uc *noteCategoryUseCase) FindAll(ctx context.Context, userId int) ([]*entity.NoteCategory, error) {
+	data, err := uc.repositories.NoteCategoryRepository.FindAll(ctx, userId)
 	if err != nil {
-		logging.GetLogger(uc.ctx).Error(err)
+		logging.GetLogger(ctx).Error(err)
 		return nil, postgres.ErrUnexpectedDBError
 	}
 	return data, nil
 }
 
-func (uc *noteCategoryUseCase) Delete(userId int, catId int) error {
-	categories, err := uc.repositories.NoteCategoryRepository.FindByIDAndUserWithChildren(uc.ctx, userId, catId)
+func (uc *noteCategoryUseCase) Delete(ctx context.Context, userId int, catId int) error {
+	categories, err := uc.repositories.NoteCategoryRepository.FindByIDAndUserWithChildren(ctx, userId, catId)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrCategoryNotFound
 		}
-		logging.GetLogger(uc.ctx).Error(err)
+		logging.GetLogger(ctx).Error(err)
 		return postgres.ErrUnexpectedDBError
 	}
 
@@ -101,10 +99,10 @@ func (uc *noteCategoryUseCase) Delete(userId int, catId int) error {
 		return ErrCategoryNotFound
 	}
 
-	checkExists, err := uc.repositories.NoteRepository.CheckExistsByCategoryIDs(uc.ctx, catIds)
+	checkExists, err := uc.repositories.NoteRepository.CheckExistsByCategoryIDs(ctx, catIds)
 	if err != nil {
 		if !errors.Is(err, pgx.ErrNoRows) {
-			logging.GetLogger(uc.ctx).Error(err)
+			logging.GetLogger(ctx).Error(err)
 			return postgres.ErrUnexpectedDBError
 		}
 	}
@@ -112,15 +110,15 @@ func (uc *noteCategoryUseCase) Delete(userId int, catId int) error {
 		return ErrCategoryHasNotes
 	}
 
-	err = uc.repositories.NoteCategoryRepository.DeleteByIds(uc.ctx, catIds)
+	err = uc.repositories.NoteCategoryRepository.DeleteByIds(ctx, catIds)
 	if err != nil {
-		logging.GetLogger(uc.ctx).Error(err)
+		logging.GetLogger(ctx).Error(err)
 		return postgres.ErrUnexpectedDBError
 	}
 	return nil
 }
 
-func (uc *noteCategoryUseCase) Update(in dto.NoteCategoryUpdate, userID int) (*entity.NoteCategory, error) {
+func (uc *noteCategoryUseCase) Update(ctx context.Context, in dto.NoteCategoryUpdate, userID int) (*entity.NoteCategory, error) {
 	noteCategoryEntity := &entity.NoteCategory{
 		ID:       in.ID,
 		UserId:   userID,
@@ -128,56 +126,56 @@ func (uc *noteCategoryUseCase) Update(in dto.NoteCategoryUpdate, userID int) (*e
 		ParentId: in.ParentID,
 	}
 
-	currentCategory, err := uc.repositories.NoteCategoryRepository.FindByIDAndUser(uc.ctx, userID, in.ID)
+	currentCategory, err := uc.repositories.NoteCategoryRepository.FindByIDAndUser(ctx, userID, in.ID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrCategoryNotFound
 		}
-		logging.GetLogger(uc.ctx).Error(err)
+		logging.GetLogger(ctx).Error(err)
 		return nil, postgres.ErrUnexpectedDBError
 	}
 	noteCategoryEntity.Position = currentCategory.Position
 
 	if in.ParentID != nil {
-		_, err = uc.repositories.NoteCategoryRepository.FindByIDAndUser(uc.ctx, userID, *in.ParentID)
+		_, err = uc.repositories.NoteCategoryRepository.FindByIDAndUser(ctx, userID, *in.ParentID)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return nil, ErrCategoryNotFound
 			}
-			logging.GetLogger(uc.ctx).Error(err)
+			logging.GetLogger(ctx).Error(err)
 			return nil, postgres.ErrUnexpectedDBError
 		}
 	}
 
 	if !reflect.DeepEqual(in.ParentID, currentCategory.ParentId) {
-		positionService := service.NewNoteCategory().PositionService(uc.ctx, uc.repositories)
+		positionService := service.NewNoteCategory().PositionService(ctx, uc.repositories)
 		newPosition, err := positionService.CalculateForNew(userID, in.ParentID)
 		if err != nil {
-			logging.GetLogger(uc.ctx).Error(err)
+			logging.GetLogger(ctx).Error(err)
 			return nil, postgres.ErrUnexpectedDBError
 		}
 		noteCategoryEntity.Position = newPosition
 	}
 
-	err = uc.repositories.NoteCategoryRepository.Update(uc.ctx, noteCategoryEntity)
+	err = uc.repositories.NoteCategoryRepository.Update(ctx, noteCategoryEntity)
 	if err != nil {
-		logging.GetLogger(uc.ctx).Error(err)
+		logging.GetLogger(ctx).Error(err)
 		return nil, postgres.ErrUnexpectedDBError
 	}
 	return noteCategoryEntity, nil
 }
 
-func (uc *noteCategoryUseCase) PositionUp(in dto.RequiredID, userID int) error {
-	_, err := uc.repositories.NoteCategoryRepository.FindByIDAndUser(uc.ctx, userID, in.ID)
+func (uc *noteCategoryUseCase) PositionUp(ctx context.Context, in dto.RequiredID, userID int) error {
+	_, err := uc.repositories.NoteCategoryRepository.FindByIDAndUser(ctx, userID, in.ID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrCategoryNotFound
 		}
-		logging.GetLogger(uc.ctx).Error(err)
+		logging.GetLogger(ctx).Error(err)
 		return postgres.ErrUnexpectedDBError
 	}
 
-	positionService := service.NewNoteCategory().PositionService(uc.ctx, uc.repositories)
+	positionService := service.NewNoteCategory().PositionService(ctx, uc.repositories)
 	err = positionService.PositionUp(userID, in.ID)
 	if err != nil {
 		return err

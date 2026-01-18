@@ -32,22 +32,20 @@ var (
 )
 
 type FileUseCase interface {
-	Upload(in dto.UploadFile, userEntity *entity.User) (*entity.File, error)
-	GetFileByHash(in dto.GetFileByHash) (*dto.FileResponse, error)
-	DeleteByID(fileID int, generalPath string) error
-	CleanUnused(generalPath string) error
+	Upload(ctx context.Context, in dto.UploadFile, userEntity *entity.User) (*entity.File, error)
+	GetFileByHash(ctx context.Context, in dto.GetFileByHash) (*dto.FileResponse, error)
+	DeleteByID(ctx context.Context, fileID int, generalPath string) error
+	CleanUnused(ctx context.Context, generalPath string) error
 	GetAllowedMimeTypes() map[string][]string
 	GetAllowedExtensions() []string
 }
 
 type fileUseCase struct {
-	ctx          context.Context
 	repositories *repository.Repositories
 }
 
-func NewFileUseCase(ctx context.Context, repositories *repository.Repositories) FileUseCase {
+func NewFileUseCase(repositories *repository.Repositories) FileUseCase {
 	return &fileUseCase{
-		ctx:          ctx,
 		repositories: repositories,
 	}
 }
@@ -81,7 +79,7 @@ func (uc *fileUseCase) GetAllowedExtensions() []string {
 	return result
 }
 
-func (uc *fileUseCase) Upload(in dto.UploadFile, userEntity *entity.User) (*entity.File, error) {
+func (uc *fileUseCase) Upload(ctx context.Context, in dto.UploadFile, userEntity *entity.User) (*entity.File, error) {
 	fileService := service.NewFile().FileService()
 
 	limitedReader := io.LimitReader(in.File, in.MaxSizeBytes+1)
@@ -95,9 +93,9 @@ func (uc *fileUseCase) Upload(in dto.UploadFile, userEntity *entity.User) (*enti
 		return nil, ErrFileTooLarge
 	}
 
-	allFilesSize, err := uc.repositories.FileRepository.GetFilesSizeByUser(uc.ctx, userEntity.ID)
+	allFilesSize, err := uc.repositories.FileRepository.GetFilesSizeByUser(ctx, userEntity.ID)
 	if err != nil {
-		logging.GetLogger(uc.ctx).Error(err)
+		logging.GetLogger(ctx).Error(err)
 		return nil, postgres.ErrUnexpectedDBError
 	}
 
@@ -148,9 +146,9 @@ func (uc *fileUseCase) Upload(in dto.UploadFile, userEntity *entity.User) (*enti
 		return nil, err
 	}
 
-	maxFileID, err := uc.repositories.FileRepository.GetLastID(uc.ctx)
+	maxFileID, err := uc.repositories.FileRepository.GetLastID(ctx)
 	if err != nil {
-		logging.GetLogger(uc.ctx).Error(err)
+		logging.GetLogger(ctx).Error(err)
 		return nil, postgres.ErrUnexpectedDBError
 	}
 
@@ -163,7 +161,7 @@ func (uc *fileUseCase) Upload(in dto.UploadFile, userEntity *entity.User) (*enti
 		SizeBytes: int64(len(data)),
 	}
 
-	saveErr := uc.repositories.StorageRepository.Save(uc.ctx, saveDto)
+	saveErr := uc.repositories.StorageRepository.Save(ctx, saveDto)
 	if saveErr != nil {
 		return nil, ErrFileSave
 	}
@@ -183,29 +181,29 @@ func (uc *fileUseCase) Upload(in dto.UploadFile, userEntity *entity.User) (*enti
 		CreatedAt:        time.Now().UTC(),
 	}
 
-	_, err = uc.repositories.FileRepository.Create(uc.ctx, fileEntity)
+	_, err = uc.repositories.FileRepository.Create(ctx, fileEntity)
 	if err != nil {
-		logging.GetLogger(uc.ctx).Error(err)
+		logging.GetLogger(ctx).Error(err)
 		return nil, postgres.ErrUnexpectedDBError
 	}
 
 	return fileEntity, nil
 }
 
-func (uc *fileUseCase) GetFileByHash(in dto.GetFileByHash) (*dto.FileResponse, error) {
-	fileEntity, err := uc.repositories.FileRepository.GetByHash(uc.ctx, in.Hash)
+func (uc *fileUseCase) GetFileByHash(ctx context.Context, in dto.GetFileByHash) (*dto.FileResponse, error) {
+	fileEntity, err := uc.repositories.FileRepository.GetByHash(ctx, in.Hash)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrFileNotFound
 		}
-		logging.GetLogger(uc.ctx).Error(err)
+		logging.GetLogger(ctx).Error(err)
 		return nil, postgres.ErrUnexpectedDBError
 	}
 
 	fullPath := filepath.Join(in.SavePath, fileEntity.FilePath)
-	fileReader, err := uc.repositories.StorageRepository.GetFile(uc.ctx, fullPath)
+	fileReader, err := uc.repositories.StorageRepository.GetFile(ctx, fullPath)
 	if err != nil {
-		logging.GetLogger(uc.ctx).Error(err)
+		logging.GetLogger(ctx).Error(err)
 		return nil, err
 	}
 
@@ -216,34 +214,34 @@ func (uc *fileUseCase) GetFileByHash(in dto.GetFileByHash) (*dto.FileResponse, e
 	return fileResponse, nil
 }
 
-func (uc *fileUseCase) DeleteByID(fileID int, generalPath string) error {
-	fileEntity, err := uc.repositories.FileRepository.GetByID(uc.ctx, fileID)
+func (uc *fileUseCase) DeleteByID(ctx context.Context, fileID int, generalPath string) error {
+	fileEntity, err := uc.repositories.FileRepository.GetByID(ctx, fileID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrFileNotFound
 		}
-		logging.GetLogger(uc.ctx).Error(err)
+		logging.GetLogger(ctx).Error(err)
 		return postgres.ErrUnexpectedDBError
 	}
 
 	fullPath := filepath.Join(generalPath, fileEntity.FilePath)
-	err = uc.repositories.StorageRepository.Delete(uc.ctx, fullPath)
+	err = uc.repositories.StorageRepository.Delete(ctx, fullPath)
 	if err != nil {
-		logging.GetLogger(uc.ctx).Error(err)
+		logging.GetLogger(ctx).Error(err)
 		return err
 	}
 
-	err = uc.repositories.FileRepository.DeleteByID(uc.ctx, fileID)
+	err = uc.repositories.FileRepository.DeleteByID(ctx, fileID)
 	if err != nil {
-		logging.GetLogger(uc.ctx).Error(err)
+		logging.GetLogger(ctx).Error(err)
 		return err
 	}
 
 	return nil
 }
 
-func (uc *fileUseCase) CleanUnused(generalPath string) error {
-	ctx, cancel := context.WithCancel(uc.ctx)
+func (uc *fileUseCase) CleanUnused(ctx context.Context, generalPath string) error {
+	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	ch, err := uc.repositories.FileRepository.GetUnusedFileIDs(ctx)
@@ -252,7 +250,7 @@ func (uc *fileUseCase) CleanUnused(generalPath string) error {
 	}
 
 	for id := range ch {
-		err := uc.DeleteByID(id, generalPath)
+		err := uc.DeleteByID(ctx, id, generalPath)
 		if err != nil {
 			return err
 		}

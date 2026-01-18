@@ -14,42 +14,42 @@ import (
 func CleanDB(ctx context.Context, cfg *config.Config, db *pgxpool.Pool, minio *minio.Client) {
 	fmt.Println("start clean-db cli command")
 	logging.GetLogger(ctx).Println("start clean-db cli command")
-	repos := repository.NewRepositories(ctx, cfg, db, minio)
+	repos := repository.NewRepositories(cfg, db, minio)
 
-	blockIpUseCase := ucase.NewBlockIpUseCase(ctx, repos)
-	err := blockIpUseCase.CleanOld()
+	blockIpUseCase := ucase.NewBlockIpUseCase(repos)
+	err := blockIpUseCase.CleanOld(ctx)
 	if err != nil {
 		fmt.Printf("Error clean block ip: %v", err)
 		logging.GetLogger(ctx).Errorf("Error clean block ip: %v", err)
 		return
 	}
 
-	userUseCase := ucase.NewUserUseCase(ctx, repos)
-	err = userUseCase.CleanOldTokens()
+	userUseCase := ucase.NewUserUseCase(repos)
+	err = userUseCase.CleanOldTokens(ctx)
 	if err != nil {
 		fmt.Printf("Error clean user tokens: %v", err)
 		logging.GetLogger(ctx).Errorf("Error clean user tokens: %v", err)
 		return
 	}
 
-	blockEventUseCase := ucase.NewBlockEventUseCase(ctx, repos)
-	err = blockEventUseCase.CleanOld()
+	blockEventUseCase := ucase.NewBlockEventUseCase(repos)
+	err = blockEventUseCase.CleanOld(ctx)
 	if err != nil {
 		fmt.Printf("Error clean block events: %v", err)
 		logging.GetLogger(ctx).Errorf("Error clean block events: %v", err)
 		return
 	}
 
-	fileUseCase := ucase.NewFileUseCase(ctx, repos)
-	err = fileUseCase.CleanUnused(cfg.File.SavePath)
+	fileUseCase := ucase.NewFileUseCase(repos)
+	err = fileUseCase.CleanUnused(ctx, cfg.File.SavePath)
 	if err != nil {
 		fmt.Printf("Error clean unused files: %v", err)
 		logging.GetLogger(ctx).Errorf("Error clean unused files: %v", err)
 		return
 	}
 
-	rateLimiterUseCase := ucase.NewRateLimiterUseCase(ctx, repos)
-	err = rateLimiterUseCase.Clean()
+	rateLimiterUseCase := ucase.NewRateLimiterUseCase(repos)
+	err = rateLimiterUseCase.Clean(ctx)
 	if err != nil {
 		fmt.Printf("Error clean rate limiters: %v", err)
 		logging.GetLogger(ctx).Errorf("Error clean rate limiters: %v", err)

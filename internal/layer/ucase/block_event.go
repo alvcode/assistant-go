@@ -7,24 +7,22 @@ import (
 )
 
 type BlockEventUseCase interface {
-	CleanOld() error
+	CleanOld(ctx context.Context) error
 }
 
 type blockEventUseCase struct {
-	ctx          context.Context
 	repositories repository.Repositories
 }
 
-func NewBlockEventUseCase(ctx context.Context, repositories *repository.Repositories) BlockEventUseCase {
+func NewBlockEventUseCase(repositories *repository.Repositories) BlockEventUseCase {
 	return &blockEventUseCase{
-		ctx:          ctx,
 		repositories: *repositories,
 	}
 }
 
-func (uc *blockEventUseCase) CleanOld() error {
+func (uc *blockEventUseCase) CleanOld(ctx context.Context) error {
 	deleteTime := time.Now().Add(-30 * time.Minute).UTC()
-	err := uc.repositories.BlockEventRepository.RemoveByDateExpired(uc.ctx, deleteTime)
+	err := uc.repositories.BlockEventRepository.RemoveByDateExpired(ctx, deleteTime)
 	if err != nil {
 		return err
 	}

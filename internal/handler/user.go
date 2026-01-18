@@ -36,7 +36,7 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	entity, err := h.useCase.Create(createUserDto)
+	entity, err := h.useCase.Create(r.Context(), createUserDto)
 	if err != nil {
 		BlockEventHandle(r, BlockEventOtherType)
 		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
@@ -61,7 +61,7 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 		SendErrorResponse(w, fmt.Sprint(err), http.StatusUnprocessableEntity, 0)
 		return
 	}
-	entity, err := h.useCase.Login(loginUserDto)
+	entity, err := h.useCase.Login(r.Context(), loginUserDto)
 	if err != nil {
 		BlockEventHandle(r, BlockEventErrorSignInType)
 		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
@@ -88,7 +88,7 @@ func (h *UserHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	entity, err := h.useCase.RefreshToken(refreshTokenDto)
+	entity, err := h.useCase.RefreshToken(r.Context(), refreshTokenDto)
 	if err != nil {
 		BlockEventHandle(r, BlockEventRefreshTokenType)
 		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
@@ -108,7 +108,7 @@ func (h *UserHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.useCase.Delete(authUser.ID)
+	err = h.useCase.Delete(r.Context(), authUser.ID)
 	if err != nil {
 		BlockEventHandle(r, BlockEventOtherType)
 		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
@@ -142,7 +142,7 @@ func (h *UserHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.useCase.ChangePassword(authUser.ID, userChangePasswordDto)
+	err = h.useCase.ChangePassword(r.Context(), authUser.ID, userChangePasswordDto)
 	if err != nil {
 		BlockEventHandle(r, BlockEventOtherType)
 		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)

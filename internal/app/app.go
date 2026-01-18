@@ -72,7 +72,7 @@ func (a *App) Run(ctx context.Context) error {
 
 func (a *App) startHTTP(ctx context.Context) error {
 	controllerInit := controller.New(a.cfg, a.pgxPool, a.minio, a.router)
-	errRoute := controllerInit.SetRoutes(ctx)
+	errRoute := controllerInit.SetRoutes()
 	if errRoute != nil {
 		logging.GetLogger(ctx).WithError(errRoute).Fatal("failed to init routes")
 	}

@@ -11,10 +11,10 @@ import (
 )
 
 func UserResetPassword(ctx context.Context, cfg *config.Config, db *pgxpool.Pool, minio *minio.Client, login string, password string) {
-	repos := repository.NewRepositories(ctx, cfg, db, minio)
+	repos := repository.NewRepositories(cfg, db, minio)
 
-	userUseCase := ucase.NewUserUseCase(ctx, repos)
-	err := userUseCase.ChangePasswordWithoutCurrent(login, password)
+	userUseCase := ucase.NewUserUseCase(repos)
+	err := userUseCase.ChangePasswordWithoutCurrent(ctx, login, password)
 	if err != nil {
 		fmt.Printf("Error change password without current: %v", err)
 		return

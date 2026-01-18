@@ -6,23 +6,21 @@ import (
 )
 
 type RateLimiterUseCase interface {
-	Clean() error
+	Clean(ctx context.Context) error
 }
 
 type rateLimiterUseCase struct {
-	ctx          context.Context
 	repositories *repository.Repositories
 }
 
-func NewRateLimiterUseCase(ctx context.Context, repositories *repository.Repositories) RateLimiterUseCase {
+func NewRateLimiterUseCase(repositories *repository.Repositories) RateLimiterUseCase {
 	return &rateLimiterUseCase{
-		ctx:          ctx,
 		repositories: repositories,
 	}
 }
 
-func (uc *rateLimiterUseCase) Clean() error {
-	err := uc.repositories.RateLimiterRepository.Clean(uc.ctx)
+func (uc *rateLimiterUseCase) Clean(ctx context.Context) error {
+	err := uc.repositories.RateLimiterRepository.Clean(ctx)
 	if err != nil {
 		return err
 	}
