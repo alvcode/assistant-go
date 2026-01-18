@@ -38,5 +38,6 @@
   "drive_parent_references_one_of_the_relocatable_struct": "The parent structure references one of the relocatable structures",
   "drive_method_unavailable_for_chunks": "You cannot download chunks using this method",
   "drive_encryption_error": "Unexpected file encryption error",
-  "drive_decryption_error": "Unexpected file decryption error"
+  "drive_decryption_error": "Unexpected file decryption error",
+  "note_share_exists": "You have already shared this post"
 }

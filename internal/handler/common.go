@@ -283,6 +283,8 @@ func buildErrorMessage(lang string, err error) string {
 		return locale.T(lang, "drive_encryption_error")
 	case errors.Is(err, ucase.ErrDriveDecrypting):
 		return locale.T(lang, "drive_decryption_error")
+	case errors.Is(err, ucase.ErrNoteShareExists):
+		return locale.T(lang, "note_share_exists")
 	default:
 		return locale.T(lang, "unexpected_error")
 	}

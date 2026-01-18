@@ -5,8 +5,13 @@ import (
 	"assistant-go/internal/layer/repository"
 	"assistant-go/internal/logging"
 	"assistant-go/internal/storage/postgres"
+	"assistant-go/pkg/utils"
 	"context"
-	"fmt"
+	"errors"
+)
+
+var (
+	ErrNoteShareExists = errors.New("note share exists")
 )
 
 type NoteShareUseCase interface {
@@ -34,7 +39,45 @@ func (uc *noteShareUseCase) Create(ctx context.Context, noteID int, userEntity *
 		return nil, ErrNoteNotFound
 	}
 
-	fmt.Println(noteID, userEntity.ID)
+	existsByNote, err := uc.repositories.NoteShareHashesRepository.ExistsByNoteID(ctx, noteID)
+	if err != nil {
+		logging.GetLogger(ctx).Error(err)
+		return nil, postgres.ErrUnexpectedDBError
+	}
 
-	return nil, nil
+	if existsByNote {
+		return nil, ErrNoteShareExists
+	}
+
+	stringUtils := utils.NewStringUtils()
+	var hash string
+	for i := 1; i < 10; i++ {
+		h, err := stringUtils.GenerateRandomString(80)
+		if err != nil {
+			logging.GetLogger(ctx).Error(err)
+			return nil, err
+		}
+		existsByHash, err := uc.repositories.NoteShareHashesRepository.ExistsByHash(ctx, h)
+		if err != nil {
+			logging.GetLogger(ctx).Error(err)
+			return nil, err
+		}
+		if !existsByHash {
+			hash = h
+			break
+		}
+	}
+
+	noteShare := entity.NoteShare{
+		NoteID: noteID,
+		Hash:   hash,
+	}
+
+	data, err := uc.repositories.NoteShareHashesRepository.Create(ctx, noteShare)
+	if err != nil {
+		logging.GetLogger(ctx).Error(err)
+		return nil, postgres.ErrUnexpectedDBError
+	}
+
+	return data, nil
 }

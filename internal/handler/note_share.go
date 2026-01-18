@@ -2,6 +2,7 @@ package handler
 
 import (
 	"assistant-go/internal/layer/ucase"
+	"assistant-go/internal/layer/vmodel"
 	"assistant-go/internal/locale"
 	"github.com/julienschmidt/httprouter"
 	"net/http"
@@ -30,7 +31,13 @@ func (h *NoteShareHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	var noteID int
 	params := httprouter.ParamsFromContext(r.Context())
-	if noteIDStr := params.ByName("id"); noteIDStr != "" {
+	noteIDStr := params.ByName("id")
+
+	if noteIDStr == "" {
+		BlockEventHandle(r, BlockEventInputDataType)
+		SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
+		return
+	} else {
 		noteIDInt, err := strconv.Atoi(noteIDStr)
 
 		if err != nil {
@@ -48,5 +55,6 @@ func (h *NoteShareHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	SendResponse(w, http.StatusCreated, noteShare)
+	response := vmodel.NoteShareFromEntity(noteShare)
+	SendResponse(w, http.StatusCreated, response)
 }
