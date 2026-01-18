@@ -4,6 +4,7 @@ package mocks
 
 import (
 	entity "assistant-go/internal/layer/entity"
+	context "context"
 
 	mock "github.com/stretchr/testify/mock"
 )
@@ -21,9 +22,9 @@ func (_m *MockNoteRepository) EXPECT() *MockNoteRepository_Expecter {
 	return &MockNoteRepository_Expecter{mock: &_m.Mock}
 }
 
-// CheckExistsByCategoryIDs provides a mock function with given fields: catIDs
-func (_m *MockNoteRepository) CheckExistsByCategoryIDs(catIDs []int) (bool, error) {
-	ret := _m.Called(catIDs)
+// CheckExistsByCategoryIDs provides a mock function with given fields: ctx, catIDs
+func (_m *MockNoteRepository) CheckExistsByCategoryIDs(ctx context.Context, catIDs []int) (bool, error) {
+	ret := _m.Called(ctx, catIDs)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CheckExistsByCategoryIDs")
@@ -31,17 +32,17 @@ func (_m *MockNoteRepository) CheckExistsByCategoryIDs(catIDs []int) (bool, erro
 
 	var r0 bool
 	var r1 error
-	if rf, ok := ret.Get(0).(func([]int) (bool, error)); ok {
-		return rf(catIDs)
+	if rf, ok := ret.Get(0).(func(context.Context, []int) (bool, error)); ok {
+		return rf(ctx, catIDs)
 	}
-	if rf, ok := ret.Get(0).(func([]int) bool); ok {
-		r0 = rf(catIDs)
+	if rf, ok := ret.Get(0).(func(context.Context, []int) bool); ok {
+		r0 = rf(ctx, catIDs)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
 
-	if rf, ok := ret.Get(1).(func([]int) error); ok {
-		r1 = rf(catIDs)
+	if rf, ok := ret.Get(1).(func(context.Context, []int) error); ok {
+		r1 = rf(ctx, catIDs)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -55,14 +56,15 @@ type MockNoteRepository_CheckExistsByCategoryIDs_Call struct {
 }
 
 // CheckExistsByCategoryIDs is a helper method to define mock.On call
+//   - ctx context.Context
 //   - catIDs []int
-func (_e *MockNoteRepository_Expecter) CheckExistsByCategoryIDs(catIDs interface{}) *MockNoteRepository_CheckExistsByCategoryIDs_Call {
-	return &MockNoteRepository_CheckExistsByCategoryIDs_Call{Call: _e.mock.On("CheckExistsByCategoryIDs", catIDs)}
+func (_e *MockNoteRepository_Expecter) CheckExistsByCategoryIDs(ctx interface{}, catIDs interface{}) *MockNoteRepository_CheckExistsByCategoryIDs_Call {
+	return &MockNoteRepository_CheckExistsByCategoryIDs_Call{Call: _e.mock.On("CheckExistsByCategoryIDs", ctx, catIDs)}
 }
 
-func (_c *MockNoteRepository_CheckExistsByCategoryIDs_Call) Run(run func(catIDs []int)) *MockNoteRepository_CheckExistsByCategoryIDs_Call {
+func (_c *MockNoteRepository_CheckExistsByCategoryIDs_Call) Run(run func(ctx context.Context, catIDs []int)) *MockNoteRepository_CheckExistsByCategoryIDs_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].([]int))
+		run(args[0].(context.Context), args[1].([]int))
 	})
 	return _c
 }
@@ -72,14 +74,14 @@ func (_c *MockNoteRepository_CheckExistsByCategoryIDs_Call) Return(_a0 bool, _a1
 	return _c
 }
 
-func (_c *MockNoteRepository_CheckExistsByCategoryIDs_Call) RunAndReturn(run func([]int) (bool, error)) *MockNoteRepository_CheckExistsByCategoryIDs_Call {
+func (_c *MockNoteRepository_CheckExistsByCategoryIDs_Call) RunAndReturn(run func(context.Context, []int) (bool, error)) *MockNoteRepository_CheckExistsByCategoryIDs_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// Create provides a mock function with given fields: in
-func (_m *MockNoteRepository) Create(in entity.Note) (*entity.Note, error) {
-	ret := _m.Called(in)
+// Create provides a mock function with given fields: ctx, in
+func (_m *MockNoteRepository) Create(ctx context.Context, in entity.Note) (*entity.Note, error) {
+	ret := _m.Called(ctx, in)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
@@ -87,19 +89,19 @@ func (_m *MockNoteRepository) Create(in entity.Note) (*entity.Note, error) {
 
 	var r0 *entity.Note
 	var r1 error
-	if rf, ok := ret.Get(0).(func(entity.Note) (*entity.Note, error)); ok {
-		return rf(in)
+	if rf, ok := ret.Get(0).(func(context.Context, entity.Note) (*entity.Note, error)); ok {
+		return rf(ctx, in)
 	}
-	if rf, ok := ret.Get(0).(func(entity.Note) *entity.Note); ok {
-		r0 = rf(in)
+	if rf, ok := ret.Get(0).(func(context.Context, entity.Note) *entity.Note); ok {
+		r0 = rf(ctx, in)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*entity.Note)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(entity.Note) error); ok {
-		r1 = rf(in)
+	if rf, ok := ret.Get(1).(func(context.Context, entity.Note) error); ok {
+		r1 = rf(ctx, in)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -113,14 +115,15 @@ type MockNoteRepository_Create_Call struct {
 }
 
 // Create is a helper method to define mock.On call
+//   - ctx context.Context
 //   - in entity.Note
-func (_e *MockNoteRepository_Expecter) Create(in interface{}) *MockNoteRepository_Create_Call {
-	return &MockNoteRepository_Create_Call{Call: _e.mock.On("Create", in)}
+func (_e *MockNoteRepository_Expecter) Create(ctx interface{}, in interface{}) *MockNoteRepository_Create_Call {
+	return &MockNoteRepository_Create_Call{Call: _e.mock.On("Create", ctx, in)}
 }
 
-func (_c *MockNoteRepository_Create_Call) Run(run func(in entity.Note)) *MockNoteRepository_Create_Call {
+func (_c *MockNoteRepository_Create_Call) Run(run func(ctx context.Context, in entity.Note)) *MockNoteRepository_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(entity.Note))
+		run(args[0].(context.Context), args[1].(entity.Note))
 	})
 	return _c
 }
@@ -130,22 +133,22 @@ func (_c *MockNoteRepository_Create_Call) Return(_a0 *entity.Note, _a1 error) *M
 	return _c
 }
 
-func (_c *MockNoteRepository_Create_Call) RunAndReturn(run func(entity.Note) (*entity.Note, error)) *MockNoteRepository_Create_Call {
+func (_c *MockNoteRepository_Create_Call) RunAndReturn(run func(context.Context, entity.Note) (*entity.Note, error)) *MockNoteRepository_Create_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// DeleteOne provides a mock function with given fields: noteID
-func (_m *MockNoteRepository) DeleteOne(noteID int) error {
-	ret := _m.Called(noteID)
+// DeleteOne provides a mock function with given fields: ctx, noteID
+func (_m *MockNoteRepository) DeleteOne(ctx context.Context, noteID int) error {
+	ret := _m.Called(ctx, noteID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DeleteOne")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(int) error); ok {
-		r0 = rf(noteID)
+	if rf, ok := ret.Get(0).(func(context.Context, int) error); ok {
+		r0 = rf(ctx, noteID)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -159,14 +162,15 @@ type MockNoteRepository_DeleteOne_Call struct {
 }
 
 // DeleteOne is a helper method to define mock.On call
+//   - ctx context.Context
 //   - noteID int
-func (_e *MockNoteRepository_Expecter) DeleteOne(noteID interface{}) *MockNoteRepository_DeleteOne_Call {
-	return &MockNoteRepository_DeleteOne_Call{Call: _e.mock.On("DeleteOne", noteID)}
+func (_e *MockNoteRepository_Expecter) DeleteOne(ctx interface{}, noteID interface{}) *MockNoteRepository_DeleteOne_Call {
+	return &MockNoteRepository_DeleteOne_Call{Call: _e.mock.On("DeleteOne", ctx, noteID)}
 }
 
-func (_c *MockNoteRepository_DeleteOne_Call) Run(run func(noteID int)) *MockNoteRepository_DeleteOne_Call {
+func (_c *MockNoteRepository_DeleteOne_Call) Run(run func(ctx context.Context, noteID int)) *MockNoteRepository_DeleteOne_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(int))
+		run(args[0].(context.Context), args[1].(int))
 	})
 	return _c
 }
@@ -176,14 +180,14 @@ func (_c *MockNoteRepository_DeleteOne_Call) Return(_a0 error) *MockNoteReposito
 	return _c
 }
 
-func (_c *MockNoteRepository_DeleteOne_Call) RunAndReturn(run func(int) error) *MockNoteRepository_DeleteOne_Call {
+func (_c *MockNoteRepository_DeleteOne_Call) RunAndReturn(run func(context.Context, int) error) *MockNoteRepository_DeleteOne_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// GetById provides a mock function with given fields: ID
-func (_m *MockNoteRepository) GetById(ID int) (*entity.Note, error) {
-	ret := _m.Called(ID)
+// GetById provides a mock function with given fields: ctx, ID
+func (_m *MockNoteRepository) GetById(ctx context.Context, ID int) (*entity.Note, error) {
+	ret := _m.Called(ctx, ID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetById")
@@ -191,19 +195,19 @@ func (_m *MockNoteRepository) GetById(ID int) (*entity.Note, error) {
 
 	var r0 *entity.Note
 	var r1 error
-	if rf, ok := ret.Get(0).(func(int) (*entity.Note, error)); ok {
-		return rf(ID)
+	if rf, ok := ret.Get(0).(func(context.Context, int) (*entity.Note, error)); ok {
+		return rf(ctx, ID)
 	}
-	if rf, ok := ret.Get(0).(func(int) *entity.Note); ok {
-		r0 = rf(ID)
+	if rf, ok := ret.Get(0).(func(context.Context, int) *entity.Note); ok {
+		r0 = rf(ctx, ID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*entity.Note)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(int) error); ok {
-		r1 = rf(ID)
+	if rf, ok := ret.Get(1).(func(context.Context, int) error); ok {
+		r1 = rf(ctx, ID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -217,14 +221,15 @@ type MockNoteRepository_GetById_Call struct {
 }
 
 // GetById is a helper method to define mock.On call
+//   - ctx context.Context
 //   - ID int
-func (_e *MockNoteRepository_Expecter) GetById(ID interface{}) *MockNoteRepository_GetById_Call {
-	return &MockNoteRepository_GetById_Call{Call: _e.mock.On("GetById", ID)}
+func (_e *MockNoteRepository_Expecter) GetById(ctx interface{}, ID interface{}) *MockNoteRepository_GetById_Call {
+	return &MockNoteRepository_GetById_Call{Call: _e.mock.On("GetById", ctx, ID)}
 }
 
-func (_c *MockNoteRepository_GetById_Call) Run(run func(ID int)) *MockNoteRepository_GetById_Call {
+func (_c *MockNoteRepository_GetById_Call) Run(run func(ctx context.Context, ID int)) *MockNoteRepository_GetById_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(int))
+		run(args[0].(context.Context), args[1].(int))
 	})
 	return _c
 }
@@ -234,14 +239,14 @@ func (_c *MockNoteRepository_GetById_Call) Return(_a0 *entity.Note, _a1 error) *
 	return _c
 }
 
-func (_c *MockNoteRepository_GetById_Call) RunAndReturn(run func(int) (*entity.Note, error)) *MockNoteRepository_GetById_Call {
+func (_c *MockNoteRepository_GetById_Call) RunAndReturn(run func(context.Context, int) (*entity.Note, error)) *MockNoteRepository_GetById_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// GetMinimalByCategoryIds provides a mock function with given fields: catIds
-func (_m *MockNoteRepository) GetMinimalByCategoryIds(catIds []int) ([]*entity.Note, error) {
-	ret := _m.Called(catIds)
+// GetMinimalByCategoryIds provides a mock function with given fields: ctx, catIds
+func (_m *MockNoteRepository) GetMinimalByCategoryIds(ctx context.Context, catIds []int) ([]*entity.Note, error) {
+	ret := _m.Called(ctx, catIds)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetMinimalByCategoryIds")
@@ -249,19 +254,19 @@ func (_m *MockNoteRepository) GetMinimalByCategoryIds(catIds []int) ([]*entity.N
 
 	var r0 []*entity.Note
 	var r1 error
-	if rf, ok := ret.Get(0).(func([]int) ([]*entity.Note, error)); ok {
-		return rf(catIds)
+	if rf, ok := ret.Get(0).(func(context.Context, []int) ([]*entity.Note, error)); ok {
+		return rf(ctx, catIds)
 	}
-	if rf, ok := ret.Get(0).(func([]int) []*entity.Note); ok {
-		r0 = rf(catIds)
+	if rf, ok := ret.Get(0).(func(context.Context, []int) []*entity.Note); ok {
+		r0 = rf(ctx, catIds)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*entity.Note)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func([]int) error); ok {
-		r1 = rf(catIds)
+	if rf, ok := ret.Get(1).(func(context.Context, []int) error); ok {
+		r1 = rf(ctx, catIds)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -275,14 +280,15 @@ type MockNoteRepository_GetMinimalByCategoryIds_Call struct {
 }
 
 // GetMinimalByCategoryIds is a helper method to define mock.On call
+//   - ctx context.Context
 //   - catIds []int
-func (_e *MockNoteRepository_Expecter) GetMinimalByCategoryIds(catIds interface{}) *MockNoteRepository_GetMinimalByCategoryIds_Call {
-	return &MockNoteRepository_GetMinimalByCategoryIds_Call{Call: _e.mock.On("GetMinimalByCategoryIds", catIds)}
+func (_e *MockNoteRepository_Expecter) GetMinimalByCategoryIds(ctx interface{}, catIds interface{}) *MockNoteRepository_GetMinimalByCategoryIds_Call {
+	return &MockNoteRepository_GetMinimalByCategoryIds_Call{Call: _e.mock.On("GetMinimalByCategoryIds", ctx, catIds)}
 }
 
-func (_c *MockNoteRepository_GetMinimalByCategoryIds_Call) Run(run func(catIds []int)) *MockNoteRepository_GetMinimalByCategoryIds_Call {
+func (_c *MockNoteRepository_GetMinimalByCategoryIds_Call) Run(run func(ctx context.Context, catIds []int)) *MockNoteRepository_GetMinimalByCategoryIds_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].([]int))
+		run(args[0].(context.Context), args[1].([]int))
 	})
 	return _c
 }
@@ -292,22 +298,22 @@ func (_c *MockNoteRepository_GetMinimalByCategoryIds_Call) Return(_a0 []*entity.
 	return _c
 }
 
-func (_c *MockNoteRepository_GetMinimalByCategoryIds_Call) RunAndReturn(run func([]int) ([]*entity.Note, error)) *MockNoteRepository_GetMinimalByCategoryIds_Call {
+func (_c *MockNoteRepository_GetMinimalByCategoryIds_Call) RunAndReturn(run func(context.Context, []int) ([]*entity.Note, error)) *MockNoteRepository_GetMinimalByCategoryIds_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// Pin provides a mock function with given fields: noteID
-func (_m *MockNoteRepository) Pin(noteID int) error {
-	ret := _m.Called(noteID)
+// Pin provides a mock function with given fields: ctx, noteID
+func (_m *MockNoteRepository) Pin(ctx context.Context, noteID int) error {
+	ret := _m.Called(ctx, noteID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Pin")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(int) error); ok {
-		r0 = rf(noteID)
+	if rf, ok := ret.Get(0).(func(context.Context, int) error); ok {
+		r0 = rf(ctx, noteID)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -321,14 +327,15 @@ type MockNoteRepository_Pin_Call struct {
 }
 
 // Pin is a helper method to define mock.On call
+//   - ctx context.Context
 //   - noteID int
-func (_e *MockNoteRepository_Expecter) Pin(noteID interface{}) *MockNoteRepository_Pin_Call {
-	return &MockNoteRepository_Pin_Call{Call: _e.mock.On("Pin", noteID)}
+func (_e *MockNoteRepository_Expecter) Pin(ctx interface{}, noteID interface{}) *MockNoteRepository_Pin_Call {
+	return &MockNoteRepository_Pin_Call{Call: _e.mock.On("Pin", ctx, noteID)}
 }
 
-func (_c *MockNoteRepository_Pin_Call) Run(run func(noteID int)) *MockNoteRepository_Pin_Call {
+func (_c *MockNoteRepository_Pin_Call) Run(run func(ctx context.Context, noteID int)) *MockNoteRepository_Pin_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(int))
+		run(args[0].(context.Context), args[1].(int))
 	})
 	return _c
 }
@@ -338,22 +345,22 @@ func (_c *MockNoteRepository_Pin_Call) Return(_a0 error) *MockNoteRepository_Pin
 	return _c
 }
 
-func (_c *MockNoteRepository_Pin_Call) RunAndReturn(run func(int) error) *MockNoteRepository_Pin_Call {
+func (_c *MockNoteRepository_Pin_Call) RunAndReturn(run func(context.Context, int) error) *MockNoteRepository_Pin_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// UnPin provides a mock function with given fields: noteID
-func (_m *MockNoteRepository) UnPin(noteID int) error {
-	ret := _m.Called(noteID)
+// UnPin provides a mock function with given fields: ctx, noteID
+func (_m *MockNoteRepository) UnPin(ctx context.Context, noteID int) error {
+	ret := _m.Called(ctx, noteID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UnPin")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(int) error); ok {
-		r0 = rf(noteID)
+	if rf, ok := ret.Get(0).(func(context.Context, int) error); ok {
+		r0 = rf(ctx, noteID)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -367,14 +374,15 @@ type MockNoteRepository_UnPin_Call struct {
 }
 
 // UnPin is a helper method to define mock.On call
+//   - ctx context.Context
 //   - noteID int
-func (_e *MockNoteRepository_Expecter) UnPin(noteID interface{}) *MockNoteRepository_UnPin_Call {
-	return &MockNoteRepository_UnPin_Call{Call: _e.mock.On("UnPin", noteID)}
+func (_e *MockNoteRepository_Expecter) UnPin(ctx interface{}, noteID interface{}) *MockNoteRepository_UnPin_Call {
+	return &MockNoteRepository_UnPin_Call{Call: _e.mock.On("UnPin", ctx, noteID)}
 }
 
-func (_c *MockNoteRepository_UnPin_Call) Run(run func(noteID int)) *MockNoteRepository_UnPin_Call {
+func (_c *MockNoteRepository_UnPin_Call) Run(run func(ctx context.Context, noteID int)) *MockNoteRepository_UnPin_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(int))
+		run(args[0].(context.Context), args[1].(int))
 	})
 	return _c
 }
@@ -384,22 +392,22 @@ func (_c *MockNoteRepository_UnPin_Call) Return(_a0 error) *MockNoteRepository_U
 	return _c
 }
 
-func (_c *MockNoteRepository_UnPin_Call) RunAndReturn(run func(int) error) *MockNoteRepository_UnPin_Call {
+func (_c *MockNoteRepository_UnPin_Call) RunAndReturn(run func(context.Context, int) error) *MockNoteRepository_UnPin_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// Update provides a mock function with given fields: in
-func (_m *MockNoteRepository) Update(in *entity.Note) error {
-	ret := _m.Called(in)
+// Update provides a mock function with given fields: ctx, in
+func (_m *MockNoteRepository) Update(ctx context.Context, in *entity.Note) error {
+	ret := _m.Called(ctx, in)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Update")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*entity.Note) error); ok {
-		r0 = rf(in)
+	if rf, ok := ret.Get(0).(func(context.Context, *entity.Note) error); ok {
+		r0 = rf(ctx, in)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -413,14 +421,15 @@ type MockNoteRepository_Update_Call struct {
 }
 
 // Update is a helper method to define mock.On call
+//   - ctx context.Context
 //   - in *entity.Note
-func (_e *MockNoteRepository_Expecter) Update(in interface{}) *MockNoteRepository_Update_Call {
-	return &MockNoteRepository_Update_Call{Call: _e.mock.On("Update", in)}
+func (_e *MockNoteRepository_Expecter) Update(ctx interface{}, in interface{}) *MockNoteRepository_Update_Call {
+	return &MockNoteRepository_Update_Call{Call: _e.mock.On("Update", ctx, in)}
 }
 
-func (_c *MockNoteRepository_Update_Call) Run(run func(in *entity.Note)) *MockNoteRepository_Update_Call {
+func (_c *MockNoteRepository_Update_Call) Run(run func(ctx context.Context, in *entity.Note)) *MockNoteRepository_Update_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*entity.Note))
+		run(args[0].(context.Context), args[1].(*entity.Note))
 	})
 	return _c
 }
@@ -430,7 +439,7 @@ func (_c *MockNoteRepository_Update_Call) Return(_a0 error) *MockNoteRepository_
 	return _c
 }
 
-func (_c *MockNoteRepository_Update_Call) RunAndReturn(run func(*entity.Note) error) *MockNoteRepository_Update_Call {
+func (_c *MockNoteRepository_Update_Call) RunAndReturn(run func(context.Context, *entity.Note) error) *MockNoteRepository_Update_Call {
 	_c.Call.Return(run)
 	return _c
 }

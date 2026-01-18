@@ -4,6 +4,7 @@ package mocks
 
 import (
 	entity "assistant-go/internal/layer/entity"
+	context "context"
 
 	mock "github.com/stretchr/testify/mock"
 )
@@ -21,9 +22,9 @@ func (_m *MockNoteCategoryRepository) EXPECT() *MockNoteCategoryRepository_Expec
 	return &MockNoteCategoryRepository_Expecter{mock: &_m.Mock}
 }
 
-// Create provides a mock function with given fields: in
-func (_m *MockNoteCategoryRepository) Create(in entity.NoteCategory) (*entity.NoteCategory, error) {
-	ret := _m.Called(in)
+// Create provides a mock function with given fields: ctx, in
+func (_m *MockNoteCategoryRepository) Create(ctx context.Context, in entity.NoteCategory) (*entity.NoteCategory, error) {
+	ret := _m.Called(ctx, in)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
@@ -31,19 +32,19 @@ func (_m *MockNoteCategoryRepository) Create(in entity.NoteCategory) (*entity.No
 
 	var r0 *entity.NoteCategory
 	var r1 error
-	if rf, ok := ret.Get(0).(func(entity.NoteCategory) (*entity.NoteCategory, error)); ok {
-		return rf(in)
+	if rf, ok := ret.Get(0).(func(context.Context, entity.NoteCategory) (*entity.NoteCategory, error)); ok {
+		return rf(ctx, in)
 	}
-	if rf, ok := ret.Get(0).(func(entity.NoteCategory) *entity.NoteCategory); ok {
-		r0 = rf(in)
+	if rf, ok := ret.Get(0).(func(context.Context, entity.NoteCategory) *entity.NoteCategory); ok {
+		r0 = rf(ctx, in)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*entity.NoteCategory)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(entity.NoteCategory) error); ok {
-		r1 = rf(in)
+	if rf, ok := ret.Get(1).(func(context.Context, entity.NoteCategory) error); ok {
+		r1 = rf(ctx, in)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -57,14 +58,15 @@ type MockNoteCategoryRepository_Create_Call struct {
 }
 
 // Create is a helper method to define mock.On call
+//   - ctx context.Context
 //   - in entity.NoteCategory
-func (_e *MockNoteCategoryRepository_Expecter) Create(in interface{}) *MockNoteCategoryRepository_Create_Call {
-	return &MockNoteCategoryRepository_Create_Call{Call: _e.mock.On("Create", in)}
+func (_e *MockNoteCategoryRepository_Expecter) Create(ctx interface{}, in interface{}) *MockNoteCategoryRepository_Create_Call {
+	return &MockNoteCategoryRepository_Create_Call{Call: _e.mock.On("Create", ctx, in)}
 }
 
-func (_c *MockNoteCategoryRepository_Create_Call) Run(run func(in entity.NoteCategory)) *MockNoteCategoryRepository_Create_Call {
+func (_c *MockNoteCategoryRepository_Create_Call) Run(run func(ctx context.Context, in entity.NoteCategory)) *MockNoteCategoryRepository_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(entity.NoteCategory))
+		run(args[0].(context.Context), args[1].(entity.NoteCategory))
 	})
 	return _c
 }
@@ -74,22 +76,22 @@ func (_c *MockNoteCategoryRepository_Create_Call) Return(_a0 *entity.NoteCategor
 	return _c
 }
 
-func (_c *MockNoteCategoryRepository_Create_Call) RunAndReturn(run func(entity.NoteCategory) (*entity.NoteCategory, error)) *MockNoteCategoryRepository_Create_Call {
+func (_c *MockNoteCategoryRepository_Create_Call) RunAndReturn(run func(context.Context, entity.NoteCategory) (*entity.NoteCategory, error)) *MockNoteCategoryRepository_Create_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// DeleteByIds provides a mock function with given fields: catIDs
-func (_m *MockNoteCategoryRepository) DeleteByIds(catIDs []int) error {
-	ret := _m.Called(catIDs)
+// DeleteByIds provides a mock function with given fields: ctx, catIDs
+func (_m *MockNoteCategoryRepository) DeleteByIds(ctx context.Context, catIDs []int) error {
+	ret := _m.Called(ctx, catIDs)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DeleteByIds")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func([]int) error); ok {
-		r0 = rf(catIDs)
+	if rf, ok := ret.Get(0).(func(context.Context, []int) error); ok {
+		r0 = rf(ctx, catIDs)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -103,14 +105,15 @@ type MockNoteCategoryRepository_DeleteByIds_Call struct {
 }
 
 // DeleteByIds is a helper method to define mock.On call
+//   - ctx context.Context
 //   - catIDs []int
-func (_e *MockNoteCategoryRepository_Expecter) DeleteByIds(catIDs interface{}) *MockNoteCategoryRepository_DeleteByIds_Call {
-	return &MockNoteCategoryRepository_DeleteByIds_Call{Call: _e.mock.On("DeleteByIds", catIDs)}
+func (_e *MockNoteCategoryRepository_Expecter) DeleteByIds(ctx interface{}, catIDs interface{}) *MockNoteCategoryRepository_DeleteByIds_Call {
+	return &MockNoteCategoryRepository_DeleteByIds_Call{Call: _e.mock.On("DeleteByIds", ctx, catIDs)}
 }
 
-func (_c *MockNoteCategoryRepository_DeleteByIds_Call) Run(run func(catIDs []int)) *MockNoteCategoryRepository_DeleteByIds_Call {
+func (_c *MockNoteCategoryRepository_DeleteByIds_Call) Run(run func(ctx context.Context, catIDs []int)) *MockNoteCategoryRepository_DeleteByIds_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].([]int))
+		run(args[0].(context.Context), args[1].([]int))
 	})
 	return _c
 }
@@ -120,22 +123,22 @@ func (_c *MockNoteCategoryRepository_DeleteByIds_Call) Return(_a0 error) *MockNo
 	return _c
 }
 
-func (_c *MockNoteCategoryRepository_DeleteByIds_Call) RunAndReturn(run func([]int) error) *MockNoteCategoryRepository_DeleteByIds_Call {
+func (_c *MockNoteCategoryRepository_DeleteByIds_Call) RunAndReturn(run func(context.Context, []int) error) *MockNoteCategoryRepository_DeleteByIds_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// DeleteByUserId provides a mock function with given fields: userID
-func (_m *MockNoteCategoryRepository) DeleteByUserId(userID int) error {
-	ret := _m.Called(userID)
+// DeleteByUserId provides a mock function with given fields: ctx, userID
+func (_m *MockNoteCategoryRepository) DeleteByUserId(ctx context.Context, userID int) error {
+	ret := _m.Called(ctx, userID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DeleteByUserId")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(int) error); ok {
-		r0 = rf(userID)
+	if rf, ok := ret.Get(0).(func(context.Context, int) error); ok {
+		r0 = rf(ctx, userID)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -149,14 +152,15 @@ type MockNoteCategoryRepository_DeleteByUserId_Call struct {
 }
 
 // DeleteByUserId is a helper method to define mock.On call
+//   - ctx context.Context
 //   - userID int
-func (_e *MockNoteCategoryRepository_Expecter) DeleteByUserId(userID interface{}) *MockNoteCategoryRepository_DeleteByUserId_Call {
-	return &MockNoteCategoryRepository_DeleteByUserId_Call{Call: _e.mock.On("DeleteByUserId", userID)}
+func (_e *MockNoteCategoryRepository_Expecter) DeleteByUserId(ctx interface{}, userID interface{}) *MockNoteCategoryRepository_DeleteByUserId_Call {
+	return &MockNoteCategoryRepository_DeleteByUserId_Call{Call: _e.mock.On("DeleteByUserId", ctx, userID)}
 }
 
-func (_c *MockNoteCategoryRepository_DeleteByUserId_Call) Run(run func(userID int)) *MockNoteCategoryRepository_DeleteByUserId_Call {
+func (_c *MockNoteCategoryRepository_DeleteByUserId_Call) Run(run func(ctx context.Context, userID int)) *MockNoteCategoryRepository_DeleteByUserId_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(int))
+		run(args[0].(context.Context), args[1].(int))
 	})
 	return _c
 }
@@ -166,14 +170,14 @@ func (_c *MockNoteCategoryRepository_DeleteByUserId_Call) Return(_a0 error) *Moc
 	return _c
 }
 
-func (_c *MockNoteCategoryRepository_DeleteByUserId_Call) RunAndReturn(run func(int) error) *MockNoteCategoryRepository_DeleteByUserId_Call {
+func (_c *MockNoteCategoryRepository_DeleteByUserId_Call) RunAndReturn(run func(context.Context, int) error) *MockNoteCategoryRepository_DeleteByUserId_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// FindAll provides a mock function with given fields: userID
-func (_m *MockNoteCategoryRepository) FindAll(userID int) ([]*entity.NoteCategory, error) {
-	ret := _m.Called(userID)
+// FindAll provides a mock function with given fields: ctx, userID
+func (_m *MockNoteCategoryRepository) FindAll(ctx context.Context, userID int) ([]*entity.NoteCategory, error) {
+	ret := _m.Called(ctx, userID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FindAll")
@@ -181,19 +185,19 @@ func (_m *MockNoteCategoryRepository) FindAll(userID int) ([]*entity.NoteCategor
 
 	var r0 []*entity.NoteCategory
 	var r1 error
-	if rf, ok := ret.Get(0).(func(int) ([]*entity.NoteCategory, error)); ok {
-		return rf(userID)
+	if rf, ok := ret.Get(0).(func(context.Context, int) ([]*entity.NoteCategory, error)); ok {
+		return rf(ctx, userID)
 	}
-	if rf, ok := ret.Get(0).(func(int) []*entity.NoteCategory); ok {
-		r0 = rf(userID)
+	if rf, ok := ret.Get(0).(func(context.Context, int) []*entity.NoteCategory); ok {
+		r0 = rf(ctx, userID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*entity.NoteCategory)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(int) error); ok {
-		r1 = rf(userID)
+	if rf, ok := ret.Get(1).(func(context.Context, int) error); ok {
+		r1 = rf(ctx, userID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -207,14 +211,15 @@ type MockNoteCategoryRepository_FindAll_Call struct {
 }
 
 // FindAll is a helper method to define mock.On call
+//   - ctx context.Context
 //   - userID int
-func (_e *MockNoteCategoryRepository_Expecter) FindAll(userID interface{}) *MockNoteCategoryRepository_FindAll_Call {
-	return &MockNoteCategoryRepository_FindAll_Call{Call: _e.mock.On("FindAll", userID)}
+func (_e *MockNoteCategoryRepository_Expecter) FindAll(ctx interface{}, userID interface{}) *MockNoteCategoryRepository_FindAll_Call {
+	return &MockNoteCategoryRepository_FindAll_Call{Call: _e.mock.On("FindAll", ctx, userID)}
 }
 
-func (_c *MockNoteCategoryRepository_FindAll_Call) Run(run func(userID int)) *MockNoteCategoryRepository_FindAll_Call {
+func (_c *MockNoteCategoryRepository_FindAll_Call) Run(run func(ctx context.Context, userID int)) *MockNoteCategoryRepository_FindAll_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(int))
+		run(args[0].(context.Context), args[1].(int))
 	})
 	return _c
 }
@@ -224,14 +229,14 @@ func (_c *MockNoteCategoryRepository_FindAll_Call) Return(_a0 []*entity.NoteCate
 	return _c
 }
 
-func (_c *MockNoteCategoryRepository_FindAll_Call) RunAndReturn(run func(int) ([]*entity.NoteCategory, error)) *MockNoteCategoryRepository_FindAll_Call {
+func (_c *MockNoteCategoryRepository_FindAll_Call) RunAndReturn(run func(context.Context, int) ([]*entity.NoteCategory, error)) *MockNoteCategoryRepository_FindAll_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// FindByIDAndUser provides a mock function with given fields: userID, id
-func (_m *MockNoteCategoryRepository) FindByIDAndUser(userID int, id int) (*entity.NoteCategory, error) {
-	ret := _m.Called(userID, id)
+// FindByIDAndUser provides a mock function with given fields: ctx, userID, id
+func (_m *MockNoteCategoryRepository) FindByIDAndUser(ctx context.Context, userID int, id int) (*entity.NoteCategory, error) {
+	ret := _m.Called(ctx, userID, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FindByIDAndUser")
@@ -239,19 +244,19 @@ func (_m *MockNoteCategoryRepository) FindByIDAndUser(userID int, id int) (*enti
 
 	var r0 *entity.NoteCategory
 	var r1 error
-	if rf, ok := ret.Get(0).(func(int, int) (*entity.NoteCategory, error)); ok {
-		return rf(userID, id)
+	if rf, ok := ret.Get(0).(func(context.Context, int, int) (*entity.NoteCategory, error)); ok {
+		return rf(ctx, userID, id)
 	}
-	if rf, ok := ret.Get(0).(func(int, int) *entity.NoteCategory); ok {
-		r0 = rf(userID, id)
+	if rf, ok := ret.Get(0).(func(context.Context, int, int) *entity.NoteCategory); ok {
+		r0 = rf(ctx, userID, id)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*entity.NoteCategory)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(int, int) error); ok {
-		r1 = rf(userID, id)
+	if rf, ok := ret.Get(1).(func(context.Context, int, int) error); ok {
+		r1 = rf(ctx, userID, id)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -265,15 +270,16 @@ type MockNoteCategoryRepository_FindByIDAndUser_Call struct {
 }
 
 // FindByIDAndUser is a helper method to define mock.On call
+//   - ctx context.Context
 //   - userID int
 //   - id int
-func (_e *MockNoteCategoryRepository_Expecter) FindByIDAndUser(userID interface{}, id interface{}) *MockNoteCategoryRepository_FindByIDAndUser_Call {
-	return &MockNoteCategoryRepository_FindByIDAndUser_Call{Call: _e.mock.On("FindByIDAndUser", userID, id)}
+func (_e *MockNoteCategoryRepository_Expecter) FindByIDAndUser(ctx interface{}, userID interface{}, id interface{}) *MockNoteCategoryRepository_FindByIDAndUser_Call {
+	return &MockNoteCategoryRepository_FindByIDAndUser_Call{Call: _e.mock.On("FindByIDAndUser", ctx, userID, id)}
 }
 
-func (_c *MockNoteCategoryRepository_FindByIDAndUser_Call) Run(run func(userID int, id int)) *MockNoteCategoryRepository_FindByIDAndUser_Call {
+func (_c *MockNoteCategoryRepository_FindByIDAndUser_Call) Run(run func(ctx context.Context, userID int, id int)) *MockNoteCategoryRepository_FindByIDAndUser_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(int), args[1].(int))
+		run(args[0].(context.Context), args[1].(int), args[2].(int))
 	})
 	return _c
 }
@@ -283,14 +289,14 @@ func (_c *MockNoteCategoryRepository_FindByIDAndUser_Call) Return(_a0 *entity.No
 	return _c
 }
 
-func (_c *MockNoteCategoryRepository_FindByIDAndUser_Call) RunAndReturn(run func(int, int) (*entity.NoteCategory, error)) *MockNoteCategoryRepository_FindByIDAndUser_Call {
+func (_c *MockNoteCategoryRepository_FindByIDAndUser_Call) RunAndReturn(run func(context.Context, int, int) (*entity.NoteCategory, error)) *MockNoteCategoryRepository_FindByIDAndUser_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// FindByIDAndUserWithChildren provides a mock function with given fields: userID, id
-func (_m *MockNoteCategoryRepository) FindByIDAndUserWithChildren(userID int, id int) ([]*entity.NoteCategory, error) {
-	ret := _m.Called(userID, id)
+// FindByIDAndUserWithChildren provides a mock function with given fields: ctx, userID, id
+func (_m *MockNoteCategoryRepository) FindByIDAndUserWithChildren(ctx context.Context, userID int, id int) ([]*entity.NoteCategory, error) {
+	ret := _m.Called(ctx, userID, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FindByIDAndUserWithChildren")
@@ -298,19 +304,19 @@ func (_m *MockNoteCategoryRepository) FindByIDAndUserWithChildren(userID int, id
 
 	var r0 []*entity.NoteCategory
 	var r1 error
-	if rf, ok := ret.Get(0).(func(int, int) ([]*entity.NoteCategory, error)); ok {
-		return rf(userID, id)
+	if rf, ok := ret.Get(0).(func(context.Context, int, int) ([]*entity.NoteCategory, error)); ok {
+		return rf(ctx, userID, id)
 	}
-	if rf, ok := ret.Get(0).(func(int, int) []*entity.NoteCategory); ok {
-		r0 = rf(userID, id)
+	if rf, ok := ret.Get(0).(func(context.Context, int, int) []*entity.NoteCategory); ok {
+		r0 = rf(ctx, userID, id)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*entity.NoteCategory)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(int, int) error); ok {
-		r1 = rf(userID, id)
+	if rf, ok := ret.Get(1).(func(context.Context, int, int) error); ok {
+		r1 = rf(ctx, userID, id)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -324,15 +330,16 @@ type MockNoteCategoryRepository_FindByIDAndUserWithChildren_Call struct {
 }
 
 // FindByIDAndUserWithChildren is a helper method to define mock.On call
+//   - ctx context.Context
 //   - userID int
 //   - id int
-func (_e *MockNoteCategoryRepository_Expecter) FindByIDAndUserWithChildren(userID interface{}, id interface{}) *MockNoteCategoryRepository_FindByIDAndUserWithChildren_Call {
-	return &MockNoteCategoryRepository_FindByIDAndUserWithChildren_Call{Call: _e.mock.On("FindByIDAndUserWithChildren", userID, id)}
+func (_e *MockNoteCategoryRepository_Expecter) FindByIDAndUserWithChildren(ctx interface{}, userID interface{}, id interface{}) *MockNoteCategoryRepository_FindByIDAndUserWithChildren_Call {
+	return &MockNoteCategoryRepository_FindByIDAndUserWithChildren_Call{Call: _e.mock.On("FindByIDAndUserWithChildren", ctx, userID, id)}
 }
 
-func (_c *MockNoteCategoryRepository_FindByIDAndUserWithChildren_Call) Run(run func(userID int, id int)) *MockNoteCategoryRepository_FindByIDAndUserWithChildren_Call {
+func (_c *MockNoteCategoryRepository_FindByIDAndUserWithChildren_Call) Run(run func(ctx context.Context, userID int, id int)) *MockNoteCategoryRepository_FindByIDAndUserWithChildren_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(int), args[1].(int))
+		run(args[0].(context.Context), args[1].(int), args[2].(int))
 	})
 	return _c
 }
@@ -342,14 +349,14 @@ func (_c *MockNoteCategoryRepository_FindByIDAndUserWithChildren_Call) Return(_a
 	return _c
 }
 
-func (_c *MockNoteCategoryRepository_FindByIDAndUserWithChildren_Call) RunAndReturn(run func(int, int) ([]*entity.NoteCategory, error)) *MockNoteCategoryRepository_FindByIDAndUserWithChildren_Call {
+func (_c *MockNoteCategoryRepository_FindByIDAndUserWithChildren_Call) RunAndReturn(run func(context.Context, int, int) ([]*entity.NoteCategory, error)) *MockNoteCategoryRepository_FindByIDAndUserWithChildren_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// GetMaxPosition provides a mock function with given fields: userID, parentID
-func (_m *MockNoteCategoryRepository) GetMaxPosition(userID int, parentID *int) (int, error) {
-	ret := _m.Called(userID, parentID)
+// GetMaxPosition provides a mock function with given fields: ctx, userID, parentID
+func (_m *MockNoteCategoryRepository) GetMaxPosition(ctx context.Context, userID int, parentID *int) (int, error) {
+	ret := _m.Called(ctx, userID, parentID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetMaxPosition")
@@ -357,17 +364,17 @@ func (_m *MockNoteCategoryRepository) GetMaxPosition(userID int, parentID *int) 
 
 	var r0 int
 	var r1 error
-	if rf, ok := ret.Get(0).(func(int, *int) (int, error)); ok {
-		return rf(userID, parentID)
+	if rf, ok := ret.Get(0).(func(context.Context, int, *int) (int, error)); ok {
+		return rf(ctx, userID, parentID)
 	}
-	if rf, ok := ret.Get(0).(func(int, *int) int); ok {
-		r0 = rf(userID, parentID)
+	if rf, ok := ret.Get(0).(func(context.Context, int, *int) int); ok {
+		r0 = rf(ctx, userID, parentID)
 	} else {
 		r0 = ret.Get(0).(int)
 	}
 
-	if rf, ok := ret.Get(1).(func(int, *int) error); ok {
-		r1 = rf(userID, parentID)
+	if rf, ok := ret.Get(1).(func(context.Context, int, *int) error); ok {
+		r1 = rf(ctx, userID, parentID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -381,15 +388,16 @@ type MockNoteCategoryRepository_GetMaxPosition_Call struct {
 }
 
 // GetMaxPosition is a helper method to define mock.On call
+//   - ctx context.Context
 //   - userID int
 //   - parentID *int
-func (_e *MockNoteCategoryRepository_Expecter) GetMaxPosition(userID interface{}, parentID interface{}) *MockNoteCategoryRepository_GetMaxPosition_Call {
-	return &MockNoteCategoryRepository_GetMaxPosition_Call{Call: _e.mock.On("GetMaxPosition", userID, parentID)}
+func (_e *MockNoteCategoryRepository_Expecter) GetMaxPosition(ctx interface{}, userID interface{}, parentID interface{}) *MockNoteCategoryRepository_GetMaxPosition_Call {
+	return &MockNoteCategoryRepository_GetMaxPosition_Call{Call: _e.mock.On("GetMaxPosition", ctx, userID, parentID)}
 }
 
-func (_c *MockNoteCategoryRepository_GetMaxPosition_Call) Run(run func(userID int, parentID *int)) *MockNoteCategoryRepository_GetMaxPosition_Call {
+func (_c *MockNoteCategoryRepository_GetMaxPosition_Call) Run(run func(ctx context.Context, userID int, parentID *int)) *MockNoteCategoryRepository_GetMaxPosition_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(int), args[1].(*int))
+		run(args[0].(context.Context), args[1].(int), args[2].(*int))
 	})
 	return _c
 }
@@ -399,22 +407,22 @@ func (_c *MockNoteCategoryRepository_GetMaxPosition_Call) Return(_a0 int, _a1 er
 	return _c
 }
 
-func (_c *MockNoteCategoryRepository_GetMaxPosition_Call) RunAndReturn(run func(int, *int) (int, error)) *MockNoteCategoryRepository_GetMaxPosition_Call {
+func (_c *MockNoteCategoryRepository_GetMaxPosition_Call) RunAndReturn(run func(context.Context, int, *int) (int, error)) *MockNoteCategoryRepository_GetMaxPosition_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// Update provides a mock function with given fields: in
-func (_m *MockNoteCategoryRepository) Update(in *entity.NoteCategory) error {
-	ret := _m.Called(in)
+// Update provides a mock function with given fields: ctx, in
+func (_m *MockNoteCategoryRepository) Update(ctx context.Context, in *entity.NoteCategory) error {
+	ret := _m.Called(ctx, in)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Update")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*entity.NoteCategory) error); ok {
-		r0 = rf(in)
+	if rf, ok := ret.Get(0).(func(context.Context, *entity.NoteCategory) error); ok {
+		r0 = rf(ctx, in)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -428,14 +436,15 @@ type MockNoteCategoryRepository_Update_Call struct {
 }
 
 // Update is a helper method to define mock.On call
+//   - ctx context.Context
 //   - in *entity.NoteCategory
-func (_e *MockNoteCategoryRepository_Expecter) Update(in interface{}) *MockNoteCategoryRepository_Update_Call {
-	return &MockNoteCategoryRepository_Update_Call{Call: _e.mock.On("Update", in)}
+func (_e *MockNoteCategoryRepository_Expecter) Update(ctx interface{}, in interface{}) *MockNoteCategoryRepository_Update_Call {
+	return &MockNoteCategoryRepository_Update_Call{Call: _e.mock.On("Update", ctx, in)}
 }
 
-func (_c *MockNoteCategoryRepository_Update_Call) Run(run func(in *entity.NoteCategory)) *MockNoteCategoryRepository_Update_Call {
+func (_c *MockNoteCategoryRepository_Update_Call) Run(run func(ctx context.Context, in *entity.NoteCategory)) *MockNoteCategoryRepository_Update_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*entity.NoteCategory))
+		run(args[0].(context.Context), args[1].(*entity.NoteCategory))
 	})
 	return _c
 }
@@ -445,22 +454,22 @@ func (_c *MockNoteCategoryRepository_Update_Call) Return(_a0 error) *MockNoteCat
 	return _c
 }
 
-func (_c *MockNoteCategoryRepository_Update_Call) RunAndReturn(run func(*entity.NoteCategory) error) *MockNoteCategoryRepository_Update_Call {
+func (_c *MockNoteCategoryRepository_Update_Call) RunAndReturn(run func(context.Context, *entity.NoteCategory) error) *MockNoteCategoryRepository_Update_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// UpdatePosition provides a mock function with given fields: in
-func (_m *MockNoteCategoryRepository) UpdatePosition(in *entity.NoteCategory) error {
-	ret := _m.Called(in)
+// UpdatePosition provides a mock function with given fields: ctx, in
+func (_m *MockNoteCategoryRepository) UpdatePosition(ctx context.Context, in *entity.NoteCategory) error {
+	ret := _m.Called(ctx, in)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdatePosition")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*entity.NoteCategory) error); ok {
-		r0 = rf(in)
+	if rf, ok := ret.Get(0).(func(context.Context, *entity.NoteCategory) error); ok {
+		r0 = rf(ctx, in)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -474,14 +483,15 @@ type MockNoteCategoryRepository_UpdatePosition_Call struct {
 }
 
 // UpdatePosition is a helper method to define mock.On call
+//   - ctx context.Context
 //   - in *entity.NoteCategory
-func (_e *MockNoteCategoryRepository_Expecter) UpdatePosition(in interface{}) *MockNoteCategoryRepository_UpdatePosition_Call {
-	return &MockNoteCategoryRepository_UpdatePosition_Call{Call: _e.mock.On("UpdatePosition", in)}
+func (_e *MockNoteCategoryRepository_Expecter) UpdatePosition(ctx interface{}, in interface{}) *MockNoteCategoryRepository_UpdatePosition_Call {
+	return &MockNoteCategoryRepository_UpdatePosition_Call{Call: _e.mock.On("UpdatePosition", ctx, in)}
 }
 
-func (_c *MockNoteCategoryRepository_UpdatePosition_Call) Run(run func(in *entity.NoteCategory)) *MockNoteCategoryRepository_UpdatePosition_Call {
+func (_c *MockNoteCategoryRepository_UpdatePosition_Call) Run(run func(ctx context.Context, in *entity.NoteCategory)) *MockNoteCategoryRepository_UpdatePosition_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*entity.NoteCategory))
+		run(args[0].(context.Context), args[1].(*entity.NoteCategory))
 	})
 	return _c
 }
@@ -491,7 +501,7 @@ func (_c *MockNoteCategoryRepository_UpdatePosition_Call) Return(_a0 error) *Moc
 	return _c
 }
 
-func (_c *MockNoteCategoryRepository_UpdatePosition_Call) RunAndReturn(run func(*entity.NoteCategory) error) *MockNoteCategoryRepository_UpdatePosition_Call {
+func (_c *MockNoteCategoryRepository_UpdatePosition_Call) RunAndReturn(run func(context.Context, *entity.NoteCategory) error) *MockNoteCategoryRepository_UpdatePosition_Call {
 	_c.Call.Return(run)
 	return _c
 }

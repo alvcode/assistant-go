@@ -68,8 +68,8 @@ func TestRegisterUserEndpoint(t *testing.T) {
 				Login: "test_user", Password: "test_pwd",
 			},
 			mockSetup: func() {
-				mockRepo.On("Find", "test_user").Return((*entity.User)(nil), errors.New("user not found"))
-				mockRepo.On("Create", mock.AnythingOfType("entity.User")).Return(&userEntity, nil)
+				mockRepo.On("Find", mock.Anything, "test_user").Return((*entity.User)(nil), errors.New("user not found"))
+				mockRepo.On("Create", mock.Anything, mock.AnythingOfType("entity.User")).Return(&userEntity, nil)
 			},
 			expectedStatusCode: http.StatusCreated,
 			expectedResponse:   string(userVMBytes),
@@ -80,7 +80,7 @@ func TestRegisterUserEndpoint(t *testing.T) {
 				Login: "test_user", Password: "test_pwd",
 			},
 			mockSetup: func() {
-				mockRepo.On("Find", "test_user").Return(&userEntity, nil)
+				mockRepo.On("Find", mock.Anything, "test_user").Return(&userEntity, nil)
 			},
 			expectedStatusCode: http.StatusUnprocessableEntity,
 			expectedResponse:   `{"message":"user_already_exists","status":422,"code":0}`,
@@ -160,9 +160,9 @@ func TestLoginEndpoint(t *testing.T) {
 				Login: "test_user", Password: "test_pwd",
 			},
 			mockSetup: func() {
-				mockRepo.On("Find", "test_user").Return(&userEntity, nil)
-				mockRepo.On("FindUserToken", mock.Anything).Return((*entity.UserToken)(nil), pgx.ErrNoRows)
-				mockRepo.On("SetUserToken", mock.AnythingOfType("entity.UserToken")).Return(&userTokenEntity, nil)
+				mockRepo.On("Find", mock.Anything, "test_user").Return(&userEntity, nil)
+				mockRepo.On("FindUserToken", mock.Anything, mock.Anything).Return((*entity.UserToken)(nil), pgx.ErrNoRows)
+				mockRepo.On("SetUserToken", mock.Anything, mock.AnythingOfType("entity.UserToken")).Return(&userTokenEntity, nil)
 			},
 			expectedStatusCode: http.StatusOK,
 			expectedResponse:   string(userTokenVMBytes),
@@ -173,7 +173,7 @@ func TestLoginEndpoint(t *testing.T) {
 				Login: "test_user", Password: "test_pwdd",
 			},
 			mockSetup: func() {
-				mockRepo.On("Find", "test_user").Return(&userEntity, nil)
+				mockRepo.On("Find", mock.Anything, "test_user").Return(&userEntity, nil)
 			},
 			expectedStatusCode: http.StatusUnprocessableEntity,
 			expectedResponse:   `{"message":"incorrect_username_or_password","status":422,"code":0}`,
@@ -184,8 +184,8 @@ func TestLoginEndpoint(t *testing.T) {
 				Login: "test_user", Password: "",
 			},
 			mockSetup: func() {
-				mockRepo.On("Find", "test_user").Return(&userEntity, nil)
-				mockRepo.On("FindUserToken", mock.Anything).Return((*entity.UserToken)(nil), pgx.ErrNoRows)
+				mockRepo.On("Find", mock.Anything, "test_user").Return(&userEntity, nil)
+				mockRepo.On("FindUserToken", mock.Anything, mock.Anything).Return((*entity.UserToken)(nil), pgx.ErrNoRows)
 			},
 			expectedStatusCode: http.StatusUnprocessableEntity,
 			expectedResponse:   `{"message":"Password is a required field","status":422,"code":0}`,
@@ -196,8 +196,8 @@ func TestLoginEndpoint(t *testing.T) {
 				Login: "", Password: "test_pwd",
 			},
 			mockSetup: func() {
-				mockRepo.On("Find", "test_user").Return(&userEntity, nil)
-				mockRepo.On("FindUserToken", mock.Anything).Return((*entity.UserToken)(nil), pgx.ErrNoRows)
+				mockRepo.On("Find", mock.Anything, "test_user").Return(&userEntity, nil)
+				mockRepo.On("FindUserToken", mock.Anything, mock.Anything).Return((*entity.UserToken)(nil), pgx.ErrNoRows)
 			},
 			expectedStatusCode: http.StatusUnprocessableEntity,
 			expectedResponse:   `{"message":"Login is a required field","status":422,"code":0}`,
@@ -249,9 +249,9 @@ func TestRefreshTokenEndpoint(t *testing.T) {
 				RefreshToken: "refresh_token_ksdjgjasdbghjasgjasghdsfhasdhadhsdfnjhsnjh",
 			},
 			mockSetup: func() {
-				mockRepo.On("FindUserToken", mock.Anything).Return(&userTokenEntity, nil).Once()
-				mockRepo.On("FindUserToken", mock.Anything).Return((*entity.UserToken)(nil), pgx.ErrNoRows).Once()
-				mockRepo.On("SetUserToken", mock.AnythingOfType("entity.UserToken")).Return(&userTokenEntity, nil)
+				mockRepo.On("FindUserToken", mock.Anything, mock.Anything).Return(&userTokenEntity, nil).Once()
+				mockRepo.On("FindUserToken", mock.Anything, mock.Anything).Return((*entity.UserToken)(nil), pgx.ErrNoRows).Once()
+				mockRepo.On("SetUserToken", mock.Anything, mock.AnythingOfType("entity.UserToken")).Return(&userTokenEntity, nil)
 			},
 			expectedStatusCode: http.StatusOK,
 			expectedResponse:   string(userTokenVMBytes),
@@ -263,8 +263,8 @@ func TestRefreshTokenEndpoint(t *testing.T) {
 				RefreshToken: "refresh_token_ksdjgjasdbghjasgjasghdsfhasdhadhsdfnjhsnjh",
 			},
 			mockSetup: func() {
-				mockRepo.On("FindUserToken", mock.Anything).Return((*entity.UserToken)(nil), pgx.ErrNoRows).Once()
-				mockRepo.On("SetUserToken", mock.AnythingOfType("entity.UserToken")).Return(&userTokenEntity, nil)
+				mockRepo.On("FindUserToken", mock.Anything, mock.Anything).Return((*entity.UserToken)(nil), pgx.ErrNoRows).Once()
+				mockRepo.On("SetUserToken", mock.Anything, mock.AnythingOfType("entity.UserToken")).Return(&userTokenEntity, nil)
 			},
 			expectedStatusCode: http.StatusUnprocessableEntity,
 			expectedResponse:   `{"message":"refresh_token_not_found","status":422,"code":0}`,
@@ -276,7 +276,7 @@ func TestRefreshTokenEndpoint(t *testing.T) {
 				RefreshToken: "refresh_token_ksdjgjasdbghjasgjasghdsfhasdhadhsdfnjhsnjhh",
 			},
 			mockSetup: func() {
-				mockRepo.On("FindUserToken", mock.Anything).Return(&userTokenEntity, nil).Once()
+				mockRepo.On("FindUserToken", mock.Anything, mock.Anything).Return(&userTokenEntity, nil).Once()
 			},
 			expectedStatusCode: http.StatusUnprocessableEntity,
 			expectedResponse:   `{"message":"refresh_token_not_found","status":422,"code":0}`,
