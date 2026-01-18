@@ -5,7 +5,6 @@ import (
 	"assistant-go/internal/handler"
 	"assistant-go/internal/layer/repository"
 	"assistant-go/internal/layer/ucase"
-	"context"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/julienschmidt/httprouter"
 	"github.com/minio/minio-go/v7"
@@ -28,7 +27,7 @@ func New(cfg *config.Config, db *pgxpool.Pool, minio *minio.Client, router *http
 	}
 }
 
-func (controller *Init) SetRoutes(ctx context.Context) error {
+func (controller *Init) SetRoutes() error {
 	repos := repository.NewRepositories(controller.cfg, controller.db, controller.minio)
 
 	handler.InitHandler(repos, controller.cfg)
