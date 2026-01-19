@@ -39,5 +39,6 @@
   "drive_method_unavailable_for_chunks": "You cannot download chunks using this method",
   "drive_encryption_error": "Unexpected file encryption error",
   "drive_decryption_error": "Unexpected file decryption error",
-  "note_share_exists": "You have already shared this post"
+  "note_share_exists": "You have already shared this post",
+  "note_share_not_found": "Share link not found"
 }

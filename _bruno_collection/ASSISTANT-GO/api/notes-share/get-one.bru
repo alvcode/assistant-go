@@ -1,0 +1,16 @@
+meta {
+  name: get-one
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{domain}}/api/notes/4/share
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

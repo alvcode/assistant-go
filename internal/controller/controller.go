@@ -170,6 +170,16 @@ func (controller *Init) setShareNotes(repositories *repository.Repositories) {
 		"/api/notes/:id/share",
 		handler.BuildHandler(noteShareHandler.Create, handler.AuthMW),
 	)
+	controller.router.Handler(
+		http.MethodGet,
+		"/api/notes/:id/share",
+		handler.BuildHandler(noteShareHandler.GetOne, handler.AuthMW),
+	)
+	controller.router.Handler(
+		http.MethodDelete,
+		"/api/notes/:id/share",
+		handler.BuildHandler(noteShareHandler.Delete, handler.AuthMW),
+	)
 }
 
 func (controller *Init) setFiles(repositories *repository.Repositories) {

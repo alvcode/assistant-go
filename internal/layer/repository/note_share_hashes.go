@@ -9,6 +9,8 @@ type NoteShareHashesRepository interface {
 	Create(ctx context.Context, in entity.NoteShare) (*entity.NoteShare, error)
 	ExistsByNoteID(ctx context.Context, noteID int) (bool, error)
 	ExistsByHash(ctx context.Context, hash string) (bool, error)
+	GetByNoteID(ctx context.Context, noteID int) (*entity.NoteShare, error)
+	DeleteByNoteID(ctx context.Context, noteID int) error
 }
 
 type noteShareHashesRepository struct {
@@ -52,4 +54,24 @@ func (ur *noteShareHashesRepository) ExistsByHash(ctx context.Context, hash stri
 	}
 
 	return exists, nil
+}
+
+func (ur *noteShareHashesRepository) GetByNoteID(ctx context.Context, noteID int) (*entity.NoteShare, error) {
+	query := `select * from note_share_hashes where note_id = $1`
+	row := ur.db.QueryRow(ctx, query, noteID)
+	var noteShare entity.NoteShare
+	if err := row.Scan(&noteShare.ID, &noteShare.NoteID, &noteShare.Hash); err != nil {
+		return nil, err
+	}
+	return &noteShare, nil
+}
+
+func (ur *noteShareHashesRepository) DeleteByNoteID(ctx context.Context, noteID int) error {
+	query := `DELETE FROM note_share_hashes WHERE note_id = $1`
+
+	_, err := ur.db.Exec(ctx, query, noteID)
+	if err != nil {
+		return err
+	}
+	return nil
 }

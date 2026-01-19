@@ -39,5 +39,6 @@
   "drive_method_unavailable_for_chunks": "Нельзя получить чанки данным методом",
   "drive_encryption_error": "Непредвиденная ошибка шифрования файла",
   "drive_decryption_error": "Непредвиденная ошибка дешифровки файла",
-  "note_share_exists": "Вы уже поделились данной заметкой"
+  "note_share_exists": "Вы уже поделились данной заметкой",
+  "note_share_not_found": "Share-ссылка не найдена"
 }
