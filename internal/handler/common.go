@@ -90,6 +90,7 @@ var (
 	BlockEventFileNotFoundType = "file_not_found"
 	BlockEventOtherType        = "other"
 	BlockEventTooManyRequests  = "too_many_requests"
+	BlockEventBruteForce       = "brute_force"
 )
 
 func BlockEventHandle(r *http.Request, eventName string) {
@@ -120,6 +121,7 @@ func BlockEventHandle(r *http.Request, eventName string) {
 	var pageNotFoundMaxCount int
 	var tooManyRequestsMaxCount int
 	var fileNotFoundMaxCount int
+	var bruteForceMaxCount int
 	switch appConf.BlockingParanoia {
 	case 1:
 		blockMinute = 30
@@ -132,6 +134,7 @@ func BlockEventHandle(r *http.Request, eventName string) {
 		pageNotFoundMaxCount = 50
 		fileNotFoundMaxCount = 40
 		tooManyRequestsMaxCount = 60
+		bruteForceMaxCount = 60
 	case 2:
 		blockMinute = 420 // 7 hour
 		allMaxCount = 150
@@ -143,6 +146,7 @@ func BlockEventHandle(r *http.Request, eventName string) {
 		pageNotFoundMaxCount = 10
 		fileNotFoundMaxCount = 20
 		tooManyRequestsMaxCount = 30
+		bruteForceMaxCount = 40
 	case 3:
 		blockMinute = 2880 // 2 day
 		allMaxCount = 70
@@ -154,6 +158,7 @@ func BlockEventHandle(r *http.Request, eventName string) {
 		pageNotFoundMaxCount = 5
 		fileNotFoundMaxCount = 10
 		tooManyRequestsMaxCount = 15
+		bruteForceMaxCount = 20
 	}
 
 	if blockEventStat.All >= allMaxCount ||
@@ -164,7 +169,8 @@ func BlockEventHandle(r *http.Request, eventName string) {
 		blockEventStat.RefreshToken >= refreshTokenMaxCount ||
 		blockEventStat.PageNotFound >= pageNotFoundMaxCount ||
 		blockEventStat.FileNotFound >= fileNotFoundMaxCount ||
-		blockEventStat.TooManyRequests >= tooManyRequestsMaxCount {
+		blockEventStat.TooManyRequests >= tooManyRequestsMaxCount ||
+		blockEventStat.BruteForce >= bruteForceMaxCount {
 		unblockTime := time.Now().Add(time.Duration(blockMinute) * time.Minute).UTC()
 		_ = blockIpRepository.SetBlock(r.Context(), IPAddress, unblockTime)
 	}

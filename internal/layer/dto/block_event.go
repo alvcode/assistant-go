@@ -10,4 +10,5 @@ type BlockEventsStat struct {
 	PageNotFound      int `db:"page_not_found"`
 	TooManyRequests   int `db:"too_many_requests"`
 	FileNotFound      int `db:"file_not_found"`
+	BruteForce        int `db:"brute_force"`
 }

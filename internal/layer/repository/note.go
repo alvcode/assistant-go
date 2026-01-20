@@ -16,6 +16,7 @@ type NoteRepository interface {
 	Pin(ctx context.Context, noteID int) error
 	UnPin(ctx context.Context, noteID int) error
 	BelongsToUser(ctx context.Context, noteID int, userID int) (bool, error)
+	GetByShareHash(ctx context.Context, hash string) (*entity.Note, error)
 }
 
 type noteRepository struct {
@@ -152,4 +153,14 @@ func (ur *noteRepository) BelongsToUser(ctx context.Context, noteID int, userID 
 	}
 
 	return exists, nil
+}
+
+func (ur *noteRepository) GetByShareHash(ctx context.Context, hash string) (*entity.Note, error) {
+	query := `select * from notes where id = (select nsh.note_id from note_share_hashes nsh where nsh.hash = $1)`
+	row := ur.db.QueryRow(ctx, query, hash)
+	var note entity.Note
+	if err := row.Scan(&note.ID, &note.CategoryID, &note.NoteBlocks, &note.CreatedAt, &note.UpdatedAt, &note.Title, &note.Pinned); err != nil {
+		return nil, err
+	}
+	return &note, nil
 }

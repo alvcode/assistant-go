@@ -6,6 +6,7 @@ import (
 	"assistant-go/internal/layer/vmodel"
 	"assistant-go/internal/locale"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/julienschmidt/httprouter"
 	"net/http"
@@ -291,4 +292,30 @@ func (h *NoteHandler) UnPin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	SendResponse(w, http.StatusNoContent, nil)
+}
+
+func (h *NoteHandler) GetOneByHash(w http.ResponseWriter, r *http.Request) {
+	langRequest := locale.GetLangFromContext(r.Context())
+
+	params := httprouter.ParamsFromContext(r.Context())
+	shareHash := params.ByName("hash")
+	if shareHash == "" {
+		BlockEventHandle(r, BlockEventInputDataType)
+		SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
+		return
+	}
+
+	note, err := h.useCase.GetOneByShareHash(r.Context(), shareHash)
+	if err != nil {
+		if errors.Is(err, ucase.ErrNoteNotFound) {
+			BlockEventHandle(r, BlockEventBruteForce)
+		} else {
+			BlockEventHandle(r, BlockEventOtherType)
+		}
+		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
+		return
+	}
+
+	result := vmodel.NoteFromEntity(note)
+	SendResponse(w, http.StatusOK, result)
 }

@@ -26,6 +26,7 @@ type NoteUseCase interface {
 	DeleteOne(ctx context.Context, noteIdStruct dto.RequiredID, userEntity *entity.User) error
 	Pin(ctx context.Context, noteIdStruct dto.RequiredID, userEntity *entity.User) error
 	UnPin(ctx context.Context, noteIdStruct dto.RequiredID, userEntity *entity.User) error
+	GetOneByShareHash(ctx context.Context, hash string) (*entity.Note, error)
 }
 
 type noteUseCase struct {
@@ -321,4 +322,17 @@ func (uc *noteUseCase) UnPin(ctx context.Context, noteIdStruct dto.RequiredID, u
 		return postgres.ErrUnexpectedDBError
 	}
 	return nil
+}
+
+func (uc *noteUseCase) GetOneByShareHash(ctx context.Context, hash string) (*entity.Note, error) {
+	note, err := uc.repositories.NoteRepository.GetByShareHash(ctx, hash)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNoteNotFound
+		}
+		logging.GetLogger(ctx).Error(err)
+		return nil, postgres.ErrUnexpectedDBError
+	}
+
+	return note, nil
 }

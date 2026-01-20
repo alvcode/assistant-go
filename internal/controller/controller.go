@@ -145,6 +145,11 @@ func (controller *Init) setNotes(repositories *repository.Repositories) {
 		handler.BuildHandler(noteHandler.GetOne, handler.AuthMW),
 	)
 	controller.router.Handler(
+		http.MethodGet,
+		"/api/notes-share/:hash/one",
+		handler.BuildHandler(noteHandler.GetOneByHash),
+	)
+	controller.router.Handler(
 		http.MethodDelete,
 		"/api/notes/:id",
 		handler.BuildHandler(noteHandler.DeleteOne, handler.AuthMW),
