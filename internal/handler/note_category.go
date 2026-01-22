@@ -84,7 +84,13 @@ func (h *NoteCategoryHandler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	params := httprouter.ParamsFromContext(r.Context())
 
-	if catIDStr := params.ByName("id"); catIDStr != "" {
+	catIDStr := params.ByName("id")
+
+	if catIDStr == "" {
+		BlockEventHandle(r, BlockEventInputDataType)
+		SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
+		return
+	} else {
 		catIdInt, err := strconv.Atoi(catIDStr)
 
 		if err != nil {
@@ -130,7 +136,12 @@ func (h *NoteCategoryHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if catIDStr := params.ByName("id"); catIDStr != "" {
+	catIDStr := params.ByName("id")
+	if catIDStr == "" {
+		BlockEventHandle(r, BlockEventInputDataType)
+		SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
+		return
+	} else {
 		catIdInt, err := strconv.Atoi(catIDStr)
 
 		if err != nil {

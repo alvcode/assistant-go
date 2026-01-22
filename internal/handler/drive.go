@@ -188,7 +188,13 @@ func (h *DriveHandler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	var structID int
 	params := httprouter.ParamsFromContext(r.Context())
-	if structIDStr := params.ByName("id"); structIDStr != "" {
+	structIDStr := params.ByName("id")
+
+	if structIDStr == "" {
+		BlockEventHandle(r, BlockEventInputDataType)
+		SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
+		return
+	} else {
 		structIDInt, err := strconv.Atoi(structIDStr)
 
 		if err != nil {
@@ -201,7 +207,6 @@ func (h *DriveHandler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	err = h.useCase.Delete(r.Context(), structID, appConf.Drive.SavePath, authUser)
 	if err != nil {
-		//BlockEventHandle(r, BlockEventUnauthorizedType)
 		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
 		return
 	}
@@ -222,7 +227,13 @@ func (h *DriveHandler) GetFile(w http.ResponseWriter, r *http.Request) {
 
 	var structID int
 	params := httprouter.ParamsFromContext(r.Context())
-	if structIDStr := params.ByName("id"); structIDStr != "" {
+	structIDStr := params.ByName("id")
+
+	if structIDStr == "" {
+		BlockEventHandle(r, BlockEventInputDataType)
+		SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
+		return
+	} else {
 		structIDInt, err := strconv.Atoi(structIDStr)
 
 		if err != nil {
@@ -293,7 +304,13 @@ func (h *DriveHandler) Rename(w http.ResponseWriter, r *http.Request) {
 
 	var structID int
 	params := httprouter.ParamsFromContext(r.Context())
-	if structIDStr := params.ByName("id"); structIDStr != "" {
+	structIDStr := params.ByName("id")
+
+	if structIDStr == "" {
+		BlockEventHandle(r, BlockEventInputDataType)
+		SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
+		return
+	} else {
 		structIDInt, err := strconv.Atoi(structIDStr)
 
 		if err != nil {
@@ -439,10 +456,14 @@ func (h *DriveHandler) UploadChunk(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var structID *int
+	var structID int
 	structIDStr := r.URL.Query().Get("structId")
 
-	if structIDStr != "" {
+	if structIDStr == "" {
+		BlockEventHandle(r, BlockEventInputDataType)
+		SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
+		return
+	} else {
 		structIDInt, err := strconv.Atoi(structIDStr)
 
 		if err != nil {
@@ -450,17 +471,17 @@ func (h *DriveHandler) UploadChunk(w http.ResponseWriter, r *http.Request) {
 			SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
 			return
 		}
-		structID = &structIDInt
-	} else {
+		structID = structIDInt
+	}
+
+	var chunkNumber int
+	chunkNumberStr := r.URL.Query().Get("chunkNumber")
+
+	if chunkNumberStr == "" {
 		BlockEventHandle(r, BlockEventInputDataType)
 		SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
 		return
-	}
-
-	var chunkNumber *int
-	chunkNumberStr := r.URL.Query().Get("chunkNumber")
-
-	if chunkNumberStr != "" {
+	} else {
 		chunkNumberInt, err := strconv.Atoi(chunkNumberStr)
 
 		if err != nil {
@@ -468,11 +489,7 @@ func (h *DriveHandler) UploadChunk(w http.ResponseWriter, r *http.Request) {
 			SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
 			return
 		}
-		chunkNumber = &chunkNumberInt
-	} else {
-		BlockEventHandle(r, BlockEventInputDataType)
-		SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
-		return
+		chunkNumber = chunkNumberInt
 	}
 
 	defer func(file multipart.File) {
@@ -485,8 +502,8 @@ func (h *DriveHandler) UploadChunk(w http.ResponseWriter, r *http.Request) {
 
 	uploadChunkDTO := dto.DriveUploadChunk{
 		File:                  file,
-		StructID:              *structID,
-		ChunkNumber:           *chunkNumber,
+		StructID:              structID,
+		ChunkNumber:           chunkNumber,
 		MaxSizeBytes:          appConf.Drive.UploadMaxSize << 20,
 		StorageMaxSizePerUser: appConf.Drive.LimitPerUser << 20,
 		SavePath:              appConf.Drive.SavePath,
@@ -545,7 +562,13 @@ func (h *DriveHandler) GetChunksInfo(w http.ResponseWriter, r *http.Request) {
 
 	var structID int
 	params := httprouter.ParamsFromContext(r.Context())
-	if structIDStr := params.ByName("id"); structIDStr != "" {
+	structIDStr := params.ByName("id")
+
+	if structIDStr == "" {
+		BlockEventHandle(r, BlockEventInputDataType)
+		SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
+		return
+	} else {
 		structIDInt, err := strconv.Atoi(structIDStr)
 
 		if err != nil {
@@ -578,9 +601,14 @@ func (h *DriveHandler) GetChunkBytes(w http.ResponseWriter, r *http.Request) {
 	}
 
 	params := httprouter.ParamsFromContext(r.Context())
-
 	var structID int
-	if structIDStr := params.ByName("id"); structIDStr != "" {
+	structIDStr := params.ByName("id")
+
+	if structIDStr == "" {
+		BlockEventHandle(r, BlockEventInputDataType)
+		SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
+		return
+	} else {
 		structIDInt, err := strconv.Atoi(structIDStr)
 
 		if err != nil {
@@ -592,7 +620,13 @@ func (h *DriveHandler) GetChunkBytes(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var chunkNumber int
-	if chunkNumberStr := params.ByName("chunkNumber"); chunkNumberStr != "" {
+	chunkNumberStr := params.ByName("chunkNumber")
+
+	if chunkNumberStr == "" {
+		BlockEventHandle(r, BlockEventInputDataType)
+		SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
+		return
+	} else {
 		chunkNumberInt, err := strconv.Atoi(chunkNumberStr)
 
 		if err != nil {
@@ -662,7 +696,13 @@ func (h *DriveHandler) UpdateFileHash(w http.ResponseWriter, r *http.Request) {
 
 	var structID int
 	params := httprouter.ParamsFromContext(r.Context())
-	if structIDStr := params.ByName("id"); structIDStr != "" {
+	structIDStr := params.ByName("id")
+
+	if structIDStr == "" {
+		BlockEventHandle(r, BlockEventInputDataType)
+		SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
+		return
+	} else {
 		structIDInt, err := strconv.Atoi(structIDStr)
 
 		if err != nil {
@@ -674,6 +714,11 @@ func (h *DriveHandler) UpdateFileHash(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fileHashSHA256 := params.ByName("hash")
+	if fileHashSHA256 == "" {
+		BlockEventHandle(r, BlockEventInputDataType)
+		SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
+		return
+	}
 
 	err = h.useCase.UpdateFileHash(r.Context(), structID, fileHashSHA256, authUser)
 	if err != nil {

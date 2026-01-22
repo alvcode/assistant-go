@@ -72,7 +72,11 @@ func (h *NoteHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 
 	catIDStr := r.URL.Query().Get("categoryId")
 
-	if catIDStr != "" {
+	if catIDStr == "" {
+		BlockEventHandle(r, BlockEventInputDataType)
+		SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
+		return
+	} else {
 		catIDInt, err := strconv.Atoi(catIDStr)
 
 		if err != nil {
@@ -147,7 +151,13 @@ func (h *NoteHandler) GetOne(w http.ResponseWriter, r *http.Request) {
 	var noteID dto.RequiredID
 
 	params := httprouter.ParamsFromContext(r.Context())
-	if noteIDStr := params.ByName("id"); noteIDStr != "" {
+	noteIDStr := params.ByName("id")
+
+	if noteIDStr == "" {
+		BlockEventHandle(r, BlockEventInputDataType)
+		SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
+		return
+	} else {
 		noteIDInt, err := strconv.Atoi(noteIDStr)
 
 		if err != nil {
@@ -187,7 +197,13 @@ func (h *NoteHandler) DeleteOne(w http.ResponseWriter, r *http.Request) {
 	var noteID dto.RequiredID
 
 	params := httprouter.ParamsFromContext(r.Context())
-	if noteIDStr := params.ByName("id"); noteIDStr != "" {
+	noteIDStr := params.ByName("id")
+
+	if noteIDStr == "" {
+		BlockEventHandle(r, BlockEventInputDataType)
+		SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
+		return
+	} else {
 		noteIDInt, err := strconv.Atoi(noteIDStr)
 
 		if err != nil {
@@ -227,7 +243,13 @@ func (h *NoteHandler) Pin(w http.ResponseWriter, r *http.Request) {
 	var noteID dto.RequiredID
 
 	params := httprouter.ParamsFromContext(r.Context())
-	if noteIDStr := params.ByName("id"); noteIDStr != "" {
+	noteIDStr := params.ByName("id")
+
+	if noteIDStr == "" {
+		BlockEventHandle(r, BlockEventInputDataType)
+		SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
+		return
+	} else {
 		noteIDInt, err := strconv.Atoi(noteIDStr)
 
 		if err != nil {
@@ -267,7 +289,13 @@ func (h *NoteHandler) UnPin(w http.ResponseWriter, r *http.Request) {
 	var noteID dto.RequiredID
 
 	params := httprouter.ParamsFromContext(r.Context())
-	if noteIDStr := params.ByName("id"); noteIDStr != "" {
+	noteIDStr := params.ByName("id")
+
+	if noteIDStr == "" {
+		BlockEventHandle(r, BlockEventInputDataType)
+		SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
+		return
+	} else {
 		noteIDInt, err := strconv.Atoi(noteIDStr)
 
 		if err != nil {

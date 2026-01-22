@@ -101,7 +101,14 @@ func (h *FileHandler) GetByHash(w http.ResponseWriter, r *http.Request) {
 	var fileHashDto dto.GetFileByHash
 
 	params := httprouter.ParamsFromContext(r.Context())
-	fileHashDto.Hash = params.ByName("hash")
+	hashParam := params.ByName("hash")
+	if hashParam == "" {
+		BlockEventHandle(r, BlockEventInputDataType)
+		SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
+		return
+	}
+
+	fileHashDto.Hash = hashParam
 
 	if err := fileHashDto.Validate(langRequest); err != nil {
 		BlockEventHandle(r, BlockEventInputDataType)
