@@ -1,4 +1,4 @@
-FROM golang:1.23.4-alpine
+FROM golang:1.25.6-alpine
 
 RUN --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg \

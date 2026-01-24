@@ -1,6 +1,6 @@
 services:
   ast-db:
-    image: postgres:16.8-bookworm
+    image: postgres:18.1-bookworm
     container_name: ast-db
     environment:
       POSTGRES_USER: ${DB_USERNAME}
@@ -10,7 +10,7 @@ services:
     ports:
       - "5489:5432"
     volumes:
-      - /var/lib/ast-pg:/var/lib/postgresql/data:rw
+      - /var/lib/ast-pg18:/var/lib/postgresql:rw
       - ./_docker/postgres/custom-postgresql.conf:/etc/postgresql/postgresql.conf
     command: postgres -c config_file=/etc/postgresql/postgresql.conf
     networks:
