@@ -45,6 +45,7 @@ func NewApp(ctx context.Context, cfg *config.Config) (App, error) {
 		minioClient, err = minio.New(cfg.S3.Endpoint, &minio.Options{
 			Creds:  credentials.NewStaticV4(cfg.S3.AccessKey, cfg.S3.SecretAccessKey, ""),
 			Secure: cfg.S3.UseSSL,
+			Region: cfg.S3.Location,
 		})
 		if err != nil {
 			logging.GetLogger(ctx).Fatalln(err)
