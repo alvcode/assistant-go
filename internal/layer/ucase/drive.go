@@ -10,13 +10,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/jackc/pgx/v5"
 	"io"
 	"mime/multipart"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 )
 
 const (
@@ -46,7 +47,7 @@ type DriveUseCase interface {
 	CreateDirectory(ctx context.Context, dto *dto.DriveCreateDirectory, user *entity.User) ([]*dto.DriveTree, error)
 	GetTree(ctx context.Context, parentID *int, user *entity.User) ([]*dto.DriveTree, error)
 	UploadFile(ctx context.Context, in dto.DriveUploadFile, user *entity.User) ([]*dto.DriveTree, error)
-	Delete(ctx context.Context, structID int, savePath string, user *entity.User) error
+	Delete(ctx context.Context, structID int, savePath string, user *entity.User, force bool) error
 	GetFile(ctx context.Context, in *dto.GetFile, user *entity.User) (*dto.FileResponse, error)
 	Rename(ctx context.Context, structID int, newName string, user *entity.User) error
 	Space(ctx context.Context, user *entity.User, totalSpace int64) (*dto.DriveSpace, error)
@@ -87,7 +88,7 @@ func (uc *driveUseCase) CreateDirectory(ctx context.Context, dto *dto.DriveCreat
 			return nil, err
 		}
 	}
-	_, err := uc.repositories.DriveStructRepository.FindRow(ctx, user.ID, dto.Name, typeDirectory, dto.ParentID)
+	_, err := uc.repositories.DriveStructRepository.FindRow(ctx, user.ID, dto.Name, typeDirectory, dto.ParentID, true)
 
 	if err == nil {
 		return nil, ErrDriveDirectoryExists
@@ -155,7 +156,7 @@ func (uc *driveUseCase) UploadFile(ctx context.Context, in dto.DriveUploadFile, 
 		return nil, ErrDriveFileNotSafeFilename
 	}
 
-	_, err = uc.repositories.DriveStructRepository.FindRow(ctx, user.ID, in.OriginalFilename, typeFile, in.ParentID)
+	_, err = uc.repositories.DriveStructRepository.FindRow(ctx, user.ID, in.OriginalFilename, typeFile, in.ParentID, false)
 
 	if err == nil {
 		return nil, ErrDriveFilenameExists
@@ -226,7 +227,7 @@ func (uc *driveUseCase) UploadFile(ctx context.Context, in dto.DriveUploadFile, 
 	return treeList, nil
 }
 
-func (uc *driveUseCase) Delete(ctx context.Context, structID int, savePath string, user *entity.User) error {
+func (uc *driveUseCase) Delete(ctx context.Context, structID int, savePath string, user *entity.User, force bool) error {
 	driveStruct, err := uc.repositories.DriveStructRepository.GetByID(ctx, structID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -237,42 +238,47 @@ func (uc *driveUseCase) Delete(ctx context.Context, structID int, savePath strin
 		return ErrDriveStructNotFound
 	}
 
-	deleteChunkList, err := uc.repositories.DriveFileChunkRepository.GetAllRecursive(ctx, structID, user.ID)
-	if err != nil {
-		if !errors.Is(err, pgx.ErrNoRows) {
-			return err
-		}
-	}
-
-	deleteFileList, err := uc.repositories.DriveFileRepository.GetAllRecursive(ctx, structID, user.ID)
-	if err != nil {
-		if !errors.Is(err, pgx.ErrNoRows) {
-			return err
-		}
-	}
-
-	var keys []string
-	if len(deleteChunkList) > 0 {
-		for _, fileChunk := range deleteChunkList {
-			keys = append(keys, filepath.Join(savePath, fileChunk.Path))
-		}
-	}
-	if len(deleteFileList) > 0 {
-		for _, file := range deleteFileList {
-			if !file.IsChunk {
-				keys = append(keys, filepath.Join(savePath, *file.Path))
+	// force delete
+	if force {
+		deleteChunkList, err := uc.repositories.DriveFileChunkRepository.GetAllRecursive(ctx, structID, user.ID, false)
+		if err != nil {
+			if !errors.Is(err, pgx.ErrNoRows) {
+				return err
 			}
 		}
-	}
 
-	if len(keys) > 0 {
-		_ = uc.repositories.StorageRepository.DeleteAll(ctx, keys)
-	}
+		deleteFileList, err := uc.repositories.DriveFileRepository.GetAllRecursive(ctx, structID, user.ID, false)
+		if err != nil {
+			if !errors.Is(err, pgx.ErrNoRows) {
+				return err
+			}
+		}
 
-	// удаление записей из БД из трех таблиц (через cascade fk)
-	err = uc.repositories.DriveStructRepository.DeleteRecursive(ctx, user.ID, structID)
-	if err != nil {
-		return err
+		var keys []string
+		if len(deleteChunkList) > 0 {
+			for _, fileChunk := range deleteChunkList {
+				keys = append(keys, filepath.Join(savePath, fileChunk.Path))
+			}
+		}
+		if len(deleteFileList) > 0 {
+			for _, file := range deleteFileList {
+				if !file.IsChunk {
+					keys = append(keys, filepath.Join(savePath, *file.Path))
+				}
+			}
+		}
+
+		if len(keys) > 0 {
+			_ = uc.repositories.StorageRepository.DeleteAll(ctx, keys)
+		}
+
+		// удаление записей из БД из трех таблиц (через cascade fk)
+		err = uc.repositories.DriveStructRepository.DeleteRecursive(ctx, user.ID, structID)
+		if err != nil {
+			return err
+		}
+	} else {
+		// надо папки удалить, а файлы оставить
 	}
 
 	return nil
@@ -463,7 +469,7 @@ func (uc *driveUseCase) ChunkPrepare(ctx context.Context, user *entity.User, in 
 		return nil, ErrDriveFileNotSafeFilename
 	}
 
-	_, err = uc.repositories.DriveStructRepository.FindRow(ctx, user.ID, in.Filename, typeFile, in.ParentID)
+	_, err = uc.repositories.DriveStructRepository.FindRow(ctx, user.ID, in.Filename, typeFile, in.ParentID, false)
 
 	if err == nil {
 		return nil, ErrDriveFilenameExists

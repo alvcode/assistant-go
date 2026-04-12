@@ -9,12 +9,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/julienschmidt/httprouter"
 	"io"
 	"mime/multipart"
 	"net/http"
 	"net/url"
 	"strconv"
+
+	"github.com/julienschmidt/httprouter"
 )
 
 type DriveHandler struct {
@@ -186,33 +187,26 @@ func (h *DriveHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var structID int
-	params := httprouter.ParamsFromContext(r.Context())
-	structIDStr := params.ByName("id")
-
-	if structIDStr == "" {
+	structID, err := getPathParamInt(r, "id")
+	if err != nil {
 		BlockEventHandle(r, BlockEventInputDataType)
 		SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
 		return
-	} else {
-		structIDInt, err := strconv.Atoi(structIDStr)
-
-		if err != nil {
-			BlockEventHandle(r, BlockEventInputDataType)
-			SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
-			return
-		}
-		structID = structIDInt
 	}
 
-	err = h.useCase.Delete(r.Context(), structID, appConf.Drive.SavePath, authUser)
+	forceDelete := false
+	forceDeleteParam := r.URL.Query().Get("force")
+	if forceDeleteParam == "1" {
+		forceDelete = true
+	}
+
+	err = h.useCase.Delete(r.Context(), structID, appConf.Drive.SavePath, authUser, forceDelete)
 	if err != nil {
 		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
 		return
 	}
 
 	SendResponse(w, http.StatusNoContent, nil)
-	return
 }
 
 func (h *DriveHandler) GetFile(w http.ResponseWriter, r *http.Request) {
@@ -288,7 +282,6 @@ func (h *DriveHandler) GetFile(w http.ResponseWriter, r *http.Request) {
 		)
 		return
 	}
-	return
 }
 
 func (h *DriveHandler) Rename(w http.ResponseWriter, r *http.Request) {

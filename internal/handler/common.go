@@ -11,10 +11,14 @@ import (
 	"assistant-go/internal/storage/postgres"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
+
+	"github.com/julienschmidt/httprouter"
 )
 
 var userRepository repository.UserRepository
@@ -199,6 +203,21 @@ func GetIpAddress(r *http.Request) (string, error) {
 		return "", ErrDetermineIP
 	}
 	return IPAddress, nil
+}
+
+func getPathParamInt(r *http.Request, paramName string) (int, error) {
+	params := httprouter.ParamsFromContext(r.Context())
+	paramString := params.ByName(paramName)
+
+	if paramString == "" {
+		return 0, errors.New("path param not found")
+	}
+
+	paramInt, err := strconv.Atoi(paramString)
+	if err != nil {
+		return 0, fmt.Errorf("error conversing path param from string to int: %w", err)
+	}
+	return paramInt, nil
 }
 
 func buildErrorMessage(lang string, err error) string {

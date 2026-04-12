@@ -4,11 +4,22 @@ import (
 	"assistant-go/internal/layer/dto"
 	"assistant-go/internal/layer/entity"
 	"context"
+	"fmt"
 )
 
 type DriveStructRepository interface {
 	GetByID(ctx context.Context, ID int) (*entity.DriveStruct, error)
-	FindRow(ctx context.Context, userID int, name string, rowType int8, parentID *int) (*entity.DriveStruct, error)
+
+	// includeRecycleBin - if true, then all files are returned;
+	// if false, then files in the recycle bin will not be included in the result
+	FindRow(
+		ctx context.Context,
+		userID int,
+		name string,
+		rowType int8,
+		parentID *int,
+		includeRecycleBin bool,
+	) (*entity.DriveStruct, error)
 	Create(ctx context.Context, entity *entity.DriveStruct) (*entity.DriveStruct, error)
 	Update(ctx context.Context, in *entity.DriveStruct) error
 	TreeByUserID(ctx context.Context, userID int, parentID *int) ([]*dto.DriveTree, error)
@@ -52,17 +63,30 @@ func (r *driveStructRepository) FindRow(
 	name string,
 	rowType int8,
 	parentID *int,
+	includeRecycleBin bool,
 ) (*entity.DriveStruct, error) {
 	var (
 		query string
 		args  []any
 	)
 
+	if includeRecycleBin {
+		query = `SELECT ds.* FROM drive_structs ds WHERE ds.user_id = $1 AND ds.name = $2 AND ds.type = $3`
+	} else {
+		query = `
+			SELECT ds.* FROM drive_structs ds
+			LEFT JOIN drive_files df on df.drive_struct_id = ds.id
+			LEFT JOIN drive_recycle_bin drb on drb.drive_struct_id = ds.id
+			WHERE 
+			drb.id is null and ds.user_id = $1 AND ds.name = $2 AND ds.type = $3
+		`
+	}
+
 	if parentID == nil {
-		query = `SELECT * FROM drive_structs WHERE user_id = $1 AND name = $2 AND type = $3 AND parent_id IS NULL`
+		query = fmt.Sprintf("%s %s", query, "AND ds.parent_id IS NULL")
 		args = []any{userID, name, rowType}
 	} else {
-		query = `SELECT * FROM drive_structs WHERE user_id = $1 AND name = $2 AND type = $3 AND parent_id = $4`
+		query = fmt.Sprintf("%s %s", query, "AND ds.parent_id = $4")
 		args = []any{userID, name, rowType, parentID}
 	}
 
@@ -117,8 +141,7 @@ func (r *driveStructRepository) TreeByUserID(ctx context.Context, userID int, pa
 		args  []any
 	)
 
-	if parentID == nil {
-		query = `
+	query = `
 			select 
 			    ds.id, ds.user_id, ds.name, ds.type, ds.created_at, ds.updated_at,
 			    coalesce(df.size, 0) as size,
@@ -126,20 +149,15 @@ func (r *driveStructRepository) TreeByUserID(ctx context.Context, userID int, pa
 				df.sha256
 			from drive_structs ds 
 			left join drive_files df on ds.id = df.drive_struct_id
-			where user_id = $1 and parent_id is null
-		`
+			left join drive_recycle_bin drb on drb.drive_struct_id = ds.id
+			where drb.id is null and user_id = $1
+	`
+
+	if parentID == nil {
+		query = fmt.Sprintf("%s %s", query, "and parent_id is null")
 		args = []any{userID}
 	} else {
-		query = `
-			select 
-			    ds.id, ds.user_id, ds.name, ds.type, ds.created_at, ds.updated_at,
-			    coalesce(df.size, 0) as size,
-				coalesce(df.is_chunk, false) as is_chunk,
-				df.sha256
-			from drive_structs ds
-			left join drive_files df on ds.id = df.drive_struct_id
-			where user_id = $1 and parent_id = $2
-		`
+		query = fmt.Sprintf("%s %s", query, "and parent_id = $2")
 		args = []any{userID, parentID}
 	}
 
