@@ -278,7 +278,11 @@ func (uc *driveUseCase) Delete(ctx context.Context, structID int, savePath strin
 			return err
 		}
 	} else {
-		// надо папки удалить, а файлы оставить
+		// Добавляем структуру в корзину
+		err = uc.repositories.DriveRecycleBinRepository.Upsert(ctx, structID, time.Now().UTC())
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

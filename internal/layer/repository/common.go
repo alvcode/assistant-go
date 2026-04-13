@@ -3,6 +3,7 @@ package repository
 import (
 	"assistant-go/internal/config"
 	"context"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -30,6 +31,7 @@ type Repositories struct {
 	DriveFileRepository       DriveFileRepository
 	DriveFileChunkRepository  DriveFileChunkRepository
 	NoteShareHashesRepository NoteShareHashesRepository
+	DriveRecycleBinRepository DriveRecycleBinRepository
 }
 
 func NewRepositories(cfg *config.Config, db *pgxpool.Pool, minio *minio.Client) *Repositories {
@@ -54,6 +56,7 @@ func NewRepositories(cfg *config.Config, db *pgxpool.Pool, minio *minio.Client) 
 		DriveFileRepository:       NewDriveFileRepository(db),
 		DriveFileChunkRepository:  NewDriveFileChunkRepository(db),
 		NoteShareHashesRepository: NewNoteShareHashesRepository(db),
+		DriveRecycleBinRepository: NewDriveRecycleBinRepository(db),
 	}
 }
 
