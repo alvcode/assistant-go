@@ -150,7 +150,6 @@ func (r *driveFileRepository) GetAllRecursive(
 				)
 				SELECT id FROM structs
 			)
-			and drb.id is null
 		`
 	}
 

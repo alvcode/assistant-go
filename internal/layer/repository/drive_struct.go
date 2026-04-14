@@ -8,7 +8,7 @@ import (
 )
 
 type DriveStructRepository interface {
-	GetByID(ctx context.Context, ID int) (*entity.DriveStruct, error)
+	GetByID(ctx context.Context, ID int, includeRecycleBin bool) (*entity.DriveStruct, error)
 
 	// includeRecycleBin - if true, then all files are returned;
 	// if false, then files in the recycle bin will not be included in the result
@@ -24,8 +24,8 @@ type DriveStructRepository interface {
 	Update(ctx context.Context, in *entity.DriveStruct) error
 	TreeByUserID(ctx context.Context, userID int, parentID *int) ([]*dto.DriveTree, error)
 	GetAllRecursive(ctx context.Context, userID int, structID int) ([]*entity.DriveStruct, error)
-	DeleteRecursive(ctx context.Context, userID int, structID int) error
-	StructCountByUserAndIDs(ctx context.Context, userID int, IDs []int) (int, error)
+	DeleteRecursiveWithoutRecycleBin(ctx context.Context, userID int, structID int) error
+	StructCountByUserAndIDs(ctx context.Context, userID int, IDs []int, includeRecycleBin bool) (int, error)
 	MassUpdateParentID(ctx context.Context, parentID *int, IDs []int) error
 }
 
@@ -37,8 +37,17 @@ func NewDriveStructRepository(db DBExecutor) DriveStructRepository {
 	return &driveStructRepository{db: db}
 }
 
-func (r *driveStructRepository) GetByID(ctx context.Context, ID int) (*entity.DriveStruct, error) {
-	query := `SELECT * FROM drive_structs WHERE id = $1`
+func (r *driveStructRepository) GetByID(ctx context.Context, ID int, includeRecycleBin bool) (*entity.DriveStruct, error) {
+	var query string
+	if includeRecycleBin {
+		query = `SELECT * FROM drive_structs WHERE id = $1`
+	} else {
+		query = `
+			SELECT ds.* FROM drive_structs ds
+			LEFT JOIN drive_recycle_bin drb on drb.drive_struct_id = ds.id
+			WHERE drb.id is null and ds.id = $1
+		`
+	}
 
 	row := r.db.QueryRow(ctx, query, ID)
 
@@ -237,20 +246,23 @@ func (r *driveStructRepository) GetAllRecursive(ctx context.Context, userID int,
 	return structs, nil
 }
 
-func (r *driveStructRepository) DeleteRecursive(ctx context.Context, userID int, structID int) error {
+func (r *driveStructRepository) DeleteRecursiveWithoutRecycleBin(ctx context.Context, userID int, structID int) error {
 	query := `
 		DELETE FROM drive_structs
 		WHERE id in (
 		    WITH RECURSIVE structs AS (
-				SELECT *
-				FROM drive_structs 
-				WHERE id = $1 and user_id = $2
+				SELECT ds1.*
+				FROM drive_structs ds1
+				LEFT JOIN drive_recycle_bin drb1 on drb1.drive_struct_id = ds1.id
+				WHERE drb1.id is null and ds1.id = $1 and ds1.user_id = $2
 			
 				UNION ALL
 			
-				SELECT ds.*
-				FROM drive_structs ds
-				INNER JOIN structs s ON ds.parent_id = s.id
+				SELECT ds2.*
+				FROM drive_structs ds2
+				LEFT JOIN drive_recycle_bin drb2 on drb2.drive_struct_id = ds2.id
+				INNER JOIN structs s ON ds2.parent_id = s.id
+				WHERE drb2.id is null
 			)
 			SELECT id FROM structs
 		)
@@ -263,13 +275,29 @@ func (r *driveStructRepository) DeleteRecursive(ctx context.Context, userID int,
 	return nil
 }
 
-func (r *driveStructRepository) StructCountByUserAndIDs(ctx context.Context, userID int, IDs []int) (int, error) {
-	query := `
+func (r *driveStructRepository) StructCountByUserAndIDs(
+	ctx context.Context,
+	userID int,
+	IDs []int,
+	includeRecycleBin bool,
+) (int, error) {
+	var query string
+	if includeRecycleBin {
+		query = `
 			select 
 			    coalesce(count(ds.id), 0) as count
 			from drive_structs ds 
 			where user_id = $1 and id = ANY($2)
 		`
+	} else {
+		query = `
+			select 
+			    coalesce(count(ds.id), 0) as count
+			from drive_structs ds 
+			left join drive_recycle_bin drb on drb.drive_struct_id = ds.id
+			where drb.id is null and ds.user_id = $1 and ds.id = ANY($2)
+		`
+	}
 
 	var result int
 	err := r.db.QueryRow(ctx, query, userID, IDs).Scan(&result)

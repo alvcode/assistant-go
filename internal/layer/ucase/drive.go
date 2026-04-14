@@ -88,9 +88,9 @@ func (uc *driveUseCase) CreateDirectory(ctx context.Context, dto *dto.DriveCreat
 			return nil, err
 		}
 	}
-	_, err := uc.repositories.DriveStructRepository.FindRow(ctx, user.ID, dto.Name, typeDirectory, dto.ParentID, true)
+	_, err := uc.repositories.DriveStructRepository.FindRow(ctx, user.ID, dto.Name, typeDirectory, dto.ParentID, false)
 
-	if err == nil {
+	if err == nil || !errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrDriveDirectoryExists
 	}
 	createEntity := &entity.DriveStruct{
@@ -228,7 +228,7 @@ func (uc *driveUseCase) UploadFile(ctx context.Context, in dto.DriveUploadFile, 
 }
 
 func (uc *driveUseCase) Delete(ctx context.Context, structID int, savePath string, user *entity.User, force bool) error {
-	driveStruct, err := uc.repositories.DriveStructRepository.GetByID(ctx, structID)
+	driveStruct, err := uc.repositories.DriveStructRepository.GetByID(ctx, structID, false)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrDriveStructNotFound
@@ -273,7 +273,7 @@ func (uc *driveUseCase) Delete(ctx context.Context, structID int, savePath strin
 		}
 
 		// удаление записей из БД из трех таблиц (через cascade fk)
-		err = uc.repositories.DriveStructRepository.DeleteRecursive(ctx, user.ID, structID)
+		err = uc.repositories.DriveStructRepository.DeleteRecursiveWithoutRecycleBin(ctx, user.ID, structID)
 		if err != nil {
 			return err
 		}
@@ -289,7 +289,7 @@ func (uc *driveUseCase) Delete(ctx context.Context, structID int, savePath strin
 }
 
 func (uc *driveUseCase) GetFile(ctx context.Context, in *dto.GetFile, user *entity.User) (*dto.FileResponse, error) {
-	driveStruct, err := uc.repositories.DriveStructRepository.GetByID(ctx, in.StructID)
+	driveStruct, err := uc.repositories.DriveStructRepository.GetByID(ctx, in.StructID, false)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrFileNotFound
@@ -344,7 +344,7 @@ func (uc *driveUseCase) GetFile(ctx context.Context, in *dto.GetFile, user *enti
 }
 
 func (uc *driveUseCase) Rename(ctx context.Context, structID int, newName string, user *entity.User) error {
-	driveStruct, err := uc.repositories.DriveStructRepository.GetByID(ctx, structID)
+	driveStruct, err := uc.repositories.DriveStructRepository.GetByID(ctx, structID, false)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrFileNotFound
@@ -379,7 +379,7 @@ func (uc *driveUseCase) Space(ctx context.Context, user *entity.User, totalSpace
 
 func (uc *driveUseCase) RenMov(ctx context.Context, user *entity.User, in dto.DriveRenMov) error {
 	if in.ParentID != nil {
-		parentStruct, err := uc.repositories.DriveStructRepository.GetByID(ctx, *in.ParentID)
+		parentStruct, err := uc.repositories.DriveStructRepository.GetByID(ctx, *in.ParentID, false)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return ErrDriveParentIdNotFound
@@ -416,7 +416,7 @@ func (uc *driveUseCase) RenMov(ctx context.Context, user *entity.User, in dto.Dr
 	}
 
 	for _, batch := range batches {
-		structCount, err := uc.repositories.DriveStructRepository.StructCountByUserAndIDs(ctx, user.ID, batch)
+		structCount, err := uc.repositories.DriveStructRepository.StructCountByUserAndIDs(ctx, user.ID, batch, false)
 		if err != nil {
 			return err
 		}
@@ -660,7 +660,7 @@ func (uc *driveUseCase) ChunksInfo(ctx context.Context, structID int) (*dto.Driv
 }
 
 func (uc *driveUseCase) GetChunkBytes(ctx context.Context, in *dto.GetChunk, user *entity.User) (*dto.FileResponse, error) {
-	driveStruct, err := uc.repositories.DriveStructRepository.GetByID(ctx, in.StructID)
+	driveStruct, err := uc.repositories.DriveStructRepository.GetByID(ctx, in.StructID, false)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrFileNotFound
@@ -721,7 +721,7 @@ func (uc *driveUseCase) GetChunkBytes(ctx context.Context, in *dto.GetChunk, use
 }
 
 func (uc *driveUseCase) UpdateFileHash(ctx context.Context, structID int, hash string, user *entity.User) error {
-	driveStruct, err := uc.repositories.DriveStructRepository.GetByID(ctx, structID)
+	driveStruct, err := uc.repositories.DriveStructRepository.GetByID(ctx, structID, false)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrFileNotFound
@@ -805,7 +805,7 @@ func (uc *driveUseCase) getFileSizeInReader(file io.Reader, maxSize int64) (int6
 }
 
 func (uc *driveUseCase) checkParentOwner(ctx context.Context, parentID int, userID int) error {
-	parentStruct, err := uc.repositories.DriveStructRepository.GetByID(ctx, parentID)
+	parentStruct, err := uc.repositories.DriveStructRepository.GetByID(ctx, parentID, false)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrDriveParentIdNotFound
