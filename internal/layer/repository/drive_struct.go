@@ -23,7 +23,12 @@ type DriveStructRepository interface {
 	Create(ctx context.Context, entity *entity.DriveStruct) (*entity.DriveStruct, error)
 	Update(ctx context.Context, in *entity.DriveStruct) error
 	TreeByUserID(ctx context.Context, userID int, parentID *int) ([]*dto.DriveTree, error)
-	GetAllRecursive(ctx context.Context, userID int, structID int) ([]*entity.DriveStruct, error)
+
+	// возвращает рекурсивно саму структуру и вложенные в нее структуры
+	GetAllRecursiveForward(ctx context.Context, userID int, structID int) ([]*entity.DriveStruct, error)
+
+	// возвращает рекурсивно саму структуру и те структуры в которые она входит в обратном порядке
+	GetAllRecursiveBackward(ctx context.Context, userID int, structID int) ([]*entity.DriveStruct, error)
 	DeleteRecursiveWithoutRecycleBin(ctx context.Context, userID int, structID int) error
 	StructCountByUserAndIDs(ctx context.Context, userID int, IDs []int, includeRecycleBin bool) (int, error)
 	MassUpdateParentID(ctx context.Context, parentID *int, IDs []int) error
@@ -201,7 +206,7 @@ func (r *driveStructRepository) TreeByUserID(ctx context.Context, userID int, pa
 	return structs, nil
 }
 
-func (r *driveStructRepository) GetAllRecursive(ctx context.Context, userID int, structID int) ([]*entity.DriveStruct, error) {
+func (r *driveStructRepository) GetAllRecursiveForward(ctx context.Context, userID int, structID int) ([]*entity.DriveStruct, error) {
 	query := `
 		WITH RECURSIVE structs AS (
 			SELECT *
@@ -213,6 +218,51 @@ func (r *driveStructRepository) GetAllRecursive(ctx context.Context, userID int,
 			SELECT ds.*
 			FROM drive_structs ds
 			INNER JOIN structs s ON ds.parent_id = s.id
+		)
+		SELECT * FROM structs
+	`
+
+	rows, err := r.db.Query(ctx, query, structID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	structs := make([]*entity.DriveStruct, 0)
+	for rows.Next() {
+		ds := &entity.DriveStruct{}
+		if err := rows.Scan(
+			&ds.ID,
+			&ds.UserID,
+			&ds.Name,
+			&ds.Type,
+			&ds.ParentID,
+			&ds.CreatedAt,
+			&ds.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		structs = append(structs, ds)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return structs, nil
+}
+
+func (r *driveStructRepository) GetAllRecursiveBackward(ctx context.Context, userID int, structID int) ([]*entity.DriveStruct, error) {
+	query := `
+		WITH RECURSIVE structs AS (
+			SELECT *
+			FROM drive_structs 
+			WHERE id = $1 and user_id = $2
+		
+			UNION ALL
+		
+			SELECT ds.*
+			FROM drive_structs ds
+			INNER JOIN structs s ON ds.id = s.parent_id
 		)
 		SELECT * FROM structs
 	`

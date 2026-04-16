@@ -5,10 +5,11 @@ import (
 	"assistant-go/internal/handler"
 	"assistant-go/internal/layer/repository"
 	"assistant-go/internal/layer/ucase"
+	"net/http"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/julienschmidt/httprouter"
 	"github.com/minio/minio-go/v7"
-	"net/http"
 )
 
 type Init struct {
@@ -52,6 +53,7 @@ func (controller *Init) SetRoutes() error {
 	controller.setShareNotes(repos)
 	controller.setFiles(repos)
 	controller.setDrive(repos)
+	controller.setDriveRecycleBin(repos)
 
 	return nil
 }
@@ -278,5 +280,16 @@ func (controller *Init) setDrive(repositories *repository.Repositories) {
 		http.MethodPatch,
 		"/api/drive/files/:id/sha256/:hash",
 		handler.BuildHandler(driveHandler.UpdateFileHash, handler.AuthMW),
+	)
+}
+
+func (controller *Init) setDriveRecycleBin(repositories *repository.Repositories) {
+	driveRecycleBinUseCase := ucase.NewDriveRecycleBinUseCase(repositories)
+	driveRecycleBinHandler := handler.NewDriveRecycleBinHandler(driveRecycleBinUseCase)
+
+	controller.router.Handler(
+		http.MethodGet,
+		"/api/drive-recycle-bin",
+		handler.BuildHandler(driveRecycleBinHandler.GetAll, handler.AuthMW),
 	)
 }
