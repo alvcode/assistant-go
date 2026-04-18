@@ -292,4 +292,25 @@ func (controller *Init) setDriveRecycleBin(repositories *repository.Repositories
 		"/api/drive-recycle-bin",
 		handler.BuildHandler(driveRecycleBinHandler.GetAll, handler.AuthMW),
 	)
+	controller.router.Handler(
+		http.MethodPost,
+		"/api/drive-recycle-bin/restore-one/:id",
+		handler.BuildHandler(driveRecycleBinHandler.GetAll, handler.AuthMW),
+	)
+	controller.router.Handler(
+		http.MethodPost,
+		"/api/drive-recycle-bin/restore-all",
+		handler.BuildHandler(driveRecycleBinHandler.GetAll, handler.AuthMW),
+	)
+	controller.router.Handler(
+		http.MethodDelete,
+		"/api/drive-recycle-bin/all",
+		handler.BuildHandler(driveRecycleBinHandler.GetAll, handler.AuthMW),
+	)
+	/**
+	метод восстановления элемента.
+	метод восстановления всей корзины
+	метод очистки корзины
+	на фронте при удалении добавить флаг force=1
+	*/
 }

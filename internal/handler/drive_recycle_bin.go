@@ -2,8 +2,8 @@ package handler
 
 import (
 	"assistant-go/internal/layer/ucase"
+	"assistant-go/internal/layer/vmodel"
 	"assistant-go/internal/locale"
-	"fmt"
 	"net/http"
 )
 
@@ -26,5 +26,28 @@ func (h *DriveRecycleBinHandler) GetAll(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	fmt.Println(authUser.ID)
+	entities, err := h.useCase.GetAll(r.Context(), authUser)
+	if err != nil {
+		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
+		return
+	}
+
+	result := make([]*vmodel.DriveRecycleBinStruct, 0)
+	for _, entity := range entities {
+		result = append(result, vmodel.DriveRecycleBinStructFromEntity(entity))
+	}
+	SendResponse(w, http.StatusOK, result)
+}
+
+func (h *DriveRecycleBinHandler) RestoreOne(w http.ResponseWriter, r *http.Request) {
+	langRequest := locale.GetLangFromContext(r.Context())
+	authUser, err := GetAuthUser(r)
+	if err != nil {
+		BlockEventHandle(r, BlockEventUnauthorizedType)
+		SendErrorResponse(w, locale.T(langRequest, "unauthorized"), http.StatusUnauthorized, 0)
+		return
+	}
+
+	resycleBinID := getPathParamInt(r, "recycle_bin_id")
+
 }
