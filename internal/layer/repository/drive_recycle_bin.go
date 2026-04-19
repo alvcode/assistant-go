@@ -9,6 +9,8 @@ import (
 type DriveRecycleBinRepository interface {
 	Upsert(ctx context.Context, structID int, originalPath string, createdAt time.Time) error
 	GetAll(ctx context.Context, userID int) ([]*entity.DriveRecycleBinStruct, error)
+	GetByID(ctx context.Context, ID int) (*entity.DriveRecycleBin, error)
+	DeleteByID(ctx context.Context, ID int) error
 }
 
 type driveRecycleBinRepository struct {
@@ -63,4 +65,26 @@ func (r *driveRecycleBinRepository) GetAll(ctx context.Context, userID int) ([]*
 		return nil, err
 	}
 	return result, nil
+}
+
+func (r *driveRecycleBinRepository) GetByID(ctx context.Context, ID int) (*entity.DriveRecycleBin, error) {
+	query := `select * from drive_recycle_bin where id = $1`
+
+	row := r.db.QueryRow(ctx, query, ID)
+
+	var result entity.DriveRecycleBin
+	if err := row.Scan(&result.ID, &result.DriveStructID, &result.CreatedAt, &result.OriginalPath); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+func (r *driveRecycleBinRepository) DeleteByID(ctx context.Context, ID int) error {
+	query := `DELETE FROM drive_recycle_bin WHERE id = $1`
+	_, err := r.db.Exec(ctx, query, ID)
+	if err != nil {
+		return err
+	}
+	return nil
 }

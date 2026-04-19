@@ -295,7 +295,7 @@ func (controller *Init) setDriveRecycleBin(repositories *repository.Repositories
 	controller.router.Handler(
 		http.MethodPost,
 		"/api/drive-recycle-bin/restore-one/:id",
-		handler.BuildHandler(driveRecycleBinHandler.GetAll, handler.AuthMW),
+		handler.BuildHandler(driveRecycleBinHandler.RestoreOne, handler.AuthMW),
 	)
 	controller.router.Handler(
 		http.MethodPost,

@@ -48,6 +48,18 @@ func (h *DriveRecycleBinHandler) RestoreOne(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	resycleBinID := getPathParamInt(r, "recycle_bin_id")
+	recycleBinID, err := getPathParamInt(r, "id")
+	if err != nil {
+		BlockEventHandle(r, BlockEventInputDataType)
+		SendErrorResponse(w, locale.T(langRequest, "parameter_conversion_error"), http.StatusBadRequest, 0)
+		return
+	}
 
+	err = h.useCase.RestoreOne(r.Context(), authUser, recycleBinID)
+	if err != nil {
+		SendErrorResponse(w, buildErrorMessage(langRequest, err), http.StatusUnprocessableEntity, 0)
+		return
+	}
+
+	SendResponse(w, http.StatusNoContent, nil)
 }
